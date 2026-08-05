@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: leads-hunter
+  datasource:
+    url: jdbc:mysql://localhost:3306/leadradar?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${DB_USERNAME:leadradar}
+    password: ${DB_PASSWORD:leadradar}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    show-sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
