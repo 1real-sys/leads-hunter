@@ -9,6 +9,12 @@ description: Use esta skill ao criar ou alterar modelagem MySQL, entidades JPA, 
 
 Use MySQL local.
 
+Banco padrão do projeto:
+
+```text
+leadsradar
+```
+
 O banco pode rodar via Docker Compose ou instalação direta.
 
 ## Versionamento de schema
@@ -31,13 +37,13 @@ Use três tabelas principais:
 
 ```text
 busca
-lead
+leads
 busca_lead
 ```
 
-Motivo: um mesmo estabelecimento pode aparecer em várias buscas. Portanto, `lead.google_place_id` deve ser único, e o histórico de aparições deve ficar em tabela associativa.
+Motivo: um mesmo estabelecimento pode aparecer em várias buscas. Portanto, `leads.google_place_id` deve ser único, e o histórico de aparições deve ficar em tabela associativa.
 
-Não use apenas `lead.busca_id` se quiser rastrear múltiplas buscas do mesmo lead.
+Não use apenas `leads.busca_id` se quiser rastrear múltiplas buscas do mesmo lead.
 
 ## Tabela `busca`
 
@@ -62,7 +68,7 @@ Campos:
 CREATE INDEX idx_busca_criada_em ON busca (criada_em);
 ```
 
-## Tabela `lead`
+## Tabela `leads`
 
 Representa um estabelecimento comercial único.
 
@@ -92,11 +98,11 @@ Campos:
 Índices:
 
 ```sql
-CREATE UNIQUE INDEX uk_lead_google_place_id ON lead (google_place_id);
-CREATE INDEX idx_lead_status ON lead (status);
-CREATE INDEX idx_lead_categoria ON lead (categoria);
-CREATE INDEX idx_lead_temperatura ON lead (temperatura);
-CREATE INDEX idx_lead_score ON lead (score);
+CREATE UNIQUE INDEX uk_lead_google_place_id ON leads (google_place_id);
+CREATE INDEX idx_lead_status ON leads (status);
+CREATE INDEX idx_lead_categoria ON leads (categoria);
+CREATE INDEX idx_lead_temperatura ON leads (temperatura);
+CREATE INDEX idx_lead_score ON leads (score);
 ```
 
 ## Tabela `busca_lead`
@@ -108,7 +114,7 @@ Campos:
 | Campo | Tipo | Observação |
 |---|---|---|
 | busca_id | BIGINT FK | referencia `busca.id` |
-| lead_id | BIGINT FK | referencia `lead.id` |
+| lead_id | BIGINT FK | referencia `leads.id` |
 | score_na_busca | INT | score calculado naquela busca |
 | temperatura_na_busca | VARCHAR(10) | temperatura naquela busca |
 | encontrado_em | DATETIME | data/hora em que apareceu nessa busca |
@@ -130,7 +136,7 @@ CREATE INDEX idx_busca_lead_encontrado_em ON busca_lead (encontrado_em);
 
 ```text
 busca 1 — N busca_lead
-lead  1 — N busca_lead
+leads 1 — N busca_lead
 ```
 
 Na prática:
