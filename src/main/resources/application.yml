@@ -17,3 +17,8 @@ spring:
 
 server:
   port: 8080
+
+google:
+  places:
+    api-key: ${GOOGLE_PLACES_API_KEY:}
+    nearby-search-url: https://places.googleapis.com/v1/places:searchNearby

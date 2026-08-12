@@ -1,5 +1,8 @@
 package dev.jlm.leadshunter.busca;
 
+import dev.jlm.leadshunter.integracao.places.PlacesApiClient;
+import dev.jlm.leadshunter.integracao.places.PlacesSearchRequest;
+import dev.jlm.leadshunter.integracao.places.PlacesSearchResponse;
 import dev.jlm.leadshunter.lead.CategoriaNegocio;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -10,20 +13,31 @@ import org.springframework.transaction.annotation.Transactional;
 public class BuscaService {
 
     private final BuscaRepository buscaRepository;
+    private final PlacesApiClient placesApiClient;
 
-    public BuscaService(BuscaRepository buscaRepository) {
+    public BuscaService(BuscaRepository buscaRepository, PlacesApiClient placesApiClient) {
         this.buscaRepository = buscaRepository;
+        this.placesApiClient = placesApiClient;
     }
 
     @Transactional
     public BuscaResponse criar(BuscaRequest request) {
+        PlacesSearchResponse placesResponse = placesApiClient.buscarProximos(
+            new PlacesSearchRequest(
+                request.latitude(),
+                request.longitude(),
+                request.raioKm(),
+                request.categorias()
+            )
+        );
+
         Busca busca = new Busca();
         busca.setEnderecoBase(request.enderecoBase());
         busca.setLatitude(request.latitude());
         busca.setLongitude(request.longitude());
         busca.setRaioKm(request.raioKm());
         busca.setCategoriasBuscadas(serializarCategorias(request.categorias()));
-        busca.setTotalEncontrados(0);
+        busca.setTotalEncontrados(placesResponse.places().size());
 
         Busca buscaSalva = buscaRepository.saveAndFlush(busca);
 
@@ -36,7 +50,7 @@ public class BuscaService {
             request.categorias(),
             buscaSalva.getTotalEncontrados(),
             buscaSalva.getCriadoEm(),
-            List.of()
+            toLeadEncontradoResponse(placesResponse)
         );
     }
 
@@ -44,5 +58,21 @@ public class BuscaService {
         return categorias.stream()
             .map(CategoriaNegocio::name)
             .collect(Collectors.joining(","));
+    }
+
+    private List<BuscaResponse.LeadEncontradoResponse> toLeadEncontradoResponse(
+        PlacesSearchResponse placesResponse
+    ) {
+        return placesResponse.places().stream()
+            .map(place -> new BuscaResponse.LeadEncontradoResponse(
+                null,
+                place.nome(),
+                place.categoria(),
+                place.enderecoFormatado(),
+                null,
+                null,
+                null
+            ))
+            .toList();
     }
 }
