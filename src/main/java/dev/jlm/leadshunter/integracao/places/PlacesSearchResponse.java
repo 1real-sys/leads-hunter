@@ -13,6 +13,7 @@ public record PlacesSearchResponse(
         String nome,
         CategoriaNegocio categoria,
         String enderecoFormatado,
+        String telefone,
         BigDecimal latitude,
         BigDecimal longitude,
         BigDecimal ratingGoogle,

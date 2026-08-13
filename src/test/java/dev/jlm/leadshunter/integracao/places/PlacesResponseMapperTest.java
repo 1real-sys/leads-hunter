@@ -21,6 +21,8 @@ class PlacesResponseMapperTest {
             "place-123",
             new DisplayName("Doces da Ana", "pt-BR"),
             "Rua das Flores, 10",
+            "+55 27 3333-4444",
+            "(27) 3333-4444",
             new Location(-25.4284, -49.2733),
             4.7,
             82,
@@ -39,6 +41,7 @@ class PlacesResponseMapperTest {
                 PlacesSearchResponse.PlaceResult::nome,
                 PlacesSearchResponse.PlaceResult::categoria,
                 PlacesSearchResponse.PlaceResult::enderecoFormatado,
+                PlacesSearchResponse.PlaceResult::telefone,
                 PlacesSearchResponse.PlaceResult::ratingGoogle,
                 PlacesSearchResponse.PlaceResult::totalReviews,
                 PlacesSearchResponse.PlaceResult::businessStatus
@@ -48,6 +51,7 @@ class PlacesResponseMapperTest {
                 "Doces da Ana",
                 CategoriaNegocio.DOCERIA,
                 "Rua das Flores, 10",
+                "+55 27 3333-4444",
                 new BigDecimal("4.7"),
                 82,
                 "OPERATIONAL"

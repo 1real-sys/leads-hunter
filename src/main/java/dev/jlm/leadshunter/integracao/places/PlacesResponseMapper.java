@@ -28,6 +28,7 @@ public class PlacesResponseMapper {
             place.displayName() != null ? place.displayName().text() : null,
             inferirCategoria(place.types()),
             place.formattedAddress(),
+            selecionarTelefone(place),
             toBigDecimal(place.location() != null ? place.location().latitude() : null),
             toBigDecimal(place.location() != null ? place.location().longitude() : null),
             place.rating() != null ? BigDecimal.valueOf(place.rating()) : null,
@@ -35,6 +36,17 @@ public class PlacesResponseMapper {
             place.businessStatus(),
             place.types() != null ? place.types() : List.of()
         );
+    }
+
+    private String selecionarTelefone(Place place) {
+        if (place.internationalPhoneNumber() != null
+            && !place.internationalPhoneNumber().isBlank()) {
+            return place.internationalPhoneNumber();
+        }
+        if (place.nationalPhoneNumber() != null && !place.nationalPhoneNumber().isBlank()) {
+            return place.nationalPhoneNumber();
+        }
+        return null;
     }
 
     private CategoriaNegocio inferirCategoria(List<String> types) {
