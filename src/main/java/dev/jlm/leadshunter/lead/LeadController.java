@@ -1,18 +1,44 @@
 package dev.jlm.leadshunter.lead;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Collections;
+import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/leads")
 public class LeadController {
 
+    private final LeadService leadService;
+
+    public LeadController(LeadService leadService) {
+        this.leadService = leadService;
+    }
+
     @GetMapping
-    public List<String> listar() {
-        return Collections.emptyList();
+    public List<LeadResponse> listar(
+        @RequestParam(required = false) StatusFunil status,
+        @RequestParam(required = false) CategoriaNegocio categoria,
+        @RequestParam(required = false) Temperatura temperatura
+    ) {
+        return leadService.listar(status, categoria, temperatura);
+    }
+
+    @GetMapping("/{id}")
+    public LeadResponse buscarPorId(@PathVariable Long id) {
+        return leadService.buscarPorId(id);
+    }
+
+    @PatchMapping("/{id}")
+    public LeadResponse atualizar(
+        @PathVariable Long id,
+        @Valid @RequestBody AtualizarLeadRequest request
+    ) {
+        return leadService.atualizar(id, request);
     }
 }

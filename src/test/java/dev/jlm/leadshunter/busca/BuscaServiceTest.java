@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -178,6 +179,51 @@ class BuscaServiceTest {
         assertThat(response.leads().getFirst().temperatura()).isEqualTo("QUENTE");
     }
 
+    @Test
+    void deveReutilizarCacheSemDeixarDePersistirCadaBusca() {
+        BuscaRequest primeiraRequest = new BuscaRequest(
+            "Centro, Curitiba - PR",
+            new BigDecimal("-25.42841"),
+            new BigDecimal("-49.27331"),
+            5,
+            List.of(CategoriaNegocio.PADARIA, CategoriaNegocio.MERCADO)
+        );
+        BuscaRequest requestEquivalente = new BuscaRequest(
+            "Outro texto para o mesmo ponto",
+            new BigDecimal("-25.42844"),
+            new BigDecimal("-49.27334"),
+            5,
+            List.of(CategoriaNegocio.MERCADO, CategoriaNegocio.PADARIA)
+        );
+        BuscaRequest requestComRaioDiferente = new BuscaRequest(
+            "Centro, Curitiba - PR",
+            new BigDecimal("-25.42841"),
+            new BigDecimal("-49.27331"),
+            6,
+            List.of(CategoriaNegocio.PADARIA, CategoriaNegocio.MERCADO)
+        );
+        PlacesSearchResponse respostaVazia = new PlacesSearchResponse(List.of());
+        AtomicLong sequenciaIds = new AtomicLong(100);
+
+        when(placesApiClient.buscarProximos(any(PlacesSearchRequest.class)))
+            .thenReturn(respostaVazia);
+        when(buscaRepository.saveAndFlush(any(Busca.class))).thenAnswer(invocation -> {
+            Busca busca = invocation.getArgument(0);
+            busca.setId(sequenciaIds.getAndIncrement());
+            busca.setCriadoEm(LocalDateTime.of(2026, 8, 17, 10, 0));
+            return busca;
+        });
+
+        BuscaService service = criarService();
+        BuscaResponse primeiraResposta = service.criar(primeiraRequest);
+        BuscaResponse respostaEquivalente = service.criar(requestEquivalente);
+        service.criar(requestComRaioDiferente);
+
+        verify(placesApiClient, times(2)).buscarProximos(any(PlacesSearchRequest.class));
+        verify(buscaRepository, times(3)).saveAndFlush(any(Busca.class));
+        assertThat(primeiraResposta.id()).isNotEqualTo(respostaEquivalente.id());
+    }
+
     private BuscaService criarService() {
         return new BuscaService(
             buscaRepository,
@@ -185,7 +231,8 @@ class BuscaServiceTest {
             leadRepository,
             placesApiClient,
             new TelefoneNormalizer(),
-            new ScoringService()
+            new ScoringService(),
+            new BuscaPlacesCache(30, 100)
         );
     }
 

@@ -22,3 +22,13 @@ google:
   places:
     api-key: ${GOOGLE_PLACES_API_KEY:}
     nearby-search-url: https://places.googleapis.com/v1/places:searchNearby
+
+app:
+  google-places:
+    rate-limit:
+      requisicoes: ${GOOGLE_PLACES_RATE_LIMIT_REQUISICOES:10}
+      periodo-segundos: ${GOOGLE_PLACES_RATE_LIMIT_PERIODO_SEGUNDOS:60}
+  cache:
+    buscas:
+      expiracao-minutos: ${BUSCA_CACHE_EXPIRACAO_MINUTOS:30}
+      tamanho-maximo: ${BUSCA_CACHE_TAMANHO_MAXIMO:100}

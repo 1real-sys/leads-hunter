@@ -27,16 +27,19 @@ public class PlacesApiClient {
 
     private final RestClient restClient;
     private final PlacesResponseMapper responseMapper;
+    private final PlacesRateLimiter rateLimiter;
     private final String apiKey;
     private final String nearbySearchUrl;
 
     public PlacesApiClient(
         PlacesResponseMapper responseMapper,
+        PlacesRateLimiter rateLimiter,
         @Value("${google.places.api-key:}") String apiKey,
         @Value("${google.places.nearby-search-url}") String nearbySearchUrl
     ) {
         this.restClient = RestClient.create();
         this.responseMapper = responseMapper;
+        this.rateLimiter = rateLimiter;
         this.apiKey = apiKey;
         this.nearbySearchUrl = nearbySearchUrl;
     }
@@ -46,6 +49,10 @@ public class PlacesApiClient {
             throw new IllegalStateException("Google Places API key ausente. Configure GOOGLE_PLACES_API_KEY.");
         }
 
+        return rateLimiter.executar(() -> executarBusca(request));
+    }
+
+    private PlacesSearchResponse executarBusca(PlacesSearchRequest request) {
         NearbySearchRequest body = new NearbySearchRequest(
             tiposGoogle(request.categorias()),
             20,

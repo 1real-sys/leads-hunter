@@ -26,6 +26,7 @@ public class BuscaService {
     private final PlacesApiClient placesApiClient;
     private final TelefoneNormalizer telefoneNormalizer;
     private final ScoringService scoringService;
+    private final BuscaPlacesCache buscaPlacesCache;
 
     public BuscaService(
         BuscaRepository buscaRepository,
@@ -33,7 +34,8 @@ public class BuscaService {
         LeadRepository leadRepository,
         PlacesApiClient placesApiClient,
         TelefoneNormalizer telefoneNormalizer,
-        ScoringService scoringService
+        ScoringService scoringService,
+        BuscaPlacesCache buscaPlacesCache
     ) {
         this.buscaRepository = buscaRepository;
         this.buscaLeadRepository = buscaLeadRepository;
@@ -41,17 +43,20 @@ public class BuscaService {
         this.placesApiClient = placesApiClient;
         this.telefoneNormalizer = telefoneNormalizer;
         this.scoringService = scoringService;
+        this.buscaPlacesCache = buscaPlacesCache;
     }
 
     @Transactional
     public BuscaResponse criar(BuscaRequest request) {
-        PlacesSearchResponse placesResponse = placesApiClient.buscarProximos(
-            new PlacesSearchRequest(
-                request.latitude(),
-                request.longitude(),
-                request.raioKm(),
-                request.categorias()
-            )
+        PlacesSearchRequest placesRequest = new PlacesSearchRequest(
+            request.latitude(),
+            request.longitude(),
+            request.raioKm(),
+            request.categorias()
+        );
+        PlacesSearchResponse placesResponse = buscaPlacesCache.buscarOuCarregar(
+            BuscaCacheKey.from(request),
+            () -> placesApiClient.buscarProximos(placesRequest)
         );
 
         Busca busca = new Busca();

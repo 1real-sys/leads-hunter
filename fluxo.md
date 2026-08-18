@@ -14,10 +14,23 @@ BuscaController.java
     v
 BuscaService.java
     |
-    +--> PlacesSearchRequest.java
+    +--> BuscaCacheKey.java
+    |        |
+    |        v
+    |    BuscaPlacesCache.java
+    |        |
+    |        +--> cache hit: reutiliza PlacesSearchResponse
+    |        |
+    |        +--> cache miss
+    |                 |
+    |                 v
+    +------------> PlacesSearchRequest.java
     |        |
     |        v
     |    PlacesApiClient.java
+    |        |
+    |        v
+    |    PlacesRateLimiter.java
     |        |
     |        | POST /v1/places:searchNearby
     |        v
@@ -54,6 +67,21 @@ BuscaResponse.java
 Resposta HTTP 201 Created
 ```
 
+O fluxo de consulta dos leads persistidos é independente de uma nova busca:
+
+```text
+GET /api/leads, GET /api/leads/{id} ou PATCH /api/leads/{id}
+    |
+    v
+LeadController.java
+    |
+    v
+LeadService.java --> LeadRepository.java --> MySQL
+    |
+    v
+LeadResponse.java --> Resposta HTTP 200 OK
+```
+
 ## Fluxo atual, arquivo por arquivo
 
 ### 1. `BuscaController.java`
@@ -66,17 +94,25 @@ Representa os parâmetros recebidos: endereço-base, latitude, longitude, raio e
 
 ### 3. `BuscaService.java`
 
-Coordena o caso de uso. Converte o request em `PlacesSearchRequest`, chama `PlacesApiClient.buscarProximos`, conta os estabelecimentos retornados e monta uma entidade `Busca`. Depois serializa as categorias e persiste o resumo por `BuscaRepository.saveAndFlush`.
+Coordena o caso de uso. Gera uma `BuscaCacheKey` e consulta `BuscaPlacesCache`. Se não houver resultado recente, converte o request em `PlacesSearchRequest` e chama `PlacesApiClient.buscarProximos`; se houver, reutiliza o `PlacesSearchResponse` sem nova chamada à Google. Depois conta os estabelecimentos, monta a entidade `Busca`, serializa as categorias e persiste o resumo por `BuscaRepository.saveAndFlush`.
+
+O cache guarda somente a resposta externa. Cada requisição continua criando uma nova `Busca`, processando os leads e registrando os vínculos `BuscaLead`, inclusive quando ocorre cache hit.
 
 Para cada estabelecimento, consolida resultados repetidos pelo `googlePlaceId` e consulta `LeadRepository`. Se o lead não existir, cria um registro com status `NOVO`. Se já existir, atualiza apenas nome, categoria, endereço, coordenadas, rating e total de reviews quando houver valores novos. Quando a Google fornece um telefone brasileiro válido, salva o valor original e a versão normalizada. Depois chama `ScoringService`, atualiza score e temperatura e preserva `status`, `observacoes` e `ultimoContatoEm`.
 
 Por fim, cria um `BuscaLead` para relacionar a nova busca ao lead e registra nele o score e a temperatura daquela execução. Em seguida, converte os leads persistidos em `BuscaResponse`. Todo o processo ocorre na mesma transação; um resultado sem `googlePlaceId` interrompe e reverte a operação.
 
-### 4. `PlacesSearchRequest.java`
+### 4. `BuscaCacheKey.java` e `BuscaPlacesCache.java`
+
+`BuscaCacheKey` identifica buscas equivalentes usando latitude e longitude arredondadas para quatro casas decimais, raio e categorias distintas em ordem alfabética. O texto de `enderecoBase` não participa da chave.
+
+`BuscaPlacesCache` usa Caffeine para manter `PlacesSearchResponse` em memória. Por padrão, cada entrada expira após 30 minutos e o cache aceita até 100 buscas. Os valores podem ser alterados por `BUSCA_CACHE_EXPIRACAO_MINUTOS` e `BUSCA_CACHE_TAMANHO_MAXIMO`. Falhas do carregador não são armazenadas.
+
+### 5. `PlacesSearchRequest.java`
 
 É o contrato interno da integração. Transporta latitude, longitude, raio e categorias sem expor o formato JSON específico da Google ao restante da aplicação.
 
-### 5. `PlacesApiClient.java`
+### 6. `PlacesApiClient.java`
 
 Isola a comunicação com o Google Places API (New). Ele:
 
@@ -85,6 +121,7 @@ Isola a comunicação com o Google Places API (New). Ele:
 - transforma o raio de quilômetros para metros;
 - limita a resposta a 20 estabelecimentos;
 - ordena por popularidade;
+- solicita uma permissão ao `PlacesRateLimiter`;
 - faz um `POST` para `places:searchNearby`;
 - usa uma Field Mask para pedir somente ID, nome, endereço, telefones, coordenadas, avaliação, quantidade de avaliações, situação e tipos.
 
@@ -92,37 +129,51 @@ Se a chave estiver ausente, a chamada é interrompida com uma exceção explican
 
 Os campos de telefone são `internationalPhoneNumber` e `nationalPhoneNumber`. Eles pertencem ao Nearby Search Enterprise, assim como o campo `rating` que a busca já solicitava.
 
-### 6. `PlacesResponseMapper.java`
+### 7. `PlacesRateLimiter.java`
+
+Usa Bucket4j para limitar chamadas HTTP reais à Google. Por padrão, permite uma capacidade de 10 requisições com reposição gradual ao longo de 60 segundos. Os valores podem ser alterados por `GOOGLE_PLACES_RATE_LIMIT_REQUISICOES` e `GOOGLE_PLACES_RATE_LIMIT_PERIODO_SEGUNDOS`.
+
+Quando não há permissão disponível, lança `PlacesRateLimitExceededException` e a API responde com HTTP `429 Too Many Requests`. Cache hit não chega ao `PlacesApiClient` e, portanto, não consome permissão. O bucket fica apenas em memória e é reiniciado junto com a aplicação; ele protege contra rajadas, não controla sozinho um orçamento mensal.
+
+### 8. `PlacesResponseMapper.java`
 
 Converte a resposta externa para o modelo interno. Mapeia os campos da Google, trata resposta vazia e infere `CategoriaNegocio` a partir dos tipos recebidos. Por exemplo, `supermarket` vira `MERCADO` e `candy_store` vira `DOCERIA`. Para telefone, prefere o formato internacional e usa o nacional como alternativa.
 
-### 7. `PlacesSearchResponse.java`
+### 9. `PlacesSearchResponse.java`
 
 Representa o resultado interno da integração. Cada `PlaceResult` contém `googlePlaceId`, nome, categoria, endereço, telefone, coordenadas, rating, total de reviews, situação operacional e tipos originais da Google.
 
-### 8. `Busca.java` e `BuscaRepository.java`
+### 10. `Busca.java` e `BuscaRepository.java`
 
 `Busca` representa o histórico da pesquisa. O repository persiste no MySQL o endereço-base, coordenadas, raio, categorias pesquisadas, total encontrado e data de criação. O schema é criado e validado pela migration `V1__criar_tabelas.sql`, com Flyway e `ddl-auto: validate`.
 
-### 9. `TelefoneNormalizer.java`
+### 11. `TelefoneNormalizer.java`
 
 Remove a formatação do telefone e produz somente dígitos no padrão `55 + DDD + número`. Aceita telefone fixo ou celular brasileiro em formato nacional, `+55` ou `0055`. Números ausentes, incompletos, com DDI estrangeiro, 0800 ou DDD inválido são ignorados. Um resultado inválido não apaga um telefone válido salvo anteriormente.
 
-### 10. `ScoringService.java`
+### 12. `ScoringService.java`
 
 Centraliza toda a regra de pontuação. Categorias específicas recebem 30 pontos, telefone válido recebe 25, reviews podem somar até 15, rating até 15 e um estabelecimento `OPERATIONAL` recebe 10. `OUTROS` não recebe pontos de categoria. A soma máxima da regra atual é 95.
 
 A temperatura é calculada pelo resultado: `FRIO` de 0 a 39, `MORNO` de 40 a 69 e `QUENTE` de 70 a 100.
 
-### 11. `Lead.java` e `LeadRepository.java`
+### 13. `Lead.java` e `LeadRepository.java`
 
 `Lead` representa um estabelecimento único. `LeadRepository.findByGooglePlaceId` é usado como chave de deduplicação. Um lead novo começa em `NOVO`; um lead existente mantém os dados comerciais definidos pelo usuário quando reaparece em outra busca.
 
-### 12. `BuscaLead.java` e `BuscaLeadRepository.java`
+### 14. `LeadController.java`, `LeadService.java` e `LeadResponse.java`
+
+Expõem a leitura e a atualização comercial dos leads já persistidos. `GET /api/leads` lista todos e aceita os filtros opcionais `status`, `categoria` e `temperatura`, que podem ser combinados. A consulta usa Query by Example e ordena por maior score e, em caso de empate, por nome. `GET /api/leads/{id}` retorna um lead específico ou HTTP `404 Not Found` por meio de `LeadNaoEncontradoException`.
+
+`PATCH /api/leads/{id}` recebe `AtualizarLeadRequest` e altera somente os campos informados entre `status`, `observacoes` e `ultimoContatoEm`. O payload vazio é rejeitado por Bean Validation. Os demais atributos do lead são preservados, e a resposta contém o estado persistido atualizado.
+
+`LeadResponse` mantém a entidade JPA fora do contrato HTTP e apresenta os dados externos, a classificação e os campos comerciais do lead. As consultas são executadas em transações somente de leitura, enquanto a atualização usa uma transação de escrita.
+
+### 15. `BuscaLead.java` e `BuscaLeadRepository.java`
 
 Representam e persistem o relacionamento N:N. Assim, uma busca pode encontrar vários leads e o mesmo lead pode aparecer em várias buscas sem ser duplicado. `scoreNaBusca` e `temperaturaNaBusca` guardam uma cópia do resultado calculado naquela execução, mesmo que o lead seja recalculado futuramente.
 
-### 13. `BuscaResponse.java`
+### 16. `BuscaResponse.java`
 
 É a resposta pública do endpoint. Retorna os dados da busca e uma lista resumida dos leads persistidos. O campo `id` contém o identificador do `Lead`; telefone, score e temperatura são retornados quando disponíveis.
 
@@ -130,8 +181,8 @@ Representam e persistem o relacionamento N:N. Assim, uma busca pode encontrar v�
 
 ```text
 src/main/java/dev/jlm/leadshunter/
-├── busca/                 # Endpoint, service, entidade e histórico das buscas
-├── integracao/places/     # Cliente Google, contratos e mapper externo
+├── busca/                 # Endpoint, service, cache, entidades e histórico
+├── integracao/places/     # Cliente Google, rate limit, contratos e mapper
 ├── lead/                  # Entidade, repository e normalização de telefone
 ├── scoring/               # Cálculo centralizado de score e temperatura
 ├── exportacao/            # Estrutura futura de exportação
@@ -170,14 +221,31 @@ src/test/java/dev/jlm/leadshunter/
 - Classificação de temperatura em `FRIO`, `MORNO` ou `QUENTE`.
 - Atualização de score e temperatura no `Lead`.
 - Registro do score e da temperatura da execução em `BuscaLead`.
+- Cache Caffeine dos resultados recentes da Google Places API.
+- Chave de cache por coordenadas arredondadas, raio e categorias ordenadas.
+- Persistência de um novo histórico mesmo quando o resultado vem do cache.
+- Rate limit Bucket4j aplicado somente às chamadas externas reais.
+- Resposta HTTP 429 quando a capacidade temporária é esgotada.
 - Retorno dos leads persistidos, com seus IDs, na resposta HTTP.
+- Listagem dos leads persistidos por `GET /api/leads`.
+- Filtros combináveis por status, categoria e temperatura.
+- Consulta individual por `GET /api/leads/{id}`, com resposta 404 para ID inexistente.
+- Atualização parcial de status, observações e último contato por `PATCH /api/leads/{id}`.
+- Preservação dos campos omitidos no payload de atualização.
+- Validação que rejeita uma atualização sem nenhum campo informado.
+- Contrato HTTP próprio em `LeadResponse`, sem exposição direta da entidade JPA.
 - Teste de contexto Spring com MySQL e Flyway.
 - Testes do `BuscaService` para criação, deduplicação, vínculo e preservação dos dados comerciais.
 - Testes de resposta completa e vazia do `PlacesResponseMapper`.
 - Testes de formatos nacionais, internacionais, ausentes e inválidos de telefone.
 - Testes das faixas de score, reviews, rating e limites de temperatura.
+- Testes da chave, configuração e reutilização do cache sem perda de histórico.
+- Testes de capacidade, bloqueio e status HTTP do rate limit.
+- Testes da passagem obrigatória do `PlacesApiClient` pelo rate limit.
+- Testes do serviço de leads para filtros, ordenação, mapeamento e ID inexistente.
+- Testes da atualização comercial e da validação de `AtualizarLeadRequest`.
 
-A última execução de `./mvnw test` concluiu 33 testes sem falhas. Os testes automatizados não consomem a API da Google.
+A última execução de `./mvnw test` concluiu 51 testes sem falhas. Os testes automatizados não consomem a API da Google.
 
 ## O que ainda não está feito
 
@@ -196,9 +264,7 @@ BuscaResponse com leads persistidos e pontuados
 
 Ainda falta:
 
-- implementar listagem, filtros e atualização de leads; hoje `LeadService` está vazio e `GET /api/leads` devolve lista vazia;
 - gerar somente o link manual de WhatsApp para telefones válidos;
-- adicionar cache Caffeine e rate limit Bucket4j;
 - implementar consulta ao histórico de buscas;
 - implementar exportação CSV/Excel; `ExportService` ainda é um esqueleto;
 - tratar de forma centralizada erros HTTP da Google, cota excedida e indisponibilidade;
