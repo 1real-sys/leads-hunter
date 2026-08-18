@@ -8,6 +8,7 @@ import dev.jlm.leadshunter.lead.Lead;
 import dev.jlm.leadshunter.lead.LeadRepository;
 import dev.jlm.leadshunter.lead.StatusFunil;
 import dev.jlm.leadshunter.lead.TelefoneNormalizer;
+import dev.jlm.leadshunter.lead.WhatsAppLinkGenerator;
 import dev.jlm.leadshunter.scoring.ScoringService;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,6 +28,7 @@ public class BuscaService {
     private final TelefoneNormalizer telefoneNormalizer;
     private final ScoringService scoringService;
     private final BuscaPlacesCache buscaPlacesCache;
+    private final WhatsAppLinkGenerator whatsAppLinkGenerator;
 
     public BuscaService(
         BuscaRepository buscaRepository,
@@ -35,7 +37,8 @@ public class BuscaService {
         PlacesApiClient placesApiClient,
         TelefoneNormalizer telefoneNormalizer,
         ScoringService scoringService,
-        BuscaPlacesCache buscaPlacesCache
+        BuscaPlacesCache buscaPlacesCache,
+        WhatsAppLinkGenerator whatsAppLinkGenerator
     ) {
         this.buscaRepository = buscaRepository;
         this.buscaLeadRepository = buscaLeadRepository;
@@ -44,6 +47,7 @@ public class BuscaService {
         this.telefoneNormalizer = telefoneNormalizer;
         this.scoringService = scoringService;
         this.buscaPlacesCache = buscaPlacesCache;
+        this.whatsAppLinkGenerator = whatsAppLinkGenerator;
     }
 
     @Transactional
@@ -172,6 +176,7 @@ public class BuscaService {
                 lead.getCategoria(),
                 lead.getEnderecoFormatado(),
                 lead.getTelefone(),
+                whatsAppLinkGenerator.gerar(lead.getTelefoneNormalizado()),
                 lead.getScore(),
                 lead.getTemperatura() != null ? lead.getTemperatura().name() : null
             ))

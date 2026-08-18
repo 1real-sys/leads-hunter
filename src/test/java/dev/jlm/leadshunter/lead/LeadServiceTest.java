@@ -31,7 +31,7 @@ class LeadServiceTest {
         Lead lead = criarLeadCompleto();
         when(leadRepository.findAll(any(Example.class), any(Sort.class)))
             .thenReturn(List.of(lead));
-        LeadService service = new LeadService(leadRepository);
+        LeadService service = criarService();
 
         List<LeadResponse> resposta = service.listar(
             StatusFunil.QUALIFICADO,
@@ -56,6 +56,7 @@ class LeadServiceTest {
             assertThat(item.googlePlaceId()).isEqualTo("place-15");
             assertThat(item.nome()).isEqualTo("Padaria Central");
             assertThat(item.telefoneNormalizado()).isEqualTo("5527999990000");
+            assertThat(item.whatsappUrl()).isEqualTo("https://wa.me/5527999990000");
             assertThat(item.score()).isEqualTo(95);
             assertThat(item.status()).isEqualTo(StatusFunil.QUALIFICADO);
             assertThat(item.observacoes()).isEqualTo("Retornar na sexta");
@@ -67,7 +68,7 @@ class LeadServiceTest {
         Lead lead = criarLeadCompleto();
         when(leadRepository.findById(15L)).thenReturn(Optional.of(lead));
 
-        LeadResponse resposta = new LeadService(leadRepository).buscarPorId(15L);
+        LeadResponse resposta = criarService().buscarPorId(15L);
 
         assertThat(resposta.id()).isEqualTo(15L);
         assertThat(resposta.nome()).isEqualTo("Padaria Central");
@@ -77,7 +78,7 @@ class LeadServiceTest {
     void deveRetornarErroQuandoLeadNaoExistir() {
         when(leadRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> new LeadService(leadRepository).buscarPorId(99L))
+        assertThatThrownBy(() -> criarService().buscarPorId(99L))
             .isInstanceOf(LeadNaoEncontradoException.class)
             .hasMessageContaining("99");
     }
@@ -94,7 +95,7 @@ class LeadServiceTest {
         when(leadRepository.findById(15L)).thenReturn(Optional.of(lead));
         when(leadRepository.saveAndFlush(lead)).thenReturn(lead);
 
-        LeadResponse resposta = new LeadService(leadRepository).atualizar(15L, request);
+        LeadResponse resposta = criarService().atualizar(15L, request);
 
         assertThat(lead.getStatus()).isEqualTo(StatusFunil.CONTATADO);
         assertThat(lead.getObservacoes()).isEqualTo("Cliente pediu uma proposta");
@@ -111,7 +112,7 @@ class LeadServiceTest {
         when(leadRepository.findById(15L)).thenReturn(Optional.of(lead));
         when(leadRepository.saveAndFlush(lead)).thenReturn(lead);
 
-        new LeadService(leadRepository).atualizar(
+        criarService().atualizar(
             15L,
             new AtualizarLeadRequest(StatusFunil.GANHO, null, null)
         );
@@ -126,10 +127,14 @@ class LeadServiceTest {
         when(leadRepository.findById(99L)).thenReturn(Optional.empty());
         AtualizarLeadRequest request = new AtualizarLeadRequest(StatusFunil.CONTATADO, null, null);
 
-        assertThatThrownBy(() -> new LeadService(leadRepository).atualizar(99L, request))
+        assertThatThrownBy(() -> criarService().atualizar(99L, request))
             .isInstanceOf(LeadNaoEncontradoException.class)
             .hasMessageContaining("99");
         verify(leadRepository, never()).saveAndFlush(any());
+    }
+
+    private LeadService criarService() {
+        return new LeadService(leadRepository, new WhatsAppLinkGenerator());
     }
 
     private Lead criarLeadCompleto() {

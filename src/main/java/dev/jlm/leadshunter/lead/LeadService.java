@@ -16,9 +16,14 @@ public class LeadService {
     );
 
     private final LeadRepository leadRepository;
+    private final WhatsAppLinkGenerator whatsAppLinkGenerator;
 
-    public LeadService(LeadRepository leadRepository) {
+    public LeadService(
+        LeadRepository leadRepository,
+        WhatsAppLinkGenerator whatsAppLinkGenerator
+    ) {
         this.leadRepository = leadRepository;
+        this.whatsAppLinkGenerator = whatsAppLinkGenerator;
     }
 
     @Transactional(readOnly = true)
@@ -34,14 +39,14 @@ public class LeadService {
 
         ExampleMatcher matcher = ExampleMatcher.matchingAll().withIgnoreNullValues();
         return leadRepository.findAll(Example.of(filtros, matcher), ORDENACAO_PADRAO).stream()
-            .map(LeadResponse::from)
+            .map(this::toResponse)
             .toList();
     }
 
     @Transactional(readOnly = true)
     public LeadResponse buscarPorId(Long id) {
         return leadRepository.findById(id)
-            .map(LeadResponse::from)
+            .map(this::toResponse)
             .orElseThrow(() -> new LeadNaoEncontradoException(id));
     }
 
@@ -60,6 +65,10 @@ public class LeadService {
             lead.setUltimoContatoEm(request.ultimoContatoEm());
         }
 
-        return LeadResponse.from(leadRepository.saveAndFlush(lead));
+        return toResponse(leadRepository.saveAndFlush(lead));
+    }
+
+    private LeadResponse toResponse(Lead lead) {
+        return LeadResponse.from(lead, whatsAppLinkGenerator);
     }
 }

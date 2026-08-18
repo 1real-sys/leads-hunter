@@ -11,6 +11,7 @@ public record LeadResponse(
     String enderecoFormatado,
     String telefone,
     String telefoneNormalizado,
+    String whatsappUrl,
     BigDecimal latitude,
     BigDecimal longitude,
     BigDecimal ratingGoogle,
@@ -24,7 +25,7 @@ public record LeadResponse(
     LocalDateTime atualizadoEm
 ) {
 
-    public static LeadResponse from(Lead lead) {
+    public static LeadResponse from(Lead lead, WhatsAppLinkGenerator whatsAppLinkGenerator) {
         return new LeadResponse(
             lead.getId(),
             lead.getGooglePlaceId(),
@@ -33,6 +34,7 @@ public record LeadResponse(
             lead.getEnderecoFormatado(),
             lead.getTelefone(),
             lead.getTelefoneNormalizado(),
+            whatsAppLinkGenerator.gerar(lead.getTelefoneNormalizado()),
             lead.getLatitude(),
             lead.getLongitude(),
             lead.getRatingGoogle(),

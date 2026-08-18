@@ -15,6 +15,7 @@ import dev.jlm.leadshunter.lead.LeadRepository;
 import dev.jlm.leadshunter.lead.StatusFunil;
 import dev.jlm.leadshunter.lead.TelefoneNormalizer;
 import dev.jlm.leadshunter.lead.Temperatura;
+import dev.jlm.leadshunter.lead.WhatsAppLinkGenerator;
 import dev.jlm.leadshunter.scoring.ScoringService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -123,6 +124,8 @@ class BuscaServiceTest {
         assertThat(response.leads().getFirst().id()).isEqualTo(20L);
         assertThat(response.leads().getFirst().nome()).isEqualTo("Padaria Central");
         assertThat(response.leads().getFirst().categoria()).isEqualTo(CategoriaNegocio.PADARIA);
+        assertThat(response.leads().getFirst().whatsappUrl())
+            .isEqualTo("https://wa.me/554133334444");
         assertThat(response.leads().getFirst().score()).isEqualTo(95);
         assertThat(response.leads().getFirst().temperatura()).isEqualTo("QUENTE");
     }
@@ -232,7 +235,8 @@ class BuscaServiceTest {
             placesApiClient,
             new TelefoneNormalizer(),
             new ScoringService(),
-            new BuscaPlacesCache(30, 100)
+            new BuscaPlacesCache(30, 100),
+            new WhatsAppLinkGenerator()
         );
     }
 

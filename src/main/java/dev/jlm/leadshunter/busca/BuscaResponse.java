@@ -23,6 +23,7 @@ public record BuscaResponse(
         CategoriaNegocio categoria,
         String enderecoFormatado,
         String telefone,
+        String whatsappUrl,
         Integer score,
         String temperatura
     ) {

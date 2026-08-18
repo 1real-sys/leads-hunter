@@ -60,6 +60,10 @@ BuscaService.java
     |
     +--> BuscaLead.java --> BuscaLeadRepository.java --> MySQL
     |
+    +--> WhatsAppLinkGenerator.java
+    |        |
+    |        +--> gera URL somente para telefone normalizado válido
+    |
     v
 BuscaResponse.java
     |
@@ -77,6 +81,8 @@ LeadController.java
     |
     v
 LeadService.java --> LeadRepository.java --> MySQL
+    |
+    +--> WhatsAppLinkGenerator.java
     |
     v
 LeadResponse.java --> Resposta HTTP 200 OK
@@ -147,9 +153,11 @@ Representa o resultado interno da integração. Cada `PlaceResult` contém `goog
 
 `Busca` representa o histórico da pesquisa. O repository persiste no MySQL o endereço-base, coordenadas, raio, categorias pesquisadas, total encontrado e data de criação. O schema é criado e validado pela migration `V1__criar_tabelas.sql`, com Flyway e `ddl-auto: validate`.
 
-### 11. `TelefoneNormalizer.java`
+### 11. `TelefoneNormalizer.java` e `WhatsAppLinkGenerator.java`
 
 Remove a formatação do telefone e produz somente dígitos no padrão `55 + DDD + número`. Aceita telefone fixo ou celular brasileiro em formato nacional, `+55` ou `0055`. Números ausentes, incompletos, com DDI estrangeiro, 0800 ou DDD inválido são ignorados. Um resultado inválido não apaga um telefone válido salvo anteriormente.
+
+`WhatsAppLinkGenerator` recebe apenas o telefone já normalizado e gera uma URL manual no formato `https://wa.me/55DDDNUMERO`. Para telefone ausente, formatado ou inválido, retorna `null`. A aplicação somente entrega o link para o usuário abrir; não existe disparo automático ou em massa.
 
 ### 12. `ScoringService.java`
 
@@ -167,7 +175,7 @@ Expõem a leitura e a atualização comercial dos leads já persistidos. `GET /a
 
 `PATCH /api/leads/{id}` recebe `AtualizarLeadRequest` e altera somente os campos informados entre `status`, `observacoes` e `ultimoContatoEm`. O payload vazio é rejeitado por Bean Validation. Os demais atributos do lead são preservados, e a resposta contém o estado persistido atualizado.
 
-`LeadResponse` mantém a entidade JPA fora do contrato HTTP e apresenta os dados externos, a classificação e os campos comerciais do lead. As consultas são executadas em transações somente de leitura, enquanto a atualização usa uma transação de escrita.
+`LeadResponse` mantém a entidade JPA fora do contrato HTTP e apresenta os dados externos, a classificação, os campos comerciais e `whatsappUrl` quando houver telefone normalizado válido. As consultas são executadas em transações somente de leitura, enquanto a atualização usa uma transação de escrita.
 
 ### 15. `BuscaLead.java` e `BuscaLeadRepository.java`
 
@@ -175,7 +183,7 @@ Representam e persistem o relacionamento N:N. Assim, uma busca pode encontrar v�
 
 ### 16. `BuscaResponse.java`
 
-É a resposta pública do endpoint. Retorna os dados da busca e uma lista resumida dos leads persistidos. O campo `id` contém o identificador do `Lead`; telefone, score e temperatura são retornados quando disponíveis.
+É a resposta pública do endpoint. Retorna os dados da busca e uma lista resumida dos leads persistidos. O campo `id` contém o identificador do `Lead`; telefone, `whatsappUrl`, score e temperatura são retornados quando disponíveis.
 
 ## Estrutura relacionada
 
@@ -183,7 +191,7 @@ Representam e persistem o relacionamento N:N. Assim, uma busca pode encontrar v�
 src/main/java/dev/jlm/leadshunter/
 ├── busca/                 # Endpoint, service, cache, entidades e histórico
 ├── integracao/places/     # Cliente Google, rate limit, contratos e mapper
-├── lead/                  # Entidade, repository e normalização de telefone
+├── lead/                  # Gestão de leads, telefone e link manual de WhatsApp
 ├── scoring/               # Cálculo centralizado de score e temperatura
 ├── exportacao/            # Estrutura futura de exportação
 └── config/                # Endpoints e configurações gerais
@@ -194,7 +202,9 @@ src/main/resources/
 
 src/test/java/dev/jlm/leadshunter/
 ├── busca/                 # Teste unitário do fluxo de BuscaService
-└── integracao/places/     # Testes do mapeamento da resposta Google
+├── integracao/places/     # Testes do cliente, mapper e rate limit da Google
+├── lead/                  # Testes de consulta, atualização e telefone
+└── scoring/               # Testes das regras de score e temperatura
 ```
 
 ## O que já está implementado e testado
@@ -234,6 +244,9 @@ src/test/java/dev/jlm/leadshunter/
 - Preservação dos campos omitidos no payload de atualização.
 - Validação que rejeita uma atualização sem nenhum campo informado.
 - Contrato HTTP próprio em `LeadResponse`, sem exposição direta da entidade JPA.
+- Geração de `whatsappUrl` somente para telefone brasileiro normalizado válido.
+- Exposição do link manual tanto nas respostas de busca quanto nas respostas de lead.
+- Ausência de qualquer envio automático ou em massa pelo WhatsApp.
 - Teste de contexto Spring com MySQL e Flyway.
 - Testes do `BuscaService` para criação, deduplicação, vínculo e preservação dos dados comerciais.
 - Testes de resposta completa e vazia do `PlacesResponseMapper`.
@@ -244,8 +257,12 @@ src/test/java/dev/jlm/leadshunter/
 - Testes da passagem obrigatória do `PlacesApiClient` pelo rate limit.
 - Testes do serviço de leads para filtros, ordenação, mapeamento e ID inexistente.
 - Testes da atualização comercial e da validação de `AtualizarLeadRequest`.
+- Testes de geração e rejeição do link manual do WhatsApp.
+- Chamada externa controlada com Google Places API (New), retornando e persistindo leads reais.
 
-A última execução de `./mvnw test` concluiu 51 testes sem falhas. Os testes automatizados não consomem a API da Google.
+A última execução de `./mvnw test` concluiu 61 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
+
+A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`.
 
 ## O que ainda não está feito
 
@@ -264,9 +281,7 @@ BuscaResponse com leads persistidos e pontuados
 
 Ainda falta:
 
-- gerar somente o link manual de WhatsApp para telefones válidos;
 - implementar consulta ao histórico de buscas;
 - implementar exportação CSV/Excel; `ExportService` ainda é um esqueleto;
 - tratar de forma centralizada erros HTTP da Google, cota excedida e indisponibilidade;
-- criar testes de chamada HTTP do controller, deduplicação, scoring, atualizações e erros;
-- realizar uma chamada manual controlada com uma chave válida para validar a integração externa de ponta a ponta.
+- criar testes HTTP dos controllers e ampliar cenários de integração JPA e tratamento de erros.
