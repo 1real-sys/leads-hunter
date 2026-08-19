@@ -88,11 +88,33 @@ LeadService.java --> LeadRepository.java --> MySQL
 LeadResponse.java --> Resposta HTTP 200 OK
 ```
 
+O histórico das buscas também pode ser consultado sem chamar a Google novamente:
+
+```text
+GET /api/buscas ou GET /api/buscas/{id}
+    |
+    v
+BuscaController.java
+    |
+    v
+BuscaService.java
+    |
+    +--> BuscaRepository.java --> resumo da busca
+    |
+    +--> BuscaLeadRepository.java --> Lead atual + score/temperatura da execução
+    |
+    +--> WhatsAppLinkGenerator.java
+    v
+BuscaResumoResponse.java ou BuscaDetalheResponse.java --> Resposta HTTP 200 OK
+```
+
 ## Fluxo atual, arquivo por arquivo
 
 ### 1. `BuscaController.java`
 
 É o ponto de entrada HTTP. Recebe `POST /api/buscas`, converte o JSON em `BuscaRequest`, executa as validações e delega para `BuscaService.criar`. Quando o fluxo termina, responde com HTTP `201 Created` e um `BuscaResponse`.
+
+Também expõe `GET /api/buscas`, que lista os resumos do histórico do mais recente para o mais antigo, e `GET /api/buscas/{id}`, que abre uma execução com os leads encontrados. Uma busca inexistente retorna HTTP `404 Not Found` por meio de `BuscaNaoEncontradaException`.
 
 ### 2. `BuscaRequest.java`
 
@@ -107,6 +129,8 @@ O cache guarda somente a resposta externa. Cada requisição continua criando um
 Para cada estabelecimento, consolida resultados repetidos pelo `googlePlaceId` e consulta `LeadRepository`. Se o lead não existir, cria um registro com status `NOVO`. Se já existir, atualiza apenas nome, categoria, endereço, coordenadas, rating e total de reviews quando houver valores novos. Quando a Google fornece um telefone brasileiro válido, salva o valor original e a versão normalizada. Depois chama `ScoringService`, atualiza score e temperatura e preserva `status`, `observacoes` e `ultimoContatoEm`.
 
 Por fim, cria um `BuscaLead` para relacionar a nova busca ao lead e registra nele o score e a temperatura daquela execução. Em seguida, converte os leads persistidos em `BuscaResponse`. Todo o processo ocorre na mesma transação; um resultado sem `googlePlaceId` interrompe e reverte a operação.
+
+Nas consultas do histórico, `listarHistorico` lê as buscas já ordenadas por `criadoEm` decrescente. `buscarHistoricoPorId` combina o resumo persistido em `Busca` com os vínculos de `BuscaLead`. O detalhe usa `scoreNaBusca` e `temperaturaNaBusca` para preservar o retrato daquela execução, enquanto status, observações e último contato refletem o estado comercial atual do `Lead`. Essas operações usam transações somente de leitura e não acionam cache nem Google Places.
 
 ### 4. `BuscaCacheKey.java` e `BuscaPlacesCache.java`
 
@@ -179,11 +203,15 @@ Expõem a leitura e a atualização comercial dos leads já persistidos. `GET /a
 
 ### 15. `BuscaLead.java` e `BuscaLeadRepository.java`
 
-Representam e persistem o relacionamento N:N. Assim, uma busca pode encontrar vários leads e o mesmo lead pode aparecer em várias buscas sem ser duplicado. `scoreNaBusca` e `temperaturaNaBusca` guardam uma cópia do resultado calculado naquela execução, mesmo que o lead seja recalculado futuramente.
+Representam e persistem o relacionamento N:N. Assim, uma busca pode encontrar vários leads e o mesmo lead pode aparecer em várias buscas sem ser duplicado. `scoreNaBusca` e `temperaturaNaBusca` guardam uma cópia do resultado calculado naquela execução, mesmo que o lead seja recalculado futuramente. A consulta do detalhe carrega o `Lead` junto com cada vínculo por `EntityGraph` e ordena os resultados pelo score histórico decrescente.
 
 ### 16. `BuscaResponse.java`
 
 É a resposta pública do endpoint. Retorna os dados da busca e uma lista resumida dos leads persistidos. O campo `id` contém o identificador do `Lead`; telefone, `whatsappUrl`, score e temperatura são retornados quando disponíveis.
+
+### 17. `BuscaResumoResponse.java` e `BuscaDetalheResponse.java`
+
+São os contratos públicos do histórico. O resumo contém os parâmetros, total e data da busca. O detalhe acrescenta os leads vinculados, o link manual de WhatsApp, o score e a temperatura daquela execução, além dos campos comerciais atuais. As categorias persistidas como texto são novamente apresentadas como valores de `CategoriaNegocio`.
 
 ## Estrutura relacionada
 
@@ -237,6 +265,10 @@ src/test/java/dev/jlm/leadshunter/
 - Rate limit Bucket4j aplicado somente às chamadas externas reais.
 - Resposta HTTP 429 quando a capacidade temporária é esgotada.
 - Retorno dos leads persistidos, com seus IDs, na resposta HTTP.
+- Listagem do histórico por `GET /api/buscas`, em ordem decrescente de criação.
+- Consulta detalhada por `GET /api/buscas/{id}`, com resposta 404 para ID inexistente.
+- Uso do score e da temperatura de `BuscaLead` no detalhe histórico.
+- Exposição dos dados comerciais atuais e do link manual de WhatsApp nos leads do histórico.
 - Listagem dos leads persistidos por `GET /api/leads`.
 - Filtros combináveis por status, categoria e temperatura.
 - Consulta individual por `GET /api/leads/{id}`, com resposta 404 para ID inexistente.
@@ -258,11 +290,13 @@ src/test/java/dev/jlm/leadshunter/
 - Testes do serviço de leads para filtros, ordenação, mapeamento e ID inexistente.
 - Testes da atualização comercial e da validação de `AtualizarLeadRequest`.
 - Testes de geração e rejeição do link manual do WhatsApp.
+- Testes do histórico para ordenação, conversão de categorias, snapshot de scoring e busca inexistente.
+- Testes HTTP de listagem, detalhe e resposta 404 dos endpoints de histórico.
 - Chamada externa controlada com Google Places API (New), retornando e persistindo leads reais.
 
-A última execução de `./mvnw test` concluiu 61 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
+A última execução de `./mvnw test` concluiu 67 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
 
-A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`.
+A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`. Os novos endpoints também foram validados contra o MySQL local: a listagem retornou a busca existente com HTTP `200`, o detalhe retornou seus 18 vínculos ordenados pelo score histórico com HTTP `200` e um ID inexistente retornou HTTP `404`.
 
 ## O que ainda não está feito
 
@@ -281,7 +315,6 @@ BuscaResponse com leads persistidos e pontuados
 
 Ainda falta:
 
-- implementar consulta ao histórico de buscas;
 - implementar exportação CSV/Excel; `ExportService` ainda é um esqueleto;
 - tratar de forma centralizada erros HTTP da Google, cota excedida e indisponibilidade;
-- criar testes HTTP dos controllers e ampliar cenários de integração JPA e tratamento de erros.
+- ampliar os testes HTTP dos demais controllers e os cenários de integração JPA e tratamento de erros.

@@ -8,6 +8,7 @@ import dev.jlm.leadshunter.lead.Lead;
 import dev.jlm.leadshunter.lead.LeadRepository;
 import dev.jlm.leadshunter.lead.StatusFunil;
 import dev.jlm.leadshunter.lead.TelefoneNormalizer;
+import dev.jlm.leadshunter.lead.Temperatura;
 import dev.jlm.leadshunter.lead.WhatsAppLinkGenerator;
 import dev.jlm.leadshunter.scoring.ScoringService;
 import java.util.LinkedHashMap;
@@ -84,6 +85,35 @@ public class BuscaService {
             buscaSalva.getTotalEncontrados(),
             buscaSalva.getCriadoEm(),
             toLeadEncontradoResponse(leads)
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<BuscaResumoResponse> listarHistorico() {
+        return buscaRepository.findAllByOrderByCriadoEmDesc().stream()
+            .map(this::toResumoResponse)
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public BuscaDetalheResponse buscarHistoricoPorId(Long id) {
+        Busca busca = buscaRepository.findById(id)
+            .orElseThrow(() -> new BuscaNaoEncontradaException(id));
+        List<BuscaDetalheResponse.LeadHistoricoResponse> leads = buscaLeadRepository
+            .findByBuscaIdOrderByScoreNaBuscaDesc(id).stream()
+            .map(this::toLeadHistoricoResponse)
+            .toList();
+
+        return new BuscaDetalheResponse(
+            busca.getId(),
+            busca.getEnderecoBase(),
+            busca.getLatitude(),
+            busca.getLongitude(),
+            busca.getRaioKm(),
+            deserializarCategorias(busca.getCategoriasBuscadas()),
+            busca.getTotalEncontrados(),
+            busca.getCriadoEm(),
+            leads
         );
     }
 
@@ -164,6 +194,51 @@ public class BuscaService {
         return categorias.stream()
             .map(CategoriaNegocio::name)
             .collect(Collectors.joining(","));
+    }
+
+    private List<CategoriaNegocio> deserializarCategorias(String categorias) {
+        if (categorias == null || categorias.isBlank()) {
+            return List.of();
+        }
+        return List.of(categorias.split(",")).stream()
+            .map(CategoriaNegocio::valueOf)
+            .toList();
+    }
+
+    private BuscaResumoResponse toResumoResponse(Busca busca) {
+        return new BuscaResumoResponse(
+            busca.getId(),
+            busca.getEnderecoBase(),
+            busca.getLatitude(),
+            busca.getLongitude(),
+            busca.getRaioKm(),
+            deserializarCategorias(busca.getCategoriasBuscadas()),
+            busca.getTotalEncontrados(),
+            busca.getCriadoEm()
+        );
+    }
+
+    private BuscaDetalheResponse.LeadHistoricoResponse toLeadHistoricoResponse(
+        BuscaLead buscaLead
+    ) {
+        Lead lead = buscaLead.getLead();
+        return new BuscaDetalheResponse.LeadHistoricoResponse(
+            lead.getId(),
+            lead.getNome(),
+            lead.getCategoria(),
+            lead.getEnderecoFormatado(),
+            lead.getTelefone(),
+            whatsAppLinkGenerator.gerar(lead.getTelefoneNormalizado()),
+            buscaLead.getScoreNaBusca(),
+            toTemperatura(buscaLead.getTemperaturaNaBusca()),
+            lead.getStatus(),
+            lead.getObservacoes(),
+            lead.getUltimoContatoEm()
+        );
+    }
+
+    private Temperatura toTemperatura(String valor) {
+        return valor == null ? null : Temperatura.valueOf(valor);
     }
 
     private List<BuscaResponse.LeadEncontradoResponse> toLeadEncontradoResponse(

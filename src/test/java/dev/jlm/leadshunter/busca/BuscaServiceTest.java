@@ -1,6 +1,7 @@
 package dev.jlm.leadshunter.busca;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -227,6 +228,87 @@ class BuscaServiceTest {
         assertThat(primeiraResposta.id()).isNotEqualTo(respostaEquivalente.id());
     }
 
+    @Test
+    void deveListarHistoricoDaBuscaMaisRecenteParaAMaisAntiga() {
+        Busca buscaRecente = criarBuscaHistorica(
+            22L,
+            "Centro de Vitória",
+            "PADARIA,MERCADO",
+            LocalDateTime.of(2026, 8, 18, 11, 0)
+        );
+        Busca buscaAntiga = criarBuscaHistorica(
+            21L,
+            "Praia do Canto",
+            "RESTAURANTE",
+            LocalDateTime.of(2026, 8, 17, 9, 30)
+        );
+        when(buscaRepository.findAllByOrderByCriadoEmDesc())
+            .thenReturn(List.of(buscaRecente, buscaAntiga));
+
+        List<BuscaResumoResponse> resposta = criarService().listarHistorico();
+
+        assertThat(resposta).extracting(BuscaResumoResponse::id)
+            .containsExactly(22L, 21L);
+        assertThat(resposta.getFirst().categorias())
+            .containsExactly(CategoriaNegocio.PADARIA, CategoriaNegocio.MERCADO);
+        assertThat(resposta.get(1).categorias())
+            .containsExactly(CategoriaNegocio.RESTAURANTE);
+        verify(buscaRepository).findAllByOrderByCriadoEmDesc();
+    }
+
+    @Test
+    void deveBuscarHistoricoComScoreDaBuscaEDadosComerciaisAtuais() {
+        Busca busca = criarBuscaHistorica(
+            22L,
+            "Centro de Vitória",
+            "PADARIA",
+            LocalDateTime.of(2026, 8, 18, 11, 0)
+        );
+        Lead lead = new Lead();
+        lead.setId(35L);
+        lead.setNome("Padaria Central");
+        lead.setCategoria(CategoriaNegocio.PADARIA);
+        lead.setEnderecoFormatado("Rua Sete, 100");
+        lead.setTelefone("(27) 99999-0000");
+        lead.setTelefoneNormalizado("5527999990000");
+        lead.setScore(95);
+        lead.setTemperatura(Temperatura.QUENTE);
+        lead.setStatus(StatusFunil.CONTATADO);
+        lead.setObservacoes("Retornar amanhã");
+        lead.setUltimoContatoEm(LocalDateTime.of(2026, 8, 18, 14, 0));
+
+        BuscaLead vinculo = new BuscaLead();
+        vinculo.setBusca(busca);
+        vinculo.setLead(lead);
+        vinculo.setScoreNaBusca(55);
+        vinculo.setTemperaturaNaBusca("MORNO");
+
+        when(buscaRepository.findById(22L)).thenReturn(Optional.of(busca));
+        when(buscaLeadRepository.findByBuscaIdOrderByScoreNaBuscaDesc(22L))
+            .thenReturn(List.of(vinculo));
+
+        BuscaDetalheResponse resposta = criarService().buscarHistoricoPorId(22L);
+
+        assertThat(resposta.id()).isEqualTo(22L);
+        assertThat(resposta.leads()).singleElement().satisfies(item -> {
+            assertThat(item.id()).isEqualTo(35L);
+            assertThat(item.scoreNaBusca()).isEqualTo(55);
+            assertThat(item.temperaturaNaBusca()).isEqualTo(Temperatura.MORNO);
+            assertThat(item.status()).isEqualTo(StatusFunil.CONTATADO);
+            assertThat(item.observacoes()).isEqualTo("Retornar amanhã");
+            assertThat(item.whatsappUrl()).isEqualTo("https://wa.me/5527999990000");
+        });
+    }
+
+    @Test
+    void deveRetornarErroQuandoBuscaHistoricaNaoExistir() {
+        when(buscaRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> criarService().buscarHistoricoPorId(99L))
+            .isInstanceOf(BuscaNaoEncontradaException.class)
+            .hasMessageContaining("99");
+    }
+
     private BuscaService criarService() {
         return new BuscaService(
             buscaRepository,
@@ -264,5 +346,23 @@ class BuscaServiceTest {
             "OPERATIONAL",
             List.of("bakery")
         );
+    }
+
+    private Busca criarBuscaHistorica(
+        Long id,
+        String enderecoBase,
+        String categorias,
+        LocalDateTime criadoEm
+    ) {
+        Busca busca = new Busca();
+        busca.setId(id);
+        busca.setEnderecoBase(enderecoBase);
+        busca.setLatitude(new BigDecimal("-20.3155"));
+        busca.setLongitude(new BigDecimal("-40.3128"));
+        busca.setRaioKm(5);
+        busca.setCategoriasBuscadas(categorias);
+        busca.setTotalEncontrados(1);
+        busca.setCriadoEm(criadoEm);
+        return busca;
     }
 }
