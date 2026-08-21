@@ -108,6 +108,30 @@ BuscaService.java
 BuscaResumoResponse.java ou BuscaDetalheResponse.java --> Resposta HTTP 200 OK
 ```
 
+A exportação CSV e Excel consulta os mesmos leads e filtros do Kanban:
+
+```text
+GET /api/exportacao/leads.csv?status=...&categoria=...&temperatura=...
+    |
+    v
+ExportController.java
+    |
+    v
+ExportService.java --> LeadService.java --> LeadRepository.java --> MySQL
+    |
+    +--> escaping CSV e URL manual de WhatsApp
+    v
+Arquivo UTF-8 leads.csv --> Resposta HTTP 200 OK
+
+GET /api/exportacao/leads.xlsx?status=...&categoria=...&temperatura=...
+    |
+    v
+ExportController.java --> ExportService.java --> Apache POI
+    |
+    v
+Arquivo leads.xlsx --> Resposta HTTP 200 OK
+```
+
 ## Fluxo atual, arquivo por arquivo
 
 ### 1. `BuscaController.java`
@@ -213,6 +237,10 @@ Representam e persistem o relacionamento N:N. Assim, uma busca pode encontrar v�
 
 São os contratos públicos do histórico. O resumo contém os parâmetros, total e data da busca. O detalhe acrescenta os leads vinculados, o link manual de WhatsApp, o score e a temperatura daquela execução, além dos campos comerciais atuais. As categorias persistidas como texto são novamente apresentadas como valores de `CategoriaNegocio`.
 
+### 18. `ExportController.java` e `ExportService.java`
+
+Expõem `GET /api/exportacao/leads.csv` e `GET /api/exportacao/leads.xlsx`. Ambos aceitam os filtros opcionais `status`, `categoria` e `temperatura`, reutilizam a ordenação e o mapeamento de `LeadService` e exportam as colunas externas e comerciais do `Lead`. O CSV é UTF-8 com escaping de vírgulas, aspas e quebras de linha; o Excel é gerado com Apache POI, cabeçalho em negrito, filtro automático, primeira linha congelada, autoajuste de colunas e células tipadas para números e datas. O link de WhatsApp exportado continua sendo apenas manual.
+
 ## Estrutura relacionada
 
 ```text
@@ -221,7 +249,7 @@ src/main/java/dev/jlm/leadshunter/
 ├── integracao/places/     # Cliente Google, rate limit, contratos e mapper
 ├── lead/                  # Gestão de leads, telefone e link manual de WhatsApp
 ├── scoring/               # Cálculo centralizado de score e temperatura
-├── exportacao/            # Estrutura futura de exportação
+├── exportacao/            # Exportação CSV e Excel
 └── config/                # Endpoints e configurações gerais
 
 src/main/resources/
@@ -269,6 +297,12 @@ src/test/java/dev/jlm/leadshunter/
 - Consulta detalhada por `GET /api/buscas/{id}`, com resposta 404 para ID inexistente.
 - Uso do score e da temperatura de `BuscaLead` no detalhe histórico.
 - Exposição dos dados comerciais atuais e do link manual de WhatsApp nos leads do histórico.
+- Exportação CSV por `GET /api/exportacao/leads.csv`.
+- Exportação Excel por `GET /api/exportacao/leads.xlsx` com Apache POI.
+- Filtros de status, categoria e temperatura aplicados também na exportação.
+- Geração de CSV UTF-8 com escaping de vírgulas, aspas e quebras de linha.
+- Header de download `Content-Disposition` com o arquivo `leads.csv`.
+- Planilha Excel com cabeçalho formatado, filtro, congelamento e dados tipados.
 - Listagem dos leads persistidos por `GET /api/leads`.
 - Filtros combináveis por status, categoria e temperatura.
 - Consulta individual por `GET /api/leads/{id}`, com resposta 404 para ID inexistente.
@@ -292,11 +326,13 @@ src/test/java/dev/jlm/leadshunter/
 - Testes de geração e rejeição do link manual do WhatsApp.
 - Testes do histórico para ordenação, conversão de categorias, snapshot de scoring e busca inexistente.
 - Testes HTTP de listagem, detalhe e resposta 404 dos endpoints de histórico.
+- Testes do conteúdo CSV, escaping, filtros, arquivo vazio e headers HTTP de download.
+- Testes de leitura da planilha Excel gerada, tipos de célula e headers HTTP de download.
 - Chamada externa controlada com Google Places API (New), retornando e persistindo leads reais.
 
-A última execução de `./mvnw test` concluiu 67 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
+A última execução de `./mvnw test` concluiu 73 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
 
-A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`. Os novos endpoints também foram validados contra o MySQL local: a listagem retornou a busca existente com HTTP `200`, o detalhe retornou seus 18 vínculos ordenados pelo score histórico com HTTP `200` e um ID inexistente retornou HTTP `404`.
+A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`. Os novos endpoints também foram validados contra o MySQL local: a listagem retornou a busca existente com HTTP `200`, o detalhe retornou seus 18 vínculos ordenados pelo score histórico com HTTP `200` e um ID inexistente retornou HTTP `404`. A exportação CSV filtrada por `status=NOVO` retornou HTTP `200`, `Content-Type: text/csv;charset=UTF-8`, nome de download `leads.csv` e 18 linhas de dados. A exportação Excel com o mesmo filtro retornou HTTP `200`, `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, nome `leads.xlsx` e arquivo reconhecido como Excel 2007+ com ZIP íntegro.
 
 ## O que ainda não está feito
 
@@ -315,6 +351,5 @@ BuscaResponse com leads persistidos e pontuados
 
 Ainda falta:
 
-- implementar exportação CSV/Excel; `ExportService` ainda é um esqueleto;
 - tratar de forma centralizada erros HTTP da Google, cota excedida e indisponibilidade;
 - ampliar os testes HTTP dos demais controllers e os cenários de integração JPA e tratamento de erros.
