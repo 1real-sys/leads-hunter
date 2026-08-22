@@ -179,7 +179,7 @@ Isola a comunicação com o Google Places API (New). Ele:
 - faz um `POST` para `places:searchNearby`;
 - usa uma Field Mask para pedir somente ID, nome, endereço, telefones, coordenadas, avaliação, quantidade de avaliações, situação e tipos.
 
-Se a chave estiver ausente, a chamada é interrompida com uma exceção explicando qual variável deve ser configurada.
+Se a chave estiver ausente, a chamada é interrompida com `PlacesApiConfigurationException`, explicando qual variável deve ser configurada. Respostas HTTP da Google são traduzidas para exceções do domínio da integração: `429` vira cota excedida, `401/403` viram falha de configuração, outros `4xx` viram consulta rejeitada e respostas `5xx` ou falhas de rede viram indisponibilidade. Se o corpo não puder ser convertido, o cliente sinaliza resposta inválida. Os detalhes brutos da resposta externa permanecem somente na causa interna da exceção.
 
 Os campos de telefone são `internationalPhoneNumber` e `nationalPhoneNumber`. Eles pertencem ao Nearby Search Enterprise, assim como o campo `rating` que a busca já solicitava.
 
@@ -241,6 +241,10 @@ São os contratos públicos do histórico. O resumo contém os parâmetros, tota
 
 Expõem `GET /api/exportacao/leads.csv` e `GET /api/exportacao/leads.xlsx`. Ambos aceitam os filtros opcionais `status`, `categoria` e `temperatura`, reutilizam a ordenação e o mapeamento de `LeadService` e exportam as colunas externas e comerciais do `Lead`. O CSV é UTF-8 com escaping de vírgulas, aspas e quebras de linha; o Excel é gerado com Apache POI, cabeçalho em negrito, filtro automático, primeira linha congelada, autoajuste de colunas e células tipadas para números e datas. O link de WhatsApp exportado continua sendo apenas manual.
 
+### 19. `ApiExceptionHandler.java` e `ApiErrorResponse.java`
+
+`ApiExceptionHandler` centraliza a conversão das falhas de integração e das exceções de recurso não encontrado em um contrato JSON único. Toda resposta contém `timestamp`, `status`, `codigo`, `mensagem` e `path`. Falhas de cota ou do rate limit local retornam `429`; chave ausente ou indisponibilidade retornam `503`; resposta inválida ou consulta rejeitada pela Google retornam `502`; buscas e leads inexistentes retornam `404`. O contrato não expõe stack trace, corpo bruto da Google ou credenciais.
+
 ## Estrutura relacionada
 
 ```text
@@ -250,7 +254,7 @@ src/main/java/dev/jlm/leadshunter/
 ├── lead/                  # Gestão de leads, telefone e link manual de WhatsApp
 ├── scoring/               # Cálculo centralizado de score e temperatura
 ├── exportacao/            # Exportação CSV e Excel
-└── config/                # Endpoints e configurações gerais
+└── config/                # Endpoints, configurações e tratamento HTTP de erros
 
 src/main/resources/
 ├── application.yml        # Banco, Flyway e variável da chave Google
@@ -259,6 +263,7 @@ src/main/resources/
 src/test/java/dev/jlm/leadshunter/
 ├── busca/                 # Teste unitário do fluxo de BuscaService
 ├── integracao/places/     # Testes do cliente, mapper e rate limit da Google
+├── config/                # Testes do contrato HTTP de erros
 ├── lead/                  # Testes de consulta, atualização e telefone
 └── scoring/               # Testes das regras de score e temperatura
 ```
@@ -303,6 +308,8 @@ src/test/java/dev/jlm/leadshunter/
 - Geração de CSV UTF-8 com escaping de vírgulas, aspas e quebras de linha.
 - Header de download `Content-Disposition` com o arquivo `leads.csv`.
 - Planilha Excel com cabeçalho formatado, filtro, congelamento e dados tipados.
+- Tratamento centralizado das falhas da Google Places e contrato JSON uniforme de erros.
+- Distinção entre rate limit local, cota externa, configuração rejeitada, indisponibilidade e resposta inválida.
 - Listagem dos leads persistidos por `GET /api/leads`.
 - Filtros combináveis por status, categoria e temperatura.
 - Consulta individual por `GET /api/leads/{id}`, com resposta 404 para ID inexistente.
@@ -326,11 +333,13 @@ src/test/java/dev/jlm/leadshunter/
 - Testes de geração e rejeição do link manual do WhatsApp.
 - Testes do histórico para ordenação, conversão de categorias, snapshot de scoring e busca inexistente.
 - Testes HTTP de listagem, detalhe e resposta 404 dos endpoints de histórico.
+- Testes HTTP do contrato de erro para cota excedida, indisponibilidade, resposta inválida e recurso inexistente.
+- Testes do cliente Places com respostas HTTP simuladas para cota, autorização, indisponibilidade e payload inválido.
 - Testes do conteúdo CSV, escaping, filtros, arquivo vazio e headers HTTP de download.
 - Testes de leitura da planilha Excel gerada, tipos de célula e headers HTTP de download.
 - Chamada externa controlada com Google Places API (New), retornando e persistindo leads reais.
 
-A última execução de `./mvnw test` concluiu 73 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
+A última execução de `./mvnw test` concluiu 81 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
 
 A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`. Os novos endpoints também foram validados contra o MySQL local: a listagem retornou a busca existente com HTTP `200`, o detalhe retornou seus 18 vínculos ordenados pelo score histórico com HTTP `200` e um ID inexistente retornou HTTP `404`. A exportação CSV filtrada por `status=NOVO` retornou HTTP `200`, `Content-Type: text/csv;charset=UTF-8`, nome de download `leads.csv` e 18 linhas de dados. A exportação Excel com o mesmo filtro retornou HTTP `200`, `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, nome `leads.xlsx` e arquivo reconhecido como Excel 2007+ com ZIP íntegro.
 
@@ -351,5 +360,4 @@ BuscaResponse com leads persistidos e pontuados
 
 Ainda falta:
 
-- tratar de forma centralizada erros HTTP da Google, cota excedida e indisponibilidade;
 - ampliar os testes HTTP dos demais controllers e os cenários de integração JPA e tratamento de erros.
