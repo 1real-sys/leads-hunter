@@ -243,7 +243,7 @@ Expõem `GET /api/exportacao/leads.csv` e `GET /api/exportacao/leads.xlsx`. Ambo
 
 ### 19. `ApiExceptionHandler.java` e `ApiErrorResponse.java`
 
-`ApiExceptionHandler` centraliza a conversão das falhas de integração e das exceções de recurso não encontrado em um contrato JSON único. Toda resposta contém `timestamp`, `status`, `codigo`, `mensagem` e `path`. Falhas de cota ou do rate limit local retornam `429`; chave ausente ou indisponibilidade retornam `503`; resposta inválida ou consulta rejeitada pela Google retornam `502`; buscas e leads inexistentes retornam `404`. O contrato não expõe stack trace, corpo bruto da Google ou credenciais.
+`ApiExceptionHandler` centraliza a conversão das falhas de integração, validação de payload, parâmetros inválidos e exceções de recurso não encontrado em um contrato JSON único. Toda resposta contém `timestamp`, `status`, `codigo`, `mensagem` e `path`. Falhas de cota ou do rate limit local retornam `429`; chave ausente ou indisponibilidade retornam `503`; resposta inválida ou consulta rejeitada pela Google retornam `502`; validações e requisições malformadas retornam `400`; buscas e leads inexistentes retornam `404`. O contrato não expõe stack trace, corpo bruto da Google ou credenciais.
 
 ## Estrutura relacionada
 
@@ -333,13 +333,16 @@ src/test/java/dev/jlm/leadshunter/
 - Testes de geração e rejeição do link manual do WhatsApp.
 - Testes do histórico para ordenação, conversão de categorias, snapshot de scoring e busca inexistente.
 - Testes HTTP de listagem, detalhe e resposta 404 dos endpoints de histórico.
+- Testes HTTP do `POST /api/buscas`, incluindo resposta `201` e rejeição de payload inválido.
+- Testes HTTP do `LeadController` para filtros, consulta, atualização parcial, 404 e validações.
 - Testes HTTP do contrato de erro para cota excedida, indisponibilidade, resposta inválida e recurso inexistente.
+- Tratamento HTTP uniforme para Bean Validation, JSON ilegível e parâmetros de enum inválidos.
 - Testes do cliente Places com respostas HTTP simuladas para cota, autorização, indisponibilidade e payload inválido.
 - Testes do conteúdo CSV, escaping, filtros, arquivo vazio e headers HTTP de download.
 - Testes de leitura da planilha Excel gerada, tipos de célula e headers HTTP de download.
 - Chamada externa controlada com Google Places API (New), retornando e persistindo leads reais.
 
-A última execução de `./mvnw test` concluiu 81 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
+A última execução de `./mvnw test` concluiu 89 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
 
 A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`. Os novos endpoints também foram validados contra o MySQL local: a listagem retornou a busca existente com HTTP `200`, o detalhe retornou seus 18 vínculos ordenados pelo score histórico com HTTP `200` e um ID inexistente retornou HTTP `404`. A exportação CSV filtrada por `status=NOVO` retornou HTTP `200`, `Content-Type: text/csv;charset=UTF-8`, nome de download `leads.csv` e 18 linhas de dados. A exportação Excel com o mesmo filtro retornou HTTP `200`, `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, nome `leads.xlsx` e arquivo reconhecido como Excel 2007+ com ZIP íntegro.
 
@@ -360,4 +363,4 @@ BuscaResponse com leads persistidos e pontuados
 
 Ainda falta:
 
-- ampliar os testes HTTP dos demais controllers e os cenários de integração JPA e tratamento de erros.
+- ampliar os cenários de integração JPA e os casos de erro ainda não cobertos.

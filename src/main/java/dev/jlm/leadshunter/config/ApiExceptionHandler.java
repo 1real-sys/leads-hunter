@@ -12,8 +12,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -80,6 +83,44 @@ public class ApiExceptionHandler {
         HttpServletRequest request
     ) {
         return resposta(HttpStatus.NOT_FOUND, "LEAD_NAO_ENCONTRADO", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiErrorResponse> handleValidation(
+        MethodArgumentNotValidException exception,
+        HttpServletRequest request
+    ) {
+        String mensagem = exception.getBindingResult().getFieldErrors().stream()
+            .findFirst()
+            .map(error -> error.getField() + ": " + error.getDefaultMessage())
+            .orElse("A requisição contém dados inválidos.");
+        return resposta(HttpStatus.BAD_REQUEST, "VALIDACAO_INVALIDA", mensagem, request);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnreadableMessage(
+        HttpMessageNotReadableException exception,
+        HttpServletRequest request
+    ) {
+        return resposta(
+            HttpStatus.BAD_REQUEST,
+            "REQUISICAO_INVALIDA",
+            "O corpo da requisição está ausente ou contém dados inválidos.",
+            request
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleTypeMismatch(
+        MethodArgumentTypeMismatchException exception,
+        HttpServletRequest request
+    ) {
+        return resposta(
+            HttpStatus.BAD_REQUEST,
+            "REQUISICAO_INVALIDA",
+            "O parâmetro de consulta '" + exception.getName() + "' é inválido.",
+            request
+        );
     }
 
     private ResponseEntity<ApiErrorResponse> resposta(
