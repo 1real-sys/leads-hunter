@@ -261,7 +261,7 @@ src/main/resources/
 └── db/migration/          # Schema versionado
 
 src/test/java/dev/jlm/leadshunter/
-├── busca/                 # Teste unitário do fluxo de BuscaService
+├── busca/                 # Testes do fluxo de BuscaService e integração JPA
 ├── integracao/places/     # Testes do cliente, mapper e rate limit da Google
 ├── config/                # Testes do contrato HTTP de erros
 ├── lead/                  # Testes de consulta, atualização e telefone
@@ -322,6 +322,9 @@ src/test/java/dev/jlm/leadshunter/
 - Ausência de qualquer envio automático ou em massa pelo WhatsApp.
 - Teste de contexto Spring com MySQL e Flyway.
 - Testes do `BuscaService` para criação, deduplicação, vínculo e preservação dos dados comerciais.
+- Teste de integração JPA com MySQL e Flyway para persistência N:N, deduplicação e rollback transacional.
+- Validação da preservação comercial e do snapshot de score/temperatura em buscas repetidas.
+- Validação da restrição única de `googlePlaceId` diretamente no banco.
 - Testes de resposta completa e vazia do `PlacesResponseMapper`.
 - Testes de formatos nacionais, internacionais, ausentes e inválidos de telefone.
 - Testes das faixas de score, reviews, rating e limites de temperatura.
@@ -342,7 +345,7 @@ src/test/java/dev/jlm/leadshunter/
 - Testes de leitura da planilha Excel gerada, tipos de célula e headers HTTP de download.
 - Chamada externa controlada com Google Places API (New), retornando e persistindo leads reais.
 
-A última execução de `./mvnw test` concluiu 89 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
+A última execução de `./mvnw test` concluiu 91 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
 
 A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`. Os novos endpoints também foram validados contra o MySQL local: a listagem retornou a busca existente com HTTP `200`, o detalhe retornou seus 18 vínculos ordenados pelo score histórico com HTTP `200` e um ID inexistente retornou HTTP `404`. A exportação CSV filtrada por `status=NOVO` retornou HTTP `200`, `Content-Type: text/csv;charset=UTF-8`, nome de download `leads.csv` e 18 linhas de dados. A exportação Excel com o mesmo filtro retornou HTTP `200`, `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, nome `leads.xlsx` e arquivo reconhecido como Excel 2007+ com ZIP íntegro.
 
@@ -363,4 +366,4 @@ BuscaResponse com leads persistidos e pontuados
 
 Ainda falta:
 
-- ampliar os cenários de integração JPA e os casos de erro ainda não cobertos.
+- ampliar os casos de erro ainda não cobertos e revisar o polimento final do MVP.
