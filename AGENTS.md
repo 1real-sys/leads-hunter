@@ -1,33 +1,31 @@
-# Instruções do projeto — Leads Hunter
+# AGENTS.md — Leads Hunter
 
-Pacote raiz do projeto:
+Este arquivo é a fonte principal de instruções para qualquer agente trabalhando neste repositório. Antes de executar qualquer tarefa, leia este arquivo e siga o fluxo abaixo.
 
-`dev.jlm.leadshunter`
+## Projeto
 
-Não criar `com.leadradar`.
-
-Classe principal:
-
-`src/main/java/dev/jlm/leadshunter/LeadsHunterApplication.java`
+- Pacote raiz: `dev.jlm.leadshunter`
+- Nunca criar ou utilizar `com.leadradar`.
+- Classe principal: `src/main/java/dev/jlm/leadshunter/LeadsHunterApplication.java`
+- Backend: Java 25 + Spring Boot 4.x + Maven + Spring Web + Spring Data JPA + Hibernate/JPA + Jakarta Validation + Flyway + MySQL.
 
 ## Regras obrigatórias
 
-- Projeto backend local em Java 25 + Spring Boot 4.x.
 - Não implementar frontend se a tarefa não pedir.
 - Não implementar autenticação, deploy, scraping de Instagram, Redis, RabbitMQ ou Kafka no MVP.
-- WhatsApp deve ser apenas link manual `https://wa.me/55...`.
-- Nunca implementar disparo automático ou em massa.
-- Não usar `lead.busca_id`.
-- O relacionamento correto é `Busca N:N Lead` via `BuscaLead`.
+- WhatsApp deve ser apenas link manual `https://wa.me/55...`; nunca implementar disparo automático ou em massa.
+- Não usar `lead.busca_id`. O relacionamento correto é `Busca N:N Lead` via `BuscaLead`.
 - Deduplicar `Lead` por `googlePlaceId`.
 - Preservar `status`, `observacoes` e `ultimoContatoEm` quando um lead existente aparecer em nova busca.
 - Não hardcodar chave da Google Places API.
-- Usar Flyway para schema.
-- Não usar `ddl-auto=update`.
+- Usar Flyway para schema. Nunca usar `ddl-auto=update`.
+- Não adicionar dependências, refatorações grandes, alterações arquiteturais ou funcionalidades fora do escopo sem necessidade real.
+- Preservar o comportamento existente salvo quando a tarefa exigir mudança.
+- Não precisa ler v1.md
 
-## Skills adicionais
+## Skills
 
-As skills completas ficam em:
+Skills disponíveis:
 
 - `.opencode/skills/leadradar-overview/SKILL.md`
 - `.opencode/skills/leadradar-backend/SKILL.md`
@@ -36,14 +34,232 @@ As skills completas ficam em:
 - `.opencode/skills/leadradar-frontend/SKILL.md`
 - `.opencode/skills/leadradar-roadmap/SKILL.md`
 
-Leia apenas a skill relevante para a tarefa atual.
+Escolha automaticamente apenas a(s) skill(s) relevante(s):
 
-Exemplos:
+- entidade, migration, relacionamento, constraint, índice, persistência → `leadradar-database`;
+- service, controller, DTO, regra de negócio, validação, Places, cache, rate limit, exportação, API REST → `leadradar-backend`;
+- organização, fluxo, responsabilidades, decisão estrutural ou refatoração arquitetural → `leadradar-architecture`;
+- Angular/UI/integração frontend-backend → `leadradar-frontend`;
+- priorização, próximo passo, MVP ou planejamento → `leadradar-roadmap`;
+- tarefa ampla/multidomínio → `leadradar-overview` quando necessário.
 
-- Tarefa de entidade, migration ou relacionamento: leia `leadradar-database`.
-- Tarefa de service, controller, DTO ou regra de negócio: leia `leadradar-backend`.
-- Tarefa de organização, fluxo ou decisão estrutural: leia `leadradar-architecture`.
-- Tarefa de priorização: leia `leadradar-roadmap`.
-- Tarefa de frontend: leia `leadradar-frontend`.
+Não leia todas as skills para tarefas pequenas. Em caso de conflito: `AGENTS.md > skill especializada > documentação auxiliar`.
 
-Não leia todas as skills se a tarefa for pequena.
+## Contexto persistente
+
+Consulte `fluxo.md` antes de implementações relevantes para entender estado atual, pendências, decisões e próximo passo.
+
+Consulte `HISTORICO_IMPLEMENTACOES.md` quando precisar entender a evolução do projeto.
+
+Não dependa exclusivamente da conversa. Código atual, Git e documentação persistente são fontes de verdade.
+
+## Fluxo obrigatório de trabalho
+
+Para qualquer tarefa de implementação:
+
+1. Leia este `AGENTS.md`.
+2. Entenda exatamente o pedido.
+3. Consulte `fluxo.md` quando aplicável.
+4. Escolha e leia somente a(s) skill(s) necessária(s).
+5. Inspecione os arquivos e o fluxo existente antes de alterar código.
+6. Identifique impactos, dependências, comportamentos que precisam ser preservados e validações necessárias.
+7. Implemente somente o escopo solicitado, seguindo os padrões existentes.
+8. Mantenha o usuário informado resumidamente sobre o que está analisando, alterando e validando.
+9. Execute testes/builds adequados.
+10. Corrija falhas causadas pela implementação e valide novamente.
+11. Atualize `fluxo.md`.
+12. Atualize `HISTORICO_IMPLEMENTACOES.md` quando a mudança representar uma implementação relevante.
+13. Entregue o relatório final obrigatório.
+
+Para tarefas pequenas, não produza planejamento excessivo. Problemas fora do escopo devem ser apenas informados quando relevantes, não corrigidos silenciosamente.
+
+## Validação
+
+Após alterações no backend, execute as validações adequadas, como:
+
+```bash
+./mvnw test
+```
+
+E, quando apropriado:
+
+```bash
+./mvnw verify
+```
+
+ou:
+
+```bash
+./mvnw package
+```
+
+Para frontend, siga as validações da skill/configuração real do projeto.
+
+Nunca afirme que teste, build, aplicação, endpoint ou migration funcionou sem executar validação que sustente a afirmação. Se não puder validar, diga explicitamente. Se falhar, investigue, corrija quando estiver no escopo e diferencie falha nova de falha preexistente.
+
+## Atualização do fluxo.md
+
+Após tarefa relevante, mantenha `fluxo.md` sincronizado com o estado REAL do projeto, atualizando conforme necessário:
+
+- concluído/parcial;
+- decisões;
+- pendências;
+- bloqueios;
+- próximo passo.
+
+`fluxo.md` representa **onde o projeto está e para onde vai**, não um histórico detalhado.
+
+Nunca marque como concluído algo não implementado ou inadequadamente validado.
+
+## Atualização do HISTORICO_IMPLEMENTACOES.md
+
+Após implementação historicamente relevante, adicione a próxima entrada numerada.
+
+O histórico deve explicar de forma simples:
+
+- o que foi implementado;
+- para que serve;
+- arquivos criados;
+- arquivos modificados;
+- arquivos removidos, quando houver.
+
+Exemplo:
+
+```markdown
+## 12. Implementação da exportação Excel
+
+Foi adicionada a exportação dos leads para Excel, permitindo gerar uma planilha com os dados relevantes cadastrados.
+
+### Arquivos envolvidos
+
+**Criados:**
+- `src/main/.../ExcelExportService.java`
+
+**Modificados:**
+- `src/main/.../ExportController.java`
+- `pom.xml`
+```
+
+Não incluir código, diffs, detalhes linha por linha, arquivos apenas lidos, caches, builds ou temporários. Agrupe mudanças da mesma funcionalidade. Alterações triviais não precisam de nova entrada.
+
+`HISTORICO_IMPLEMENTACOES.md` representa **como o projeto chegou ao estado atual**.
+
+## Relatório final obrigatório
+
+Ao concluir qualquer tarefa que altere o projeto, use esta estrutura:
+
+### Implementado
+
+Explique objetivamente cada lógica/comportamento implementado e em qual arquivo/componente ocorreu. Não reporte apenas nomes de arquivos.
+
+### Validação
+
+Liste somente validações realmente executadas e seus resultados, por exemplo:
+
+- `./mvnw test` — passou, 48 testes executados.
+- `./mvnw package` — passou.
+- `ScoringServiceTest` — 8 testes passaram.
+
+Nunca invente resultados. Se algo não foi executado ou falhou, informe claramente.
+
+### Documentação atualizada
+
+Informe atualizações realizadas em `fluxo.md` e `HISTORICO_IMPLEMENTACOES.md` e, quando relevante, o que mudou neles.
+
+### Arquivos criados
+
+Liste somente arquivos realmente criados. Se nenhum: `Nenhum.`
+
+### Arquivos modificados
+
+Liste somente arquivos realmente modificados, incluindo documentação alterada. Se nenhum: `Nenhum.`
+
+### Arquivos removidos
+
+Inclua somente quando houver remoções.
+
+### Observações
+
+Inclua somente se houver limitação, decisão técnica importante, dívida técnica, comportamento inesperado, falha preexistente ou algo relevante deixado propositalmente fora do escopo. Não gere sugestões genéricas.
+
+Se a tarefa for apenas análise e não modificar arquivos, não é necessário usar o relatório completo; informe apenas o resultado.
+
+## Honestidade operacional
+
+Nunca:
+
+- afirmar que leu arquivo que não leu;
+- afirmar que executou comando que não executou;
+- afirmar que validação passou sem executá-la;
+- declarar implementação completa com parte necessária pendente;
+- esconder erros;
+- inventar conteúdo em `fluxo.md` ou `HISTORICO_IMPLEMENTACOES.md`;
+- documentar comportamento que o código não possui.
+
+Código, testes, documentação e relatório final devem representar o mesmo estado real.
+
+## Prioridade das instruções
+
+Em caso de dúvida ou conflito:
+
+1. pedido explícito atual do usuário;
+2. este `AGENTS.md`;
+3. arquitetura e comportamento existentes no código;
+4. skill especializada relevante;
+5. `fluxo.md`;
+6. `HISTORICO_IMPLEMENTACOES.md`;
+7. convenções gerais e boas práticas.
+
+## Definição de concluído
+
+Uma implementação só está concluída quando, conforme aplicável:
+
+1. o pedido foi implementado;
+2. o código relevante foi revisado;
+3. testes apropriados foram executados;
+4. build/validação apropriada foi executada;
+5. erros causados pela mudança foram corrigidos;
+6. `fluxo.md` representa o novo estado;
+7. `HISTORICO_IMPLEMENTACOES.md` registra a mudança quando historicamente relevante;
+8. o relatório final foi apresentado.
+
+
+
+### Segurança
+
+Leia `SKILL.md` quando a tarefa envolver ou puder afetar:
+
+- autenticação ou autorização;
+- Spring Security;
+- login, logout, cadastro ou recuperação de senha;
+- access token, JWT, refresh token, sessão ou cookies;
+- criação ou alteração de rotas/endpoints;
+- controllers que recebem dados externos;
+- operações POST, PUT, PATCH ou DELETE;
+- permissões ou acesso a recursos por ID;
+- usuários, roles ou ownership;
+- Google Places API ou qualquer integração externa;
+- API keys, secrets, credenciais ou variáveis de ambiente;
+- CORS, CSRF ou headers HTTP;
+- validação ou sanitização de entrada;
+- upload ou download de arquivos;
+- exportação CSV/Excel;
+- queries, filtros ou acesso ao banco;
+- migrations relacionadas a usuários, permissões ou dados sensíveis;
+- cache contendo dados dependentes do usuário;
+- rate limiting;
+- endpoints administrativos ou Actuator;
+- tratamento de erros ou logs que possam expor dados;
+- configuração de produção, HTTPS, proxy ou infraestrutura;
+- dependências relacionadas à segurança;
+- qualquer tarefa explicitamente relacionada a vulnerabilidades ou hardening.
+
+Também consulte `SKILL.md` quando uma implementação nova introduzir uma nova superfície de entrada, acesso a dados, integração externa ou operação potencialmente abusável, mesmo que a tarefa não tenha sido descrita explicitamente como "segurança".
+
+Não é necessário ler `SKILL.md` para alterações puramente internas que comprovadamente não afetem superfície de ataque, autenticação, autorização, entrada externa, dados sensíveis ou infraestrutura.
+
+As regras de `SKILL.md` devem ser consideradas requisitos do projeto quando aplicáveis à tarefa atual.
+
+Não implemente antecipadamente todas as proteções descritas em `SKILL.md`. Aplique apenas as relacionadas ao escopo atual e ao estágio definido em `fluxo.md`.
+
+Se uma tarefa solicitada conflitar com uma regra de segurança do `SKILL.md`, não ignore silenciosamente a regra. Identifique o conflito e preserve a alternativa segura, salvo instrução explícita e justificada em nível superior.
