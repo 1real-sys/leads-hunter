@@ -5,9 +5,15 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "busca")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Busca {
 
     @Id
@@ -41,77 +47,5 @@ public class Busca {
     @PrePersist
     void prePersist() {
         this.criadoEm = LocalDateTime.now();
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getEnderecoBase() {
-        return enderecoBase;
-    }
-
-    public void setEnderecoBase(String enderecoBase) {
-        this.enderecoBase = enderecoBase;
-    }
-
-    public BigDecimal getLatitude() {
-        return latitude;
-    }
-
-    public void setLatitude(BigDecimal latitude) {
-        this.latitude = latitude;
-    }
-
-    public BigDecimal getLongitude() {
-        return longitude;
-    }
-
-    public void setLongitude(BigDecimal longitude) {
-        this.longitude = longitude;
-    }
-
-    public Integer getRaioKm() {
-        return raioKm;
-    }
-
-    public void setRaioKm(Integer raioKm) {
-        this.raioKm = raioKm;
-    }
-
-    public String getCategoriasBuscadas() {
-        return categoriasBuscadas;
-    }
-
-    public void setCategoriasBuscadas(String categoriasBuscadas) {
-        this.categoriasBuscadas = categoriasBuscadas;
-    }
-
-    public Integer getTotalEncontrados() {
-        return totalEncontrados;
-    }
-
-    public void setTotalEncontrados(Integer totalEncontrados) {
-        this.totalEncontrados = totalEncontrados;
-    }
-
-    public LocalDateTime getCriadoEm() {
-        return criadoEm;
-    }
-
-    public void setCriadoEm(LocalDateTime criadoEm) {
-        this.criadoEm = criadoEm;
-    }
-
-    public List<BuscaLead> getBuscaLeads() {
-        return buscaLeads;
-    }
-
-    public void setBuscaLeads(List<BuscaLead> buscaLeads) {
-        this.buscaLeads = buscaLeads;
     }
 }

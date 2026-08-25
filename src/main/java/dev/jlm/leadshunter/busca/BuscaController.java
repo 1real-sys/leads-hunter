@@ -2,6 +2,7 @@ package dev.jlm.leadshunter.busca;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,13 +14,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("/api/buscas")
+@RequiredArgsConstructor
 public class BuscaController {
 
     private final BuscaService buscaService;
-
-    public BuscaController(BuscaService buscaService) {
-        this.buscaService = buscaService;
-    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

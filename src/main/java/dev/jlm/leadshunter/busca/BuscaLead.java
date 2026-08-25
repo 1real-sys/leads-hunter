@@ -3,11 +3,17 @@ package dev.jlm.leadshunter.busca;
 import dev.jlm.leadshunter.lead.Lead;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "busca_lead", uniqueConstraints = {
     @UniqueConstraint(name = "uk_busca_lead_busca_lead", columnNames = {"busca_id", "lead_id"})
 })
+@Getter
+@Setter
+@NoArgsConstructor
 public class BuscaLead {
 
     @Id
@@ -34,53 +40,5 @@ public class BuscaLead {
     @PrePersist
     void prePersist() {
         this.encontradoEm = LocalDateTime.now();
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Busca getBusca() {
-        return busca;
-    }
-
-    public void setBusca(Busca busca) {
-        this.busca = busca;
-    }
-
-    public Lead getLead() {
-        return lead;
-    }
-
-    public void setLead(Lead lead) {
-        this.lead = lead;
-    }
-
-    public Integer getScoreNaBusca() {
-        return scoreNaBusca;
-    }
-
-    public void setScoreNaBusca(Integer scoreNaBusca) {
-        this.scoreNaBusca = scoreNaBusca;
-    }
-
-    public String getTemperaturaNaBusca() {
-        return temperaturaNaBusca;
-    }
-
-    public void setTemperaturaNaBusca(String temperaturaNaBusca) {
-        this.temperaturaNaBusca = temperaturaNaBusca;
-    }
-
-    public LocalDateTime getEncontradoEm() {
-        return encontradoEm;
-    }
-
-    public void setEncontradoEm(LocalDateTime encontradoEm) {
-        this.encontradoEm = encontradoEm;
     }
 }

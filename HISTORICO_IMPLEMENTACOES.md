@@ -336,3 +336,31 @@ Nenhum.
 - `src/main/java/dev/jlm/leadshunter/config/ApiExceptionHandler.java`
 - `src/test/java/dev/jlm/leadshunter/busca/BuscaControllerTest.java`
 - `src/test/java/dev/jlm/leadshunter/config/ApiExceptionHandlerTest.java`
+
+---
+
+## 14. Refatoração seletiva de boilerplate com Lombok — 25/08/2026
+
+Foi aplicada uma refatoração de legibilidade no backend usando Lombok somente nos pontos em que a geração de código é segura e reduz manutenção. As entidades JPA passaram a declarar getters, setters e construtor sem argumentos por anotações explícitas, enquanto services e controllers passaram a usar construtores gerados para suas dependências obrigatórias.
+
+O advice global de erros também passou a usar `@Slf4j`. Records, construtores especiais de integração e classes de configuração com parâmetros `@Value` foram preservados. Nenhuma entidade recebeu `@Data`, `@Builder`, `@EqualsAndHashCode` ou `@ToString`, evitando efeitos indesejados com relacionamentos JPA e proxies Hibernate.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+Nenhum.
+
+**Modificados:**
+
+- `fluxo.md`
+- `src/main/java/dev/jlm/leadshunter/busca/Busca.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaController.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaLead.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
+- `src/main/java/dev/jlm/leadshunter/config/ApiExceptionHandler.java`
+- `src/main/java/dev/jlm/leadshunter/exportacao/ExportController.java`
+- `src/main/java/dev/jlm/leadshunter/exportacao/ExportService.java`
+- `src/main/java/dev/jlm/leadshunter/lead/Lead.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadController.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadService.java`

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class ExportService {
 
     private static final List<String> COLUNAS = List.of(
@@ -50,10 +52,6 @@ public class ExportService {
     private static final String CABECALHO = String.join(",", COLUNAS);
 
     private final LeadService leadService;
-
-    public ExportService(LeadService leadService) {
-        this.leadService = leadService;
-    }
 
     @Transactional(readOnly = true)
     public byte[] exportarLeads(

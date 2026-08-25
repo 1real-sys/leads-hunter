@@ -10,8 +10,7 @@ import dev.jlm.leadshunter.integracao.places.PlacesRateLimitExceededException;
 import dev.jlm.leadshunter.lead.LeadNaoEncontradoException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -21,9 +20,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
+@Slf4j
 public class ApiExceptionHandler {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @ExceptionHandler(PlacesRateLimitExceededException.class)
     public ResponseEntity<ApiErrorResponse> handleRateLimit(
@@ -132,7 +130,7 @@ public class ApiExceptionHandler {
         Exception exception,
         HttpServletRequest request
     ) {
-        LOGGER.error(
+        log.error(
             "Erro interno não tratado em {} {} (tipo={})",
             request.getMethod(),
             request.getRequestURI(),

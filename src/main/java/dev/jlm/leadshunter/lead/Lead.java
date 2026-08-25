@@ -3,9 +3,15 @@ package dev.jlm.leadshunter.lead;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "leads")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Lead {
 
     @Id
@@ -75,149 +81,5 @@ public class Lead {
     @PreUpdate
     void preUpdate() {
         this.atualizadoEm = LocalDateTime.now();
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getGooglePlaceId() {
-        return googlePlaceId;
-    }
-
-    public void setGooglePlaceId(String googlePlaceId) {
-        this.googlePlaceId = googlePlaceId;
-    }
-
-    public String getNome() {
-        return nome;
-    }
-
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-
-    public CategoriaNegocio getCategoria() {
-        return categoria;
-    }
-
-    public void setCategoria(CategoriaNegocio categoria) {
-        this.categoria = categoria;
-    }
-
-    public String getEnderecoFormatado() {
-        return enderecoFormatado;
-    }
-
-    public void setEnderecoFormatado(String enderecoFormatado) {
-        this.enderecoFormatado = enderecoFormatado;
-    }
-
-    public String getTelefone() {
-        return telefone;
-    }
-
-    public void setTelefone(String telefone) {
-        this.telefone = telefone;
-    }
-
-    public String getTelefoneNormalizado() {
-        return telefoneNormalizado;
-    }
-
-    public void setTelefoneNormalizado(String telefoneNormalizado) {
-        this.telefoneNormalizado = telefoneNormalizado;
-    }
-
-    public BigDecimal getLatitude() {
-        return latitude;
-    }
-
-    public void setLatitude(BigDecimal latitude) {
-        this.latitude = latitude;
-    }
-
-    public BigDecimal getLongitude() {
-        return longitude;
-    }
-
-    public void setLongitude(BigDecimal longitude) {
-        this.longitude = longitude;
-    }
-
-    public BigDecimal getRatingGoogle() {
-        return ratingGoogle;
-    }
-
-    public void setRatingGoogle(BigDecimal ratingGoogle) {
-        this.ratingGoogle = ratingGoogle;
-    }
-
-    public Integer getTotalReviews() {
-        return totalReviews;
-    }
-
-    public void setTotalReviews(Integer totalReviews) {
-        this.totalReviews = totalReviews;
-    }
-
-    public Integer getScore() {
-        return score;
-    }
-
-    public void setScore(Integer score) {
-        this.score = score;
-    }
-
-    public Temperatura getTemperatura() {
-        return temperatura;
-    }
-
-    public void setTemperatura(Temperatura temperatura) {
-        this.temperatura = temperatura;
-    }
-
-    public StatusFunil getStatus() {
-        return status;
-    }
-
-    public void setStatus(StatusFunil status) {
-        this.status = status;
-    }
-
-    public String getObservacoes() {
-        return observacoes;
-    }
-
-    public void setObservacoes(String observacoes) {
-        this.observacoes = observacoes;
-    }
-
-    public LocalDateTime getUltimoContatoEm() {
-        return ultimoContatoEm;
-    }
-
-    public void setUltimoContatoEm(LocalDateTime ultimoContatoEm) {
-        this.ultimoContatoEm = ultimoContatoEm;
-    }
-
-    public LocalDateTime getCriadoEm() {
-        return criadoEm;
-    }
-
-    public void setCriadoEm(LocalDateTime criadoEm) {
-        this.criadoEm = criadoEm;
-    }
-
-    public LocalDateTime getAtualizadoEm() {
-        return atualizadoEm;
-    }
-
-    public void setAtualizadoEm(LocalDateTime atualizadoEm) {
-        this.atualizadoEm = atualizadoEm;
     }
 }

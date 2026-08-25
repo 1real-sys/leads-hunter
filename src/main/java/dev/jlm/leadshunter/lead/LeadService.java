@@ -1,6 +1,7 @@
 package dev.jlm.leadshunter.lead;
 
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.Sort;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class LeadService {
 
     private static final Sort ORDENACAO_PADRAO = Sort.by(
@@ -17,14 +19,6 @@ public class LeadService {
 
     private final LeadRepository leadRepository;
     private final WhatsAppLinkGenerator whatsAppLinkGenerator;
-
-    public LeadService(
-        LeadRepository leadRepository,
-        WhatsAppLinkGenerator whatsAppLinkGenerator
-    ) {
-        this.leadRepository = leadRepository;
-        this.whatsAppLinkGenerator = whatsAppLinkGenerator;
-    }
 
     @Transactional(readOnly = true)
     public List<LeadResponse> listar(

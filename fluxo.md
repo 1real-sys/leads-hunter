@@ -351,7 +351,7 @@ A última execução de `./mvnw test`, com um agente Byte Buddy informado soment
 
 A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`. Os novos endpoints também foram validados contra o MySQL local: a listagem retornou a busca existente com HTTP `200`, o detalhe retornou seus 18 vínculos ordenados pelo score histórico com HTTP `200` e um ID inexistente retornou HTTP `404`. A exportação CSV filtrada por `status=NOVO` retornou HTTP `200`, `Content-Type: text/csv;charset=UTF-8`, nome de download `leads.csv` e 18 linhas de dados. A exportação Excel com o mesmo filtro retornou HTTP `200`, `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, nome `leads.xlsx` e arquivo reconhecido como Excel 2007+ com ZIP íntegro.
 
-## O que ainda não está feito
+## Fechamento técnico do backend
 
 O trecho de enriquecimento e scoring da busca agora funciona desta forma:
 
@@ -366,6 +366,21 @@ PlacesSearchResponse
 BuscaResponse com leads persistidos e pontuados
 ```
 
-O tratamento de erros e os principais caminhos de entrada inválida agora estão cobertos. Ainda falta:
+O tratamento de erros e os principais caminhos de entrada inválida estão cobertos. O fechamento técnico do backend foi concluído após as seguintes validações:
 
-- revisar o polimento final do MVP.
+- `./mvnw -DargLine=-javaagent:/home/jlm1real/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.10/byte-buddy-agent-1.18.10.jar test`: 98 testes executados, sem falhas, erros ou testes ignorados.
+- `./mvnw -DskipTests package`: build do JAR executável concluído com sucesso.
+- Inicialização local da aplicação: Tomcat subiu na porta 8080, conexão com MySQL foi estabelecida, a migration foi validada pelo Flyway e o schema permaneceu atualizado na versão 1.
+- Smoke test sem nova chamada à Google Places: `GET /api/buscas`, `GET /api/leads?status=NOVO`, exportação CSV e exportação XLSX retornaram HTTP 200; foram confirmados 18 leads, 19 linhas no CSV e arquivo Excel 2007+ íntegro.
+
+O backend do MVP está concluído e validado para uso local/portfólio. O próximo ciclo do produto é o frontend das fases 5 a 7 do roadmap; não há nova pendência funcional de backend dentro do escopo atual.
+
+## Padrão de boilerplate com Lombok
+
+O backend utiliza Lombok de forma seletiva, mantendo a configuração já existente no Maven e sem alterar contratos HTTP ou regras de negócio.
+
+- `Busca`, `BuscaLead` e `Lead` usam `@Getter`, `@Setter` e `@NoArgsConstructor` para substituir os accessors manuais e preservar o construtor exigido pelo JPA.
+- `BuscaController`, `BuscaService`, `LeadController`, `LeadService`, `ExportController` e `ExportService` usam `@RequiredArgsConstructor` para injetar dependências obrigatórias `final`.
+- `ApiExceptionHandler` usa `@Slf4j` para eliminar a declaração manual do logger.
+- DTOs e contratos internos que já são `record` permanecem records.
+- Entidades JPA não usam `@Data`, `@Builder`, `@EqualsAndHashCode` ou `@ToString`, evitando recursão em relacionamentos, lazy loading inesperado e comparação por campos mutáveis.

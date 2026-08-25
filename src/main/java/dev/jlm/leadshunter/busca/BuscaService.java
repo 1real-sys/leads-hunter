@@ -16,10 +16,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class BuscaService {
 
     private final BuscaRepository buscaRepository;
@@ -30,26 +32,6 @@ public class BuscaService {
     private final ScoringService scoringService;
     private final BuscaPlacesCache buscaPlacesCache;
     private final WhatsAppLinkGenerator whatsAppLinkGenerator;
-
-    public BuscaService(
-        BuscaRepository buscaRepository,
-        BuscaLeadRepository buscaLeadRepository,
-        LeadRepository leadRepository,
-        PlacesApiClient placesApiClient,
-        TelefoneNormalizer telefoneNormalizer,
-        ScoringService scoringService,
-        BuscaPlacesCache buscaPlacesCache,
-        WhatsAppLinkGenerator whatsAppLinkGenerator
-    ) {
-        this.buscaRepository = buscaRepository;
-        this.buscaLeadRepository = buscaLeadRepository;
-        this.leadRepository = leadRepository;
-        this.placesApiClient = placesApiClient;
-        this.telefoneNormalizer = telefoneNormalizer;
-        this.scoringService = scoringService;
-        this.buscaPlacesCache = buscaPlacesCache;
-        this.whatsAppLinkGenerator = whatsAppLinkGenerator;
-    }
 
     @Transactional
     public BuscaResponse criar(BuscaRequest request) {

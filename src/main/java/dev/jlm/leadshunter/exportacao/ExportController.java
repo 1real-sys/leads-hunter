@@ -13,9 +13,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/exportacao")
+@RequiredArgsConstructor
 public class ExportController {
 
     private static final MediaType CSV_MEDIA_TYPE = new MediaType(
@@ -28,10 +30,6 @@ public class ExportController {
     );
 
     private final ExportService exportService;
-
-    public ExportController(ExportService exportService) {
-        this.exportService = exportService;
-    }
 
     @GetMapping(value = "/leads.csv", produces = "text/csv")
     public ResponseEntity<byte[]> exportarLeads(
