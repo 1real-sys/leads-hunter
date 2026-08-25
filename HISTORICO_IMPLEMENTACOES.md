@@ -315,3 +315,24 @@ Os testes também confirmaram que buscas repetidas preservam os dados comerciais
 **Modificados:**
 
 - `fluxo.md`
+
+---
+
+## 13. Hardening do contrato de erros HTTP — 24/08/2026
+
+O tratamento global de erros foi ampliado para cobrir exceções inesperadas sem expor mensagens internas, nomes de classes ou detalhes potencialmente sensíveis ao cliente. A API agora retorna `500 ERRO_INTERNO` com uma mensagem genérica e registra somente método, rota e tipo da exceção para diagnóstico seguro.
+
+Também foram adicionados testes HTTP para rate limit local, configuração ausente, consulta rejeitada pela Google, erro inesperado, JSON malformado, corpo ausente e categoria inválida no payload.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+Nenhum.
+
+**Modificados:**
+
+- `fluxo.md`
+- `src/main/java/dev/jlm/leadshunter/config/ApiExceptionHandler.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/config/ApiExceptionHandlerTest.java`

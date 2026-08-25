@@ -113,6 +113,51 @@ class BuscaControllerTest {
     }
 
     @Test
+    void deveRejeitarBuscaComJsonMalformado() throws Exception {
+        mockMvc.perform(post("/api/buscas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"latitude\": -25.4284,"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.codigo").value("REQUISICAO_INVALIDA"))
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.mensagem").value(
+                "O corpo da requisição está ausente ou contém dados inválidos."
+            ));
+
+        verifyNoInteractions(buscaService);
+    }
+
+    @Test
+    void deveRejeitarBuscaComCorpoAusente() throws Exception {
+        mockMvc.perform(post("/api/buscas")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.codigo").value("REQUISICAO_INVALIDA"))
+            .andExpect(jsonPath("$.status").value(400));
+
+        verifyNoInteractions(buscaService);
+    }
+
+    @Test
+    void deveRejeitarCategoriaDesconhecidaNoPayload() throws Exception {
+        mockMvc.perform(post("/api/buscas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "latitude": -25.4284,
+                      "longitude": -49.2733,
+                      "raioKm": 5,
+                      "categorias": ["CATEGORIA_INEXISTENTE"]
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.codigo").value("REQUISICAO_INVALIDA"))
+            .andExpect(jsonPath("$.status").value(400));
+
+        verifyNoInteractions(buscaService);
+    }
+
+    @Test
     void deveListarHistoricoViaHttp() throws Exception {
         when(buscaService.listarHistorico()).thenReturn(List.of(
             new BuscaResumoResponse(

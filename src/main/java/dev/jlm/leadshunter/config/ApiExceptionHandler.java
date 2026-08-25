@@ -10,6 +10,8 @@ import dev.jlm.leadshunter.integracao.places.PlacesRateLimitExceededException;
 import dev.jlm.leadshunter.lead.LeadNaoEncontradoException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -20,6 +22,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @ExceptionHandler(PlacesRateLimitExceededException.class)
     public ResponseEntity<ApiErrorResponse> handleRateLimit(
@@ -119,6 +123,25 @@ public class ApiExceptionHandler {
             HttpStatus.BAD_REQUEST,
             "REQUISICAO_INVALIDA",
             "O parâmetro de consulta '" + exception.getName() + "' é inválido.",
+            request
+        );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiErrorResponse> handleUnexpected(
+        Exception exception,
+        HttpServletRequest request
+    ) {
+        LOGGER.error(
+            "Erro interno não tratado em {} {} (tipo={})",
+            request.getMethod(),
+            request.getRequestURI(),
+            exception.getClass().getName()
+        );
+        return resposta(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "ERRO_INTERNO",
+            "Ocorreu um erro interno. Tente novamente mais tarde.",
             request
         );
     }

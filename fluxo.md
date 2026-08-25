@@ -243,7 +243,7 @@ Expõem `GET /api/exportacao/leads.csv` e `GET /api/exportacao/leads.xlsx`. Ambo
 
 ### 19. `ApiExceptionHandler.java` e `ApiErrorResponse.java`
 
-`ApiExceptionHandler` centraliza a conversão das falhas de integração, validação de payload, parâmetros inválidos e exceções de recurso não encontrado em um contrato JSON único. Toda resposta contém `timestamp`, `status`, `codigo`, `mensagem` e `path`. Falhas de cota ou do rate limit local retornam `429`; chave ausente ou indisponibilidade retornam `503`; resposta inválida ou consulta rejeitada pela Google retornam `502`; validações e requisições malformadas retornam `400`; buscas e leads inexistentes retornam `404`. O contrato não expõe stack trace, corpo bruto da Google ou credenciais.
+`ApiExceptionHandler` centraliza a conversão das falhas de integração, validação de payload, parâmetros inválidos e exceções de recurso não encontrado em um contrato JSON único. Toda resposta contém `timestamp`, `status`, `codigo`, `mensagem` e `path`. Falhas de cota ou do rate limit local retornam `429`; chave ausente ou indisponibilidade retornam `503`; resposta inválida ou consulta rejeitada pela Google retornam `502`; validações e requisições malformadas retornam `400`; buscas e leads inexistentes retornam `404`. Exceções inesperadas são registradas apenas com método, rota e tipo da exceção e retornam `500 ERRO_INTERNO` com mensagem genérica. O contrato não expõe stack trace, corpo bruto da Google, mensagens internas ou credenciais.
 
 ## Estrutura relacionada
 
@@ -340,12 +340,14 @@ src/test/java/dev/jlm/leadshunter/
 - Testes HTTP do `LeadController` para filtros, consulta, atualização parcial, 404 e validações.
 - Testes HTTP do contrato de erro para cota excedida, indisponibilidade, resposta inválida e recurso inexistente.
 - Tratamento HTTP uniforme para Bean Validation, JSON ilegível e parâmetros de enum inválidos.
+- Fallback HTTP seguro para exceções inesperadas, com resposta `500 ERRO_INTERNO` sem detalhes internos.
+- Testes HTTP para rate limit local, configuração ausente, consulta rejeitada, erro inesperado, JSON malformado, corpo ausente e enum inválido no payload.
 - Testes do cliente Places com respostas HTTP simuladas para cota, autorização, indisponibilidade e payload inválido.
 - Testes do conteúdo CSV, escaping, filtros, arquivo vazio e headers HTTP de download.
 - Testes de leitura da planilha Excel gerada, tipos de célula e headers HTTP de download.
 - Chamada externa controlada com Google Places API (New), retornando e persistindo leads reais.
 
-A última execução de `./mvnw test` concluiu 91 testes sem falhas, incluindo o contexto Spring com MySQL e Flyway. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
+A última execução de `./mvnw test`, com um agente Byte Buddy informado somente em runtime para compatibilidade do Mockito com a JVM Java 25 do ambiente de validação, concluiu 98 testes sem falhas, incluindo o contexto Spring com MySQL, Flyway e a integração JPA. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
 
 A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`. Os novos endpoints também foram validados contra o MySQL local: a listagem retornou a busca existente com HTTP `200`, o detalhe retornou seus 18 vínculos ordenados pelo score histórico com HTTP `200` e um ID inexistente retornou HTTP `404`. A exportação CSV filtrada por `status=NOVO` retornou HTTP `200`, `Content-Type: text/csv;charset=UTF-8`, nome de download `leads.csv` e 18 linhas de dados. A exportação Excel com o mesmo filtro retornou HTTP `200`, `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, nome `leads.xlsx` e arquivo reconhecido como Excel 2007+ com ZIP íntegro.
 
@@ -364,6 +366,6 @@ PlacesSearchResponse
 BuscaResponse com leads persistidos e pontuados
 ```
 
-Ainda falta:
+O tratamento de erros e os principais caminhos de entrada inválida agora estão cobertos. Ainda falta:
 
-- ampliar os casos de erro ainda não cobertos e revisar o polimento final do MVP.
+- revisar o polimento final do MVP.
