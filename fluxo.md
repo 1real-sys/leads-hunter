@@ -1,6 +1,6 @@
 # Fluxo do Leads Hunter
 
-Este documento descreve o fluxo real do projeto no estado atual. O backend está concluído e o bootstrap do frontend foi entregue; o próximo passo do MVP é a base de contratos e HTTP do Angular.
+Este documento descreve o fluxo real do projeto no estado atual. O backend está concluído e os sprints FE-00, FE-01 e FE-02 do frontend foram entregues; o próximo passo do MVP é o mapa Leaflet interativo.
 
 ## Visão geral
 
@@ -385,7 +385,7 @@ O planejamento detalhado e os critérios de aceite estão em [FRONTEND_SPRINTS.m
 | --- | --- | --- |
 | FE-00 | Bootstrap Angular e execução local | CONCLUÍDO |
 | FE-01 | Contratos TypeScript e base HTTP | CONCLUÍDO |
-| FE-02 | Shell, navegação e rotas | PENDENTE |
+| FE-02 | Shell, navegação e rotas | CONCLUÍDO |
 | FE-03 | Mapa Leaflet interativo | PENDENTE |
 | FE-04 | Formulário de busca sincronizado ao mapa | PENDENTE |
 | FE-05 | Execução da busca pela API | PENDENTE |
@@ -414,11 +414,11 @@ Decisões preservadas para o ciclo:
 - Signals para estado simples e RxJS somente quando o fluxo assíncrono justificar;
 - sem biblioteca de estado global, dashboard avançado ou abstrações sem necessidade.
 
-O FE-01 deixou disponível `provideHttpClient()`, os contratos TypeScript da API em `frontend/src/app/shared/models`, o prefixo relativo `/api` em `frontend/src/app/core/api/api-routes.ts` e o mapeamento seguro de falhas HTTP em `frontend/src/app/core/api/api-error-message.ts`. Após revisão, `AtualizarLeadRequest` passou a exigir em compilação ao menos um campo não nulo, e os testes passaram a exercer os DTOs aninhados das buscas. Nenhum service, componente de negócio, interceptor de autenticação ou estado global foi antecipado.
+O FE-01 deixou disponível `provideHttpClient()`, os contratos TypeScript da API em `frontend/src/app/shared/models`, o prefixo relativo `/api` em `frontend/src/app/core/api/api-routes.ts` e o mapeamento seguro de falhas HTTP em `frontend/src/app/core/api/api-error-message.ts`. Após revisão, `AtualizarLeadRequest` passou a exigir em compilação ao menos um campo não nulo, e os testes passaram a exercer os DTOs aninhados das buscas. O FE-02 adicionou o shell navegável, as rotas lazy de Busca, Kanban e Histórico, placeholders acessíveis e o fallback de rota desconhecida. Nenhum service, mapa, componente de negócio, integração HTTP de feature, interceptor de autenticação ou estado global foi antecipado.
 
 ### Próximo passo
 
-Os sprints **FE-00** e **FE-01** estão concluídos e validados. O próximo passo é executar o **FE-02 — Shell, navegação e rotas**; os demais sprints permanecem pendentes.
+Os sprints **FE-00**, **FE-01** e **FE-02** estão concluídos e validados. O próximo passo é executar o **FE-03 — Mapa Leaflet interativo**; os demais sprints permanecem pendentes.
 
 ## Padrão de boilerplate com Lombok
 

@@ -454,3 +454,30 @@ Nenhum.
 - `fluxo.md`
 - `frontend/src/app/shared/models/api-contracts.spec.ts`
 - `frontend/src/app/shared/models/lead.model.ts`
+
+---
+
+## 18. Shell, navegação e rotas do frontend — 29/08/2026
+
+Foi entregue o shell navegável do Leads Hunter, com cabeçalho, navegação principal para Busca, Kanban e Histórico, área de conteúdo, rodapé e fallback acessível para rotas desconhecidas. As três áreas usam carregamento lazy e permanecem como placeholders, sem antecipar mapa, integração HTTP ou regras de negócio. Também foram adicionados tokens visuais básicos de cores, espaçamento, tipografia, foco e estados, além de skip link e responsividade inicial.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/app.routes.spec.ts`
+- `frontend/src/app/features/busca/busca-page.ts`
+- `frontend/src/app/features/historico/historico-page.ts`
+- `frontend/src/app/features/kanban/kanban-page.ts`
+- `frontend/src/app/features/not-found/not-found-page.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/src/app/app.html`
+- `frontend/src/app/app.scss`
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/app.spec.ts`
+- `frontend/src/app/app.ts`
+- `frontend/src/styles.scss`

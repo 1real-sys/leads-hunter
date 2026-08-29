@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-02 — Shell, navegação e rotas**.
+- Próximo sprint: **FE-03 — Mapa Leaflet interativo**.
 
 ## Decisões do plano
 
@@ -77,7 +77,7 @@ Todo sprint deve cumprir, conforme seu escopo:
 | --- | --- | --- | --- |
 | FE-00 | Bootstrap Angular e execução local | Nenhuma | CONCLUÍDO |
 | FE-01 | Contratos TypeScript e base HTTP | FE-00 | CONCLUÍDO |
-| FE-02 | Shell, navegação e rotas | FE-00 | PENDENTE |
+| FE-02 | Shell, navegação e rotas | FE-00 | CONCLUÍDO |
 | FE-03 | Mapa Leaflet interativo | FE-01, FE-02 | PENDENTE |
 | FE-04 | Formulário de busca sincronizado ao mapa | FE-03 | PENDENTE |
 | FE-05 | Execução da busca pela API | FE-04 | PENDENTE |
@@ -185,7 +185,7 @@ Criar a base fortemente tipada para integrar o frontend à API real.
 
 ## FE-02 — Shell, navegação e rotas
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -212,6 +212,14 @@ Entregar a estrutura navegável do aplicativo antes das telas de negócio.
 
 - Testes de roteamento e navegação.
 - `npm run build`.
+
+### Resultado
+
+- Shell com marca, cabeçalho, navegação principal, área de conteúdo e rodapé.
+- Rotas `/busca`, `/kanban` e `/historico` carregadas sob demanda, com títulos de página e indicação acessível da rota ativa.
+- Páginas-placeholder sem lógica de negócio e fallback para rotas desconhecidas.
+- Tokens visuais básicos, foco visível, skip link e layout responsivo adicionados sem biblioteca visual.
+- Suíte de navegação validada com `RouterTestingHarness` e smoke test de rota profunda no servidor de desenvolvimento.
 
 ---
 
@@ -691,4 +699,4 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** e **FE-01** estão concluídos e validados. O próximo sprint autorizado é o **FE-02 — Shell, navegação e rotas**.
+Os sprints **FE-00**, **FE-01** e **FE-02** estão concluídos e validados. O próximo sprint autorizado é o **FE-03 — Mapa Leaflet interativo**.
