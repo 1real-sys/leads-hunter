@@ -384,7 +384,7 @@ O planejamento detalhado e os critérios de aceite estão em [FRONTEND_SPRINTS.m
 | Sprint | Entrega | Status |
 | --- | --- | --- |
 | FE-00 | Bootstrap Angular e execução local | CONCLUÍDO |
-| FE-01 | Contratos TypeScript e base HTTP | PENDENTE |
+| FE-01 | Contratos TypeScript e base HTTP | CONCLUÍDO |
 | FE-02 | Shell, navegação e rotas | PENDENTE |
 | FE-03 | Mapa Leaflet interativo | PENDENTE |
 | FE-04 | Formulário de busca sincronizado ao mapa | PENDENTE |
@@ -414,9 +414,11 @@ Decisões preservadas para o ciclo:
 - Signals para estado simples e RxJS somente quando o fluxo assíncrono justificar;
 - sem biblioteca de estado global, dashboard avançado ou abstrações sem necessidade.
 
+O FE-01 deixou disponível `provideHttpClient()`, os contratos TypeScript da API em `frontend/src/app/shared/models`, o prefixo relativo `/api` em `frontend/src/app/core/api/api-routes.ts` e o mapeamento seguro de falhas HTTP em `frontend/src/app/core/api/api-error-message.ts`. Nenhum service, componente de negócio, interceptor de autenticação ou estado global foi antecipado.
+
 ### Próximo passo
 
-O **FE-00 — Bootstrap Angular e execução local** está concluído e validado. O próximo passo é executar o **FE-01 — Contratos TypeScript e base HTTP**; os demais sprints permanecem pendentes.
+Os sprints **FE-00** e **FE-01** estão concluídos e validados. O próximo passo é executar o **FE-02 — Shell, navegação e rotas**; os demais sprints permanecem pendentes.
 
 ## Padrão de boilerplate com Lombok
 

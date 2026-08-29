@@ -408,3 +408,29 @@ O projeto foi instalado com Angular CLI 22.1.6 por meio do `npx`, mantendo o fro
 
 - `.opencode/skills/leadradar-frontend/SKILL.md`
 - `fluxo.md`
+
+---
+
+## 16. Contratos TypeScript e base HTTP do frontend — 29/08/2026
+
+Foi criada a base fortemente tipada para o frontend consumir os contratos reais da API. A configuração Angular passou a fornecer `HttpClient`, os DTOs e enums foram organizados por domínio, o prefixo relativo `/api` foi centralizado e as falhas HTTP passaram a ter mensagens seguras para a interface, sem expor detalhes internos. Testes de contrato e do utilitário foram adicionados sem chamadas de rede.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/core/api/api-error-message.spec.ts`
+- `frontend/src/app/core/api/api-error-message.ts`
+- `frontend/src/app/core/api/api-routes.ts`
+- `frontend/src/app/shared/models/api-contracts.spec.ts`
+- `frontend/src/app/shared/models/api-error-response.model.ts`
+- `frontend/src/app/shared/models/busca.model.ts`
+- `frontend/src/app/shared/models/date.model.ts`
+- `frontend/src/app/shared/models/enums.model.ts`
+- `frontend/src/app/shared/models/lead.model.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/src/app/app.config.ts`

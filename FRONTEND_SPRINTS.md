@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-01 — Contratos TypeScript e base HTTP**.
+- Próximo sprint: **FE-02 — Shell, navegação e rotas**.
 
 ## Decisões do plano
 
@@ -76,7 +76,7 @@ Todo sprint deve cumprir, conforme seu escopo:
 | Sprint | Entrega | Dependência | Status |
 | --- | --- | --- | --- |
 | FE-00 | Bootstrap Angular e execução local | Nenhuma | CONCLUÍDO |
-| FE-01 | Contratos TypeScript e base HTTP | FE-00 | PENDENTE |
+| FE-01 | Contratos TypeScript e base HTTP | FE-00 | CONCLUÍDO |
 | FE-02 | Shell, navegação e rotas | FE-00 | PENDENTE |
 | FE-03 | Mapa Leaflet interativo | FE-01, FE-02 | PENDENTE |
 | FE-04 | Formulário de busca sincronizado ao mapa | FE-03 | PENDENTE |
@@ -138,7 +138,7 @@ Criar uma aplicação Angular moderna, mínima e validada, pronta para receber a
 
 ## FE-01 — Contratos TypeScript e base HTTP
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -171,6 +171,14 @@ Criar a base fortemente tipada para integrar o frontend à API real.
 
 - Testes dos tipos auxiliares e do mapeamento de erro.
 - `npm run build`.
+
+### Resultado
+
+- `provideHttpClient()` configurado na aplicação.
+- Contratos tipados da API organizados em `shared/models`, com enums literais, campos nulos/opcionais e datas como strings ISO.
+- Prefixo relativo `/api` e rotas conhecidas centralizados em `core/api/api-routes.ts`.
+- Falhas HTTP convertidas em mensagens seguras por `core/api/api-error-message.ts`.
+- Testes de contrato e utilitário executados sem rede real.
 
 ---
 
@@ -682,4 +690,4 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-O **FE-00 — Bootstrap Angular e execução local** está concluído e validado. O próximo sprint autorizado é o **FE-01 — Contratos TypeScript e base HTTP**.
+Os sprints **FE-00** e **FE-01** estão concluídos e validados. O próximo sprint autorizado é o **FE-02 — Shell, navegação e rotas**.
