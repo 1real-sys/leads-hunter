@@ -364,3 +364,47 @@ Nenhum.
 - `src/main/java/dev/jlm/leadshunter/lead/Lead.java`
 - `src/main/java/dev/jlm/leadshunter/lead/LeadController.java`
 - `src/main/java/dev/jlm/leadshunter/lead/LeadService.java`
+
+---
+
+## 15. Bootstrap do frontend Angular — 29/08/2026
+
+Foi criada a aplicação frontend do Leads Hunter em Angular 22.1.4, com TypeScript strict, componentes standalone, routing, SCSS, testes habilitados e sem SSR. A página inicial confirma a renderização da aplicação, e o servidor de desenvolvimento foi configurado para encaminhar chamadas `/api` ao backend local em `http://localhost:8080`.
+
+O projeto foi instalado com Angular CLI 22.1.6 por meio do `npx`, mantendo o frontend isolado no diretório `frontend/`. Também foram incorporadas as instruções Angular usadas no bootstrap e o plano incremental do ciclo frontend. A suíte inicial e o build de produção foram validados com sucesso.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `.opencode/skills/angular-developer/`
+- `.opencode/skills/angular-new-app/SKILL.md`
+- `FRONTEND_SPRINTS.md`
+- `frontend/.codex/config.toml`
+- `frontend/.editorconfig`
+- `frontend/.gitignore`
+- `frontend/.prettierrc`
+- `frontend/AGENTS.md`
+- `frontend/angular.json`
+- `frontend/package.json`
+- `frontend/package-lock.json`
+- `frontend/proxy.conf.json`
+- `frontend/README.md`
+- `frontend/tsconfig.json`
+- `frontend/tsconfig.app.json`
+- `frontend/tsconfig.spec.json`
+- `frontend/public/favicon.ico`
+- `frontend/src/main.ts`
+- `frontend/src/index.html`
+- `frontend/src/styles.scss`
+- `frontend/src/app/app.config.ts`
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/app.spec.ts`
+- `frontend/src/app/app.scss`
+- `frontend/src/app/app.ts`
+- `frontend/src/app/app.html`
+
+**Modificados:**
+
+- `.opencode/skills/leadradar-frontend/SKILL.md`
+- `fluxo.md`

@@ -1,0 +1,20 @@
+<main class="bootstrap-page">
+  <section class="bootstrap-card" aria-labelledby="page-title">
+    <div class="brand-mark" aria-hidden="true">LH</div>
+
+    <p class="eyebrow">{{ productName() }}</p>
+    <h1 id="page-title">Frontend Angular inicializado</h1>
+    <p class="intro">
+      A base da aplicação está pronta para receber a busca de leads, o Kanban e o histórico.
+    </p>
+
+    <div class="status" role="status">
+      <span class="status-dot" aria-hidden="true"></span>
+      Ambiente local configurado
+    </div>
+
+    <p class="next-step">Próximo passo: conectar os contratos da API.</p>
+  </section>
+</main>
+
+<router-outlet />

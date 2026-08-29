@@ -1,6 +1,6 @@
 # Fluxo do Leads Hunter
 
-Este documento descreve o fluxo real do backend no estado atual do projeto. Também diferencia o que já funciona do fluxo completo planejado para o MVP.
+Este documento descreve o fluxo real do projeto no estado atual. O backend está concluído e o bootstrap do frontend foi entregue; o próximo passo do MVP é a base de contratos e HTTP do Angular.
 
 ## Visão geral
 
@@ -374,6 +374,49 @@ O tratamento de erros e os principais caminhos de entrada inválida estão cober
 - Smoke test sem nova chamada à Google Places: `GET /api/buscas`, `GET /api/leads?status=NOVO`, exportação CSV e exportação XLSX retornaram HTTP 200; foram confirmados 18 leads, 19 linhas no CSV e arquivo Excel 2007+ íntegro.
 
 O backend do MVP está concluído e validado para uso local/portfólio. O próximo ciclo do produto é o frontend das fases 5 a 7 do roadmap; não há nova pendência funcional de backend dentro do escopo atual.
+
+## Planejamento do próximo ciclo — frontend
+
+O workspace agora possui a aplicação Angular em `frontend/`, com `angular.json`, `package.json`, `src/app`, routing, SCSS, testes e sem SSR. Node.js `v26.7.0` e npm `12.0.2` estão disponíveis; Angular CLI global não está instalado e a CLI local `22.1.6` foi usada para instalar Angular `22.1.4`. O projeto usa o proxy de desenvolvimento `/api` para `http://localhost:8080`. Depois do bootstrap, o desenvolvimento seguirá `angular-developer` e `leadradar-frontend`.
+
+O planejamento detalhado e os critérios de aceite estão em [FRONTEND_SPRINTS.md](FRONTEND_SPRINTS.md). Os sprints foram divididos para entregar incrementos pequenos, completos e validados:
+
+| Sprint | Entrega | Status |
+| --- | --- | --- |
+| FE-00 | Bootstrap Angular e execução local | CONCLUÍDO |
+| FE-01 | Contratos TypeScript e base HTTP | PENDENTE |
+| FE-02 | Shell, navegação e rotas | PENDENTE |
+| FE-03 | Mapa Leaflet interativo | PENDENTE |
+| FE-04 | Formulário de busca sincronizado ao mapa | PENDENTE |
+| FE-05 | Execução da busca pela API | PENDENTE |
+| FE-06 | Apresentação dos resultados da busca | PENDENTE |
+| FE-07 | Consulta e filtros de leads | PENDENTE |
+| FE-08 | Kanban somente leitura e cards | PENDENTE |
+| FE-09 | Drag-and-drop com persistência de status | PENDENTE |
+| FE-10 | Detalhe do lead e WhatsApp manual | PENDENTE |
+| FE-11 | Observações e último contato | PENDENTE |
+| FE-12 | Lista do histórico de buscas | PENDENTE |
+| FE-13 | Detalhe de uma busca anterior | PENDENTE |
+| FE-14 | Downloads CSV e XLSX | PENDENTE |
+| FE-15 | Polimento integrado, responsividade e acessibilidade | PENDENTE |
+| FE-16 | Testes de fluxo e fechamento do MVP | PENDENTE |
+
+Decisões preservadas para o ciclo:
+
+- SPA local, standalone, TypeScript strict e sem SSR;
+- proxy de desenvolvimento `/api` para o backend local, sem alterar CORS apenas para desenvolvimento;
+- ausência de autenticação, multiusuário e deploy, conforme o escopo atual;
+- uso dos endpoints reais documentados em `API.md`;
+- um único `PATCH /api/leads/{id}` para status, observações e último contato;
+- Leaflet para mapa e Angular CDK para o Kanban;
+- WhatsApp somente por abertura manual de `whatsappUrl`;
+- downloads CSV/XLSX produzidos pelo backend;
+- Signals para estado simples e RxJS somente quando o fluxo assíncrono justificar;
+- sem biblioteca de estado global, dashboard avançado ou abstrações sem necessidade.
+
+### Próximo passo
+
+O **FE-00 — Bootstrap Angular e execução local** está concluído e validado. O próximo passo é executar o **FE-01 — Contratos TypeScript e base HTTP**; os demais sprints permanecem pendentes.
 
 ## Padrão de boilerplate com Lombok
 
