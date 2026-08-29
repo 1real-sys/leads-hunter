@@ -104,6 +104,24 @@ Em resumo:
 
 ---
 
+# Limites de autorização Git
+
+Um pedido para implementar, corrigir, revisar, validar, concluir ou finalizar um sprint autoriza somente as alterações locais e validações necessárias ao escopo solicitado.
+
+Esse tipo de pedido **não autoriza** executar:
+
+* `git add`;
+* `git commit`;
+* `git push`;
+* criação de tags, branches ou pull requests;
+* merge ou qualquer outra publicação de alterações.
+
+Operações Git que alterem o índice, o histórico ou o repositório remoto só podem ser executadas quando o **prompt atual do usuário** as solicitar explicitamente. Uma autorização concedida para outro sprint, tarefa ou mensagem anterior não deve ser reutilizada.
+
+Ao concluir uma implementação sem essa autorização, manter as mudanças locais sem staging e informar o estado no relatório final. Comandos Git somente de leitura, como `git status`, `git diff` e `git log`, continuam permitidos para inspeção e revisão.
+
+---
+
 # Stack
 
 Use:

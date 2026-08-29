@@ -11,7 +11,14 @@ import {
   Temperatura
 } from './enums.model';
 import { AtualizarLeadRequest, LeadResponse } from './lead.model';
-import { BuscaDetalheResponse, BuscaRequest, BuscaResponse, BuscaResumoResponse } from './busca.model';
+import {
+  BuscaDetalheResponse,
+  BuscaRequest,
+  BuscaResponse,
+  BuscaResumoResponse,
+  LeadEncontradoResponse,
+  LeadHistoricoResponse
+} from './busca.model';
 
 describe('contratos TypeScript da API', () => {
   it('mantém enums e prefixo alinhados aos contratos reais', () => {
@@ -40,6 +47,17 @@ describe('contratos TypeScript da API', () => {
       categorias: [categoria]
     } satisfies BuscaRequest;
 
+    const leadEncontrado = {
+      id: 20,
+      nome: 'Padaria Central',
+      categoria,
+      enderecoFormatado: null,
+      telefone: null,
+      whatsappUrl: null,
+      score: 95,
+      temperatura
+    } satisfies LeadEncontradoResponse;
+
     const busca = {
       id: 10,
       enderecoBase: null,
@@ -47,9 +65,9 @@ describe('contratos TypeScript da API', () => {
       longitude: request.longitude,
       raioKm: request.raioKm,
       categorias: request.categorias,
-      totalEncontrados: 0,
+      totalEncontrados: 1,
       criadoEm: localDateTime,
-      leads: []
+      leads: [leadEncontrado]
     } satisfies BuscaResponse;
 
     const resumo = {
@@ -63,9 +81,23 @@ describe('contratos TypeScript da API', () => {
       criadoEm: busca.criadoEm
     } satisfies BuscaResumoResponse;
 
+    const leadHistorico = {
+      id: leadEncontrado.id,
+      nome: leadEncontrado.nome,
+      categoria: leadEncontrado.categoria,
+      enderecoFormatado: leadEncontrado.enderecoFormatado,
+      telefone: leadEncontrado.telefone,
+      whatsappUrl: leadEncontrado.whatsappUrl,
+      scoreNaBusca: leadEncontrado.score,
+      temperaturaNaBusca: leadEncontrado.temperatura,
+      status,
+      observacoes: null,
+      ultimoContatoEm: null
+    } satisfies LeadHistoricoResponse;
+
     const detalhe = {
       ...resumo,
-      leads: []
+      leads: [leadHistorico]
     } satisfies BuscaDetalheResponse;
 
     const lead = {
@@ -105,5 +137,18 @@ describe('contratos TypeScript da API', () => {
     } satisfies ApiErrorResponse;
 
     expect({ busca, resumo, detalhe, lead, update, apiError, temperatura }).toBeDefined();
+  });
+
+  it('rejeita atualização sem ao menos um valor não nulo', () => {
+    // @ts-expect-error O backend rejeita payload sem campo informado.
+    const semCampos: AtualizarLeadRequest = {};
+    // @ts-expect-error Campos nulos são preservados e não contam como atualização.
+    const somenteNulos: AtualizarLeadRequest = {
+      status: null,
+      observacoes: null,
+      ultimoContatoEm: null
+    };
+
+    expect([semCampos, somenteNulos]).toHaveLength(2);
   });
 });

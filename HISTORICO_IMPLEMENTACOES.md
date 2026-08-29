@@ -434,3 +434,23 @@ Foi criada a base fortemente tipada para o frontend consumir os contratos reais 
 - `FRONTEND_SPRINTS.md`
 - `fluxo.md`
 - `frontend/src/app/app.config.ts`
+
+---
+
+## 17. Correção dos contratos do FE-01 — 29/08/2026
+
+Após revisão independente do sprint, o contrato TypeScript de atualização de lead passou a impedir payloads vazios ou compostos somente por valores nulos, acompanhando a validação já existente no backend. Os testes de contrato também passaram a montar os leads resumidos e históricos completos, cobrindo os campos dos DTOs aninhados. A skill de frontend foi reforçada para exigir autorização explícita no prompt atual antes de operações Git que alterem índice, histórico ou repositório remoto.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+Nenhum.
+
+**Modificados:**
+
+- `.opencode/skills/leadradar-frontend/SKILL.md`
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/src/app/shared/models/api-contracts.spec.ts`
+- `frontend/src/app/shared/models/lead.model.ts`

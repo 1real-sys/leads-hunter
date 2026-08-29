@@ -23,8 +23,13 @@ export interface LeadResponse {
   atualizadoEm: LocalDateTimeString | null;
 }
 
-export interface AtualizarLeadRequest {
+interface CamposAtualizaveisLead {
   status?: StatusFunil | null;
   observacoes?: string | null;
   ultimoContatoEm?: LocalDateTimeString | null;
 }
+
+export type AtualizarLeadRequest =
+  | (CamposAtualizaveisLead & { status: StatusFunil })
+  | (CamposAtualizaveisLead & { observacoes: string })
+  | (CamposAtualizaveisLead & { ultimoContatoEm: LocalDateTimeString });

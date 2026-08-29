@@ -414,7 +414,7 @@ Decisões preservadas para o ciclo:
 - Signals para estado simples e RxJS somente quando o fluxo assíncrono justificar;
 - sem biblioteca de estado global, dashboard avançado ou abstrações sem necessidade.
 
-O FE-01 deixou disponível `provideHttpClient()`, os contratos TypeScript da API em `frontend/src/app/shared/models`, o prefixo relativo `/api` em `frontend/src/app/core/api/api-routes.ts` e o mapeamento seguro de falhas HTTP em `frontend/src/app/core/api/api-error-message.ts`. Nenhum service, componente de negócio, interceptor de autenticação ou estado global foi antecipado.
+O FE-01 deixou disponível `provideHttpClient()`, os contratos TypeScript da API em `frontend/src/app/shared/models`, o prefixo relativo `/api` em `frontend/src/app/core/api/api-routes.ts` e o mapeamento seguro de falhas HTTP em `frontend/src/app/core/api/api-error-message.ts`. Após revisão, `AtualizarLeadRequest` passou a exigir em compilação ao menos um campo não nulo, e os testes passaram a exercer os DTOs aninhados das buscas. Nenhum service, componente de negócio, interceptor de autenticação ou estado global foi antecipado.
 
 ### Próximo passo
 

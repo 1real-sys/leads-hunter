@@ -178,7 +178,8 @@ Criar a base fortemente tipada para integrar o frontend à API real.
 - Contratos tipados da API organizados em `shared/models`, com enums literais, campos nulos/opcionais e datas como strings ISO.
 - Prefixo relativo `/api` e rotas conhecidas centralizados em `core/api/api-routes.ts`.
 - Falhas HTTP convertidas em mensagens seguras por `core/api/api-error-message.ts`.
-- Testes de contrato e utilitário executados sem rede real.
+- `AtualizarLeadRequest` exige em compilação ao menos um campo com valor não nulo, como o backend.
+- Testes de contrato cobrem também os DTOs aninhados das buscas e payloads de atualização inválidos, sem rede real.
 
 ---
 
