@@ -1,0 +1,14 @@
+<div class="mapa-busca">
+  <div
+    #mapContainer
+    class="mapa-busca__canvas"
+    role="region"
+    aria-label="Mapa interativo para selecionar o centro e visualizar o raio da busca"
+  ></div>
+  <div class="mapa-busca__instructions">
+    <p>
+      Use os controles para aplicar zoom. Clique no mapa ou arraste o marcador para mudar o centro.
+    </p>
+    <button type="button" (click)="useVisibleCenter()">Usar centro visível</button>
+  </div>
+</div>

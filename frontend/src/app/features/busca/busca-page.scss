@@ -1,0 +1,125 @@
+:host {
+  display: block;
+}
+
+.busca-page {
+  padding: var(--space-8) 0 var(--space-10);
+}
+
+.busca-page__header {
+  max-width: 48rem;
+  margin-bottom: var(--space-6);
+}
+
+.busca-page__eyebrow,
+.busca-page__context-label {
+  margin: 0 0 var(--space-2);
+  color: var(--accent-strong);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.busca-page__header h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.busca-page__header > p:last-child {
+  max-width: 42rem;
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-body);
+}
+
+.busca-page__workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16rem;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.busca-page__context {
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.busca-page__context h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--font-size-lg);
+}
+
+.busca-page__context dl {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 0;
+}
+
+.busca-page__context dl > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.busca-page__context dt {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.busca-page__context dd {
+  margin: 0;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.busca-page__hint {
+  margin: var(--space-6) 0 0;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
+}
+
+@media (max-width: 52rem) {
+  .busca-page__workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .busca-page__context {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.75fr) 1fr;
+    gap: var(--space-6);
+  }
+
+  .busca-page__context dl,
+  .busca-page__hint {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 35rem) {
+  .busca-page {
+    padding-top: var(--space-6);
+  }
+
+  .busca-page__context {
+    display: block;
+  }
+
+  .busca-page__context dl,
+  .busca-page__hint {
+    margin-top: var(--space-6);
+  }
+}

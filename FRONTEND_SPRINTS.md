@@ -11,12 +11,13 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-03 — Mapa Leaflet interativo**.
+- Próximo sprint: **FE-04 — Formulário de busca sincronizado ao mapa**.
 
 ## Decisões do plano
 
 - O frontend ficará no diretório `frontend/` dentro deste repositório.
 - A criação inicial seguirá `angular-new-app`; depois, o desenvolvimento seguirá `angular-developer` e `leadradar-frontend`.
+- Para tarefas que envolvem criação e desenvolvimento de UI, usar `leadradar-antislopUI` como complementar
 - Será usada a versão estável do Angular disponível no momento do bootstrap, respeitando o mínimo Angular 21+ definido pela skill.
 - A aplicação será uma SPA local, sem SSR, autenticação, cadastro, RBAC ou deploy remoto.
 - TypeScript permanecerá em modo `strict` e os componentes serão standalone.
@@ -71,6 +72,30 @@ Todo sprint deve cumprir, conforme seu escopo:
 - `fluxo.md` atualizado com o estado real;
 - `HISTORICO_IMPLEMENTACOES.md` atualizado quando o sprint representar implementação relevante.
 
+## Veredito obrigatório de conclusão
+
+Ao terminar a implementação ou a revisão de qualquer sprint, o agente deve retornar explicitamente se **todo o escopo, todos os critérios de aceite e todas as validações obrigatórias passaram**. Não basta informar que o código foi criado, que os testes passaram ou que o build compilou.
+
+O relatório de encerramento deve conter, obrigatoriamente:
+
+1. cada item da seção `Escopo`, marcado individualmente como `PASSOU`, `FALHOU` ou `NÃO VALIDADO`, acompanhado da evidência correspondente;
+2. cada item da seção `Critérios de aceite`, marcado individualmente como `PASSOU`, `FALHOU` ou `NÃO VALIDADO`, acompanhado da evidência correspondente;
+3. cada comando ou procedimento da seção `Validação`, com o resultado realmente obtido;
+4. um veredito final usando exatamente uma destas formas:
+   - `SPRINT APROVADO — todo o escopo e todos os critérios de aceite passaram.`
+   - `SPRINT NÃO APROVADO — existem itens que falharam ou não foram validados.`
+
+Regras para o veredito:
+
+- `PASSOU` exige implementação existente e verificação objetiva; suposição, inspeção superficial ou resultado de build isolado não são evidência suficiente para comportamento funcional;
+- se qualquer item de escopo ou critério de aceite estiver como `FALHOU` ou `NÃO VALIDADO`, o sprint inteiro deve receber `SPRINT NÃO APROVADO`;
+- um sprint não aprovado deve permanecer `EM ANDAMENTO` ou `BLOQUEADO`, conforme o caso, e o relatório deve listar claramente o que falta;
+- é proibido marcar o sprint como `CONCLUÍDO`, atualizar o próximo passo ou declarar a entrega validada enquanto existir item pendente, falho ou não validado;
+- depois de uma correção, os itens afetados e as validações obrigatórias devem ser executados novamente antes de emitir novo veredito;
+- problemas encontrados não podem ser omitidos do relatório para permitir a conclusão do sprint.
+
+Esta verificação é responsabilidade do agente que implementa e também do agente que revisa. O revisor não deve confiar no status documentado sem confrontá-lo com o código e com evidências de validação.
+
 ## Visão geral
 
 | Sprint | Entrega | Dependência | Status |
@@ -78,7 +103,7 @@ Todo sprint deve cumprir, conforme seu escopo:
 | FE-00 | Bootstrap Angular e execução local | Nenhuma | CONCLUÍDO |
 | FE-01 | Contratos TypeScript e base HTTP | FE-00 | CONCLUÍDO |
 | FE-02 | Shell, navegação e rotas | FE-00 | CONCLUÍDO |
-| FE-03 | Mapa Leaflet interativo | FE-01, FE-02 | PENDENTE |
+| FE-03 | Mapa Leaflet interativo | FE-01, FE-02 | CONCLUÍDO |
 | FE-04 | Formulário de busca sincronizado ao mapa | FE-03 | PENDENTE |
 | FE-05 | Execução da busca pela API | FE-04 | PENDENTE |
 | FE-06 | Apresentação dos resultados da busca | FE-05 | PENDENTE |
@@ -225,7 +250,7 @@ Entregar a estrutura navegável do aplicativo antes das telas de negócio.
 
 ## FE-03 — Mapa Leaflet interativo
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -254,6 +279,14 @@ Entregar um mapa reutilizável que controle o ponto central e o raio da busca.
 - Testes da lógica de coordenadas/raio sem depender de tile externo.
 - Teste manual de clique, drag, zoom e navegação.
 - `npm run build`.
+
+### Resultado
+
+- Leaflet `1.9.4` e seus tipos foram adicionados como as únicas dependências do mapa, com CSS global e assets locais do marcador configurados no build Angular.
+- O componente reutilizável recebe ponto central e raio tipados, emite coordenadas válidas por clique ou drag, oferece confirmação do centro visível por teclado e atualiza marcador/círculo sem recriar o mapa.
+- Tiles HTTPS do OpenStreetMap foram configurados com atribuição visível e sem prefetch, geocodificação ou armazenamento offline.
+- Listeners e instância são encerrados ao destruir o componente, permitindo sair e retornar à rota sem duplicação.
+- Testes isolam o Leaflet e validam coordenadas, raio, interação, atualização incremental e cleanup sem acessar tiles externos.
 
 ---
 
@@ -699,4 +732,4 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00**, **FE-01** e **FE-02** estão concluídos e validados. O próximo sprint autorizado é o **FE-03 — Mapa Leaflet interativo**.
+Os sprints **FE-00** a **FE-03** estão concluídos e validados. O próximo sprint autorizado é o **FE-04 — Formulário de busca sincronizado ao mapa**.

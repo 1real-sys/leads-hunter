@@ -1,22 +1,21 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
+import { MapaBusca } from './mapa-busca';
+import { PontoMapa } from './mapa.model';
 
 @Component({
+  imports: [MapaBusca],
   selector: 'app-busca-page',
-  template: `
-    <section class="page-placeholder" aria-labelledby="busca-page-title">
-      <p class="page-placeholder__eyebrow">Área principal</p>
-      <h1 id="busca-page-title">Busca</h1>
-      <p class="page-placeholder__description">
-        Encontre estabelecimentos próximos e transforme contexto local em oportunidades comerciais.
-      </p>
-      <div class="placeholder-state" role="status">
-        <span class="placeholder-state__marker" aria-hidden="true">01</span>
-        <div>
-          <strong>Estrutura pronta</strong>
-          <p>O formulário e o mapa serão conectados nos próximos incrementos do MVP.</p>
-        </div>
-      </div>
-    </section>
-  `
+  styleUrl: './busca-page.scss',
+  templateUrl: './busca-page.html',
 })
-export class BuscaPage {}
+export class BuscaPage {
+  protected readonly pontoCentral = signal<PontoMapa>({
+    latitude: -25.4284,
+    longitude: -49.2733,
+  });
+  protected readonly raioKm = signal(5);
+
+  protected atualizarPontoCentral(ponto: PontoMapa): void {
+    this.pontoCentral.set(ponto);
+  }
+}

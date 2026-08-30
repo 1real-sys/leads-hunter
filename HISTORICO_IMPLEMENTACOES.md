@@ -481,3 +481,31 @@ Foi entregue o shell navegável do Leads Hunter, com cabeçalho, navegação pri
 - `frontend/src/app/app.spec.ts`
 - `frontend/src/app/app.ts`
 - `frontend/src/styles.scss`
+
+---
+
+## 19. Mapa Leaflet interativo do frontend — 29/08/2026
+
+Foi adicionado à tela de Busca um mapa interativo para escolher o ponto central da prospecção por clique, arraste do marcador ou confirmação por teclado, e visualizar o raio atual em um círculo. O mapa usa tiles do OpenStreetMap com atribuição visível, reaproveita as mesmas camadas quando ponto ou raio mudam e encerra corretamente seus recursos ao sair da rota. A interface mostra as coordenadas selecionadas sem antecipar o formulário ou a execução da busca dos próximos sprints.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/features/busca/busca-page.html`
+- `frontend/src/app/features/busca/busca-page.scss`
+- `frontend/src/app/features/busca/mapa-busca.html`
+- `frontend/src/app/features/busca/mapa-busca.scss`
+- `frontend/src/app/features/busca/mapa-busca.spec.ts`
+- `frontend/src/app/features/busca/mapa-busca.ts`
+- `frontend/src/app/features/busca/mapa.model.spec.ts`
+- `frontend/src/app/features/busca/mapa.model.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/angular.json`
+- `frontend/package-lock.json`
+- `frontend/package.json`
+- `frontend/src/app/features/busca/busca-page.ts`
