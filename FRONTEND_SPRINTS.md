@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-05 — Execução da busca pela API**.
+- Próximo sprint: **FE-06 — Apresentação dos resultados da busca**.
 
 ## Decisões do plano
 
@@ -105,7 +105,7 @@ Esta verificação é responsabilidade do agente que implementa e também do age
 | FE-02 | Shell, navegação e rotas | FE-00 | CONCLUÍDO |
 | FE-03 | Mapa Leaflet interativo | FE-01, FE-02 | CONCLUÍDO |
 | FE-04 | Formulário de busca sincronizado ao mapa | FE-03 | CONCLUÍDO |
-| FE-05 | Execução da busca pela API | FE-04 | PENDENTE |
+| FE-05 | Execução da busca pela API | FE-04 | CONCLUÍDO |
 | FE-06 | Apresentação dos resultados da busca | FE-05 | PENDENTE |
 | FE-07 | Consulta e filtros de leads | FE-01, FE-02 | PENDENTE |
 | FE-08 | Kanban somente leitura e cards | FE-07 | PENDENTE |
@@ -335,7 +335,7 @@ Permitir configurar uma busca válida usando mapa e formulário sincronizados.
 
 ## FE-05 — Execução da busca pela API
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -364,6 +364,16 @@ Executar `POST /api/buscas` a partir do formulário e representar todos os estad
 - Testes do estado de loading e prevenção de clique duplo.
 - Smoke test local com backend, sem afirmar sucesso da Google se a chamada não for executada.
 - `npm run build`.
+
+### Resultado
+
+- `BuscaApi` passou a encapsular o `POST /api/buscas` com `BuscaRequest` e `BuscaResponse` tipados.
+- A página controla os estados `loading`, `success`, `empty` e `error`, bloqueia submissões concorrentes, mantém a resposta completa e libera uma nova tentativa após falha.
+- Os erros `400`, `429`, `502`, `503` e `500` usam o envelope conhecido quando disponível e mantêm os fallbacks seguros já existentes para respostas desconhecidas.
+- Os testes com `HttpTestingController` validaram método, rota, payload, resposta, códigos de erro, loading, clique duplo, retry e resposta sem leads.
+- O smoke local enviou o payload pelo proxy Angular e recebeu `503 GOOGLE_PLACES_CONFIGURATION` do backend iniciado com `GOOGLE_PLACES_API_KEY` vazia; nenhuma chamada à Google foi executada.
+- A suíte frontend concluiu 57 testes sem falhas e o build de produção foi gerado com sucesso.
+- A auditoria automatizada com axe-core 4.13.0 no Firefox não encontrou violações na rota `/busca`.
 
 ---
 
@@ -742,4 +752,4 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** a **FE-04** estão concluídos e validados. O próximo sprint autorizado é o **FE-05 — Execução da busca pela API**.
+Os sprints **FE-00** a **FE-05** estão concluídos e validados. O próximo sprint autorizado é o **FE-06 — Apresentação dos resultados da busca**.

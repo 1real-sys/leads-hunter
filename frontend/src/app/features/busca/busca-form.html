@@ -175,15 +175,17 @@
   </fieldset>
 
   <div class="busca-form__actions">
-    <button type="submit" [disabled]="buscaForm().invalid() || buscaForm().submitting()">
-      Confirmar configuração
+    <button
+      type="submit"
+      [attr.aria-busy]="executando()"
+      [disabled]="buscaForm().invalid() || buscaForm().submitting() || executando()"
+    >
+      @if (executando()) {
+        Buscando leads...
+      } @else {
+        Buscar leads
+      }
     </button>
-    <p>Uma busca só poderá ser executada quando todos os parâmetros forem válidos.</p>
+    <p>A busca só será enviada quando todos os parâmetros forem válidos.</p>
   </div>
-
-  @if (configuracaoConfirmada()) {
-    <p class="busca-form__success" role="status">
-      Configuração válida. A área está pronta para a próxima etapa.
-    </p>
-  }
 </form>

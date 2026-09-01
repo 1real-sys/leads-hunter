@@ -73,9 +73,7 @@ describe('BuscaForm', () => {
         categorias: ['PADARIA', 'FARMACIA'],
       },
     ]);
-    expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain(
-      'Configuração válida',
-    );
+    expect(button.textContent).toContain('Buscar leads');
   });
 
   it('aceita os limites geográficos e de raio definidos pelo backend', async () => {
@@ -186,7 +184,7 @@ describe('BuscaForm', () => {
     );
   });
 
-  it('remove a confirmação visível assim que qualquer parâmetro muda', async () => {
+  it('mantém o botão bloqueado e anuncia o loading enquanto a busca está em andamento', async () => {
     const fixture = await createFixture();
     const market = fixture.nativeElement.querySelector(
       '[data-categoria="MERCADO"]',
@@ -194,14 +192,19 @@ describe('BuscaForm', () => {
     market.click();
     await fixture.whenStable();
 
-    const form = fixture.nativeElement.querySelector('form') as HTMLFormElement;
-    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
-    await fixture.whenStable();
-    expect(fixture.nativeElement.querySelector('[role="status"]')).not.toBeNull();
-
-    fixture.componentInstance.modelo.update((modelo) => ({ ...modelo, raioKm: 6 }));
+    fixture.componentRef.setInput('executando', true);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+    const button = fixture.nativeElement.querySelector(
+      'button[type="submit"]',
+    ) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.textContent).toContain('Buscando leads');
+
+    fixture.componentRef.setInput('executando', false);
+    await fixture.whenStable();
+    expect(button.disabled).toBe(false);
+    expect(button.textContent).toContain('Buscar leads');
   });
 });

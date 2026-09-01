@@ -539,3 +539,31 @@ O formulário e o mapa compartilham o mesmo estado: clique ou arraste do marcado
 - `frontend/src/app/features/busca/busca-page.ts`
 - `frontend/src/app/features/busca/mapa-busca.spec.ts`
 - `frontend/src/app/features/busca/mapa-busca.ts`
+
+---
+
+## 21. Execução da busca pela API no frontend — 31/08/2026
+
+O formulário de busca passou a executar o endpoint real `POST /api/buscas` por meio de uma integração HTTP tipada. A tela bloqueia submissões simultâneas, informa o carregamento, mantém a resposta completa confirmada pelo backend e diferencia sucesso com leads, sucesso sem leads e falhas recuperáveis.
+
+Os erros previstos para validação, rate limit, integração com a Google e falha interna apresentam mensagens seguras, sem expor respostas desconhecidas. A operação pode ser enviada novamente após uma falha. Foram adicionados testes HTTP e de componente para payload, resposta, códigos `400`, `429`, `502`, `503` e `500`, clique duplo, retry e resposta vazia.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/core/api/busca-api.spec.ts`
+- `frontend/src/app/core/api/busca-api.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/src/app/features/busca/busca-form.html`
+- `frontend/src/app/features/busca/busca-form.scss`
+- `frontend/src/app/features/busca/busca-form.spec.ts`
+- `frontend/src/app/features/busca/busca-form.ts`
+- `frontend/src/app/features/busca/busca-page.html`
+- `frontend/src/app/features/busca/busca-page.scss`
+- `frontend/src/app/features/busca/busca-page.spec.ts`
+- `frontend/src/app/features/busca/busca-page.ts`

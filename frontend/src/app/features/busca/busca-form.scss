@@ -140,8 +140,7 @@
 
 .busca-form__hint,
 .busca-form__error,
-.busca-form__actions p,
-.busca-form__success {
+.busca-form__actions p {
   margin: 0;
   font-size: var(--font-size-xs);
   line-height: var(--line-height-body);
@@ -188,15 +187,6 @@
   cursor: not-allowed;
 }
 
-.busca-form__success {
-  padding: var(--space-3);
-  border: 1px solid var(--success-border);
-  border-radius: var(--radius-sm);
-  background: var(--success-surface);
-  color: var(--success-ink);
-  font-weight: 700;
-}
-
 @media (max-width: 64rem) {
   .busca-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -204,8 +194,7 @@
 
   .busca-form__header,
   .busca-form__categories,
-  .busca-form__actions,
-  .busca-form__success {
+  .busca-form__actions {
     grid-column: 1 / -1;
   }
 }
@@ -218,8 +207,7 @@
 
   .busca-form__header,
   .busca-form__categories,
-  .busca-form__actions,
-  .busca-form__success {
+  .busca-form__actions {
     grid-column: auto;
   }
 }

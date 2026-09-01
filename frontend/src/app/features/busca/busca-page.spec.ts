@@ -1,7 +1,12 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, input, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { API_ROUTES } from '../../core/api/api-routes';
+import { ApiErrorResponse } from '../../shared/models/api-error-response.model';
+import { BuscaRequest, BuscaResponse } from '../../shared/models/busca.model';
 import { BuscaPage } from './busca-page';
 import { MapaBusca } from './mapa-busca';
 import { PontoMapa } from './mapa.model';
@@ -16,19 +21,71 @@ class MapaBuscaStub {
   readonly pontoCentralChange = output<PontoMapa>();
 }
 
+const REQUEST: BuscaRequest = {
+  enderecoBase: '',
+  latitude: -25.4284,
+  longitude: -49.2733,
+  raioKm: 5,
+  categorias: ['MERCADO'],
+};
+
+const RESPONSE: BuscaResponse = {
+  id: 42,
+  enderecoBase: '',
+  latitude: REQUEST.latitude,
+  longitude: REQUEST.longitude,
+  raioKm: REQUEST.raioKm,
+  categorias: REQUEST.categorias,
+  totalEncontrados: 1,
+  criadoEm: '2026-08-31T10:30:00',
+  leads: [
+    {
+      id: 7,
+      nome: 'Mercado Central',
+      categoria: 'MERCADO',
+      enderecoFormatado: 'Rua Central, 100',
+      telefone: null,
+      whatsappUrl: null,
+      score: 55,
+      temperatura: 'MORNO',
+    },
+  ],
+};
+
 describe('BuscaPage', () => {
+  let httpTesting: HttpTestingController;
+
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [BuscaPage] });
+    TestBed.configureTestingModule({
+      imports: [BuscaPage],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     TestBed.overrideComponent(BuscaPage, {
       remove: { imports: [MapaBusca] },
       add: { imports: [MapaBuscaStub] },
     });
+    httpTesting = TestBed.inject(HttpTestingController);
   });
+
+  afterEach(() => httpTesting.verify());
 
   async function createFixture() {
     const fixture = TestBed.createComponent(BuscaPage);
     await fixture.whenStable();
     return fixture;
+  }
+
+  async function prepararBuscaValida(fixture: Awaited<ReturnType<typeof createFixture>>) {
+    const market = fixture.nativeElement.querySelector(
+      '[data-categoria="MERCADO"]',
+    ) as HTMLInputElement;
+    market.click();
+    await fixture.whenStable();
+  }
+
+  function enviarBusca(fixture: Awaited<ReturnType<typeof createFixture>>): void {
+    const form = fixture.nativeElement.querySelector('form') as HTMLFormElement;
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
   }
 
   it('atualiza latitude e longitude do formulário quando o mapa emite um novo ponto', async () => {
@@ -88,5 +145,122 @@ describe('BuscaPage', () => {
 
     expect(map.raioKm()).toBe(12);
     expect(fixture.nativeElement.querySelector('output')?.textContent).toContain('12 km');
+  });
+
+  it('envia uma busca válida, bloqueia duplicidade e mantém a resposta completa', async () => {
+    const fixture = await createFixture();
+    await prepararBuscaValida(fixture);
+
+    enviarBusca(fixture);
+    await fixture.whenStable();
+    enviarBusca(fixture);
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector(
+      'button[type="submit"]',
+    ) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.textContent).toContain('Buscando leads');
+    expect(fixture.nativeElement.textContent).toContain('Busca em andamento');
+
+    const requests = httpTesting.match(API_ROUTES.buscas);
+    expect(requests).toHaveLength(1);
+    expect(requests[0].request.method).toBe('POST');
+    expect(requests[0].request.body).toEqual(REQUEST);
+
+    requests[0].flush(RESPONSE, { status: 201, statusText: 'Created' });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['estadoOperacao']()).toBe('success');
+    expect(fixture.componentInstance['resultadoBusca']()).toEqual(RESPONSE);
+    expect(button.disabled).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Busca #42 concluída');
+    expect(fixture.nativeElement.textContent).toContain('1 lead(s)');
+  });
+
+  it.each([
+    [400, 'VALIDACAO_INVALIDA'],
+    [429, 'GOOGLE_PLACES_RATE_LIMIT'],
+    [502, 'GOOGLE_PLACES_INVALID_RESPONSE'],
+    [503, 'GOOGLE_PLACES_UNAVAILABLE'],
+    [500, 'ERRO_INTERNO'],
+  ] as const)(
+    'apresenta o erro seguro retornado pelo backend para o status %i',
+    async (status, codigo) => {
+      const fixture = await createFixture();
+      await prepararBuscaValida(fixture);
+      enviarBusca(fixture);
+
+      const errorBody: ApiErrorResponse = {
+        timestamp: '2026-08-31T13:30:00Z',
+        status,
+        codigo,
+        mensagem: `Mensagem segura para ${status}`,
+        path: API_ROUTES.buscas,
+      };
+      httpTesting
+        .expectOne(API_ROUTES.buscas)
+        .flush(errorBody, { status, statusText: `Error ${status}` });
+      await fixture.whenStable();
+
+      const button = fixture.nativeElement.querySelector(
+        'button[type="submit"]',
+      ) as HTMLButtonElement;
+      expect(fixture.componentInstance['estadoOperacao']()).toBe('error');
+      expect(fixture.componentInstance['resultadoBusca']()).toBeNull();
+      expect(button.disabled).toBe(false);
+      expect(fixture.nativeElement.textContent).toContain(errorBody.mensagem);
+      expect(fixture.nativeElement.textContent).toContain('tentar novamente');
+    },
+  );
+
+  it('permite tentar novamente com segurança depois de uma falha', async () => {
+    const fixture = await createFixture();
+    await prepararBuscaValida(fixture);
+    enviarBusca(fixture);
+
+    httpTesting.expectOne(API_ROUTES.buscas).flush(
+      {
+        timestamp: '2026-08-31T13:30:00Z',
+        status: 503,
+        codigo: 'GOOGLE_PLACES_UNAVAILABLE',
+        mensagem: 'O serviço externo está temporariamente indisponível.',
+        path: API_ROUTES.buscas,
+      } satisfies ApiErrorResponse,
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+    await fixture.whenStable();
+
+    enviarBusca(fixture);
+    const retry = httpTesting.expectOne(API_ROUTES.buscas);
+    expect(retry.request.body).toEqual(REQUEST);
+    retry.flush(RESPONSE, { status: 201, statusText: 'Created' });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['estadoOperacao']()).toBe('success');
+    expect(fixture.componentInstance['mensagemErro']()).toBeNull();
+    expect(fixture.componentInstance['resultadoBusca']()).toEqual(RESPONSE);
+  });
+
+  it('trata uma resposta sem leads como sucesso vazio e preserva seus dados', async () => {
+    const fixture = await createFixture();
+    await prepararBuscaValida(fixture);
+    enviarBusca(fixture);
+
+    const emptyResponse: BuscaResponse = {
+      ...RESPONSE,
+      totalEncontrados: 0,
+      leads: [],
+    };
+    httpTesting
+      .expectOne(API_ROUTES.buscas)
+      .flush(emptyResponse, { status: 201, statusText: 'Created' });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['estadoOperacao']()).toBe('empty');
+    expect(fixture.componentInstance['resultadoBusca']()).toEqual(emptyResponse);
+    expect(fixture.componentInstance['mensagemErro']()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Nenhum lead encontrado');
+    expect(fixture.nativeElement.textContent).not.toContain('encontrou um problema');
   });
 });

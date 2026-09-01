@@ -1,4 +1,4 @@
-import { Component, computed, model, output, signal } from '@angular/core';
+import { Component, input, model, output } from '@angular/core';
 import {
   form,
   FormField,
@@ -25,6 +25,7 @@ import {
 })
 export class BuscaForm {
   readonly modelo = model.required<BuscaFormModel>();
+  readonly executando = input(false);
   readonly buscaConfirmada = output<BuscaRequest>();
 
   protected readonly opcoesCategoria = OPCOES_CATEGORIA;
@@ -63,17 +64,10 @@ export class BuscaForm {
     );
   });
 
-  private readonly assinaturaConfirmada = signal<string | null>(null);
-  private readonly assinaturaAtual = computed(() => JSON.stringify(this.modelo()));
-  protected readonly configuracaoConfirmada = computed(
-    () => this.assinaturaConfirmada() === this.assinaturaAtual(),
-  );
-
   protected confirmarConfiguracao(event: SubmitEvent): void {
     event.preventDefault();
     void submit(this.buscaForm, async () => {
       const request = criarBuscaRequest(this.modelo());
-      this.assinaturaConfirmada.set(this.assinaturaAtual());
       this.buscaConfirmada.emit(request);
     });
   }

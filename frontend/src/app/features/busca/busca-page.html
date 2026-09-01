@@ -28,6 +28,52 @@
       />
     </section>
 
-    <app-busca-form [(modelo)]="buscaModel" />
+    <app-busca-form
+      [(modelo)]="buscaModel"
+      [executando]="carregando()"
+      (buscaConfirmada)="executarBusca($event)"
+    />
   </div>
+
+  @switch (estadoOperacao()) {
+    @case ('loading') {
+      <section class="busca-page__feedback busca-page__feedback--loading" role="status">
+        <p class="busca-page__feedback-label">Busca em andamento</p>
+        <h2>Consultando estabelecimentos próximos</h2>
+        <p>Aguarde a confirmação do backend antes de iniciar outra busca.</p>
+      </section>
+    }
+    @case ('error') {
+      <section class="busca-page__feedback busca-page__feedback--error" role="alert">
+        <p class="busca-page__feedback-label">Não foi possível concluir</p>
+        <h2>A busca encontrou um problema</h2>
+        <p>{{ mensagemErro() }}</p>
+        <p>Revise os parâmetros, se necessário, e use “Buscar leads” para tentar novamente.</p>
+      </section>
+    }
+    @case ('empty') {
+      @if (resultadoBusca(); as resultado) {
+        <section class="busca-page__feedback busca-page__feedback--empty" role="status">
+          <p class="busca-page__feedback-label">Busca #{{ resultado.id }} concluída</p>
+          <h2>Nenhum lead encontrado nesta área</h2>
+          <p>
+            O backend confirmou {{ resultado.totalEncontrados }} estabelecimento(s) em
+            {{ resultado.criadoEm }}. Você pode ajustar o mapa ou as categorias e buscar novamente.
+          </p>
+        </section>
+      }
+    }
+    @case ('success') {
+      @if (resultadoBusca(); as resultado) {
+        <section class="busca-page__feedback busca-page__feedback--success" role="status">
+          <p class="busca-page__feedback-label">Busca #{{ resultado.id }} concluída</p>
+          <h2>{{ resultado.totalEncontrados }} estabelecimento(s) confirmado(s)</h2>
+          <p>
+            Resposta recebida em {{ resultado.criadoEm }}. Os {{ resultado.leads.length }} lead(s)
+            foram mantidos para a etapa de resultados.
+          </p>
+        </section>
+      }
+    }
+  }
 </section>

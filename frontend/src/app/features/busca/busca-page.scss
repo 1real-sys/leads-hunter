@@ -75,6 +75,64 @@
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
+.busca-page__feedback {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 52rem;
+  margin-top: var(--space-6);
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.busca-page__feedback h2,
+.busca-page__feedback p {
+  margin: 0;
+}
+
+.busca-page__feedback h2 {
+  color: var(--ink);
+  font-size: var(--font-size-lg);
+}
+
+.busca-page__feedback > p:not(.busca-page__feedback-label) {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
+}
+
+.busca-page__feedback-label {
+  color: var(--accent-strong);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.busca-page__feedback--loading {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.busca-page__feedback--success {
+  border-color: var(--success-border);
+  background: var(--success-surface);
+}
+
+.busca-page__feedback--success .busca-page__feedback-label {
+  color: var(--success-ink);
+}
+
+.busca-page__feedback--error {
+  border-color: #d92d20;
+  background: #fff4f2;
+}
+
+.busca-page__feedback--error .busca-page__feedback-label {
+  color: #9f1c14;
+}
+
 @media (max-width: 64rem) {
   .busca-page__workspace {
     grid-template-columns: 1fr;
