@@ -53,26 +53,12 @@
     }
     @case ('empty') {
       @if (resultadoBusca(); as resultado) {
-        <section class="busca-page__feedback busca-page__feedback--empty" role="status">
-          <p class="busca-page__feedback-label">Busca #{{ resultado.id }} concluída</p>
-          <h2>Nenhum lead encontrado nesta área</h2>
-          <p>
-            O backend confirmou {{ resultado.totalEncontrados }} estabelecimento(s) em
-            {{ resultado.criadoEm }}. Você pode ajustar o mapa ou as categorias e buscar novamente.
-          </p>
-        </section>
+        <app-busca-resultados [resultado]="resultado" />
       }
     }
     @case ('success') {
       @if (resultadoBusca(); as resultado) {
-        <section class="busca-page__feedback busca-page__feedback--success" role="status">
-          <p class="busca-page__feedback-label">Busca #{{ resultado.id }} concluída</p>
-          <h2>{{ resultado.totalEncontrados }} estabelecimento(s) confirmado(s)</h2>
-          <p>
-            Resposta recebida em {{ resultado.criadoEm }}. Os {{ resultado.leads.length }} lead(s)
-            foram mantidos para a etapa de resultados.
-          </p>
-        </section>
+        <app-busca-resultados [resultado]="resultado" />
       }
     }
   }

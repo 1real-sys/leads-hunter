@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-06 — Apresentação dos resultados da busca**.
+- Próximo sprint: **FE-07 — Consulta e filtros de leads**.
 
 ## Decisões do plano
 
@@ -106,7 +106,7 @@ Esta verificação é responsabilidade do agente que implementa e também do age
 | FE-03 | Mapa Leaflet interativo | FE-01, FE-02 | CONCLUÍDO |
 | FE-04 | Formulário de busca sincronizado ao mapa | FE-03 | CONCLUÍDO |
 | FE-05 | Execução da busca pela API | FE-04 | CONCLUÍDO |
-| FE-06 | Apresentação dos resultados da busca | FE-05 | PENDENTE |
+| FE-06 | Apresentação dos resultados da busca | FE-05 | CONCLUÍDO |
 | FE-07 | Consulta e filtros de leads | FE-01, FE-02 | PENDENTE |
 | FE-08 | Kanban somente leitura e cards | FE-07 | PENDENTE |
 | FE-09 | Drag-and-drop com persistência de status | FE-08 | PENDENTE |
@@ -379,7 +379,7 @@ Executar `POST /api/buscas` a partir do formulário e representar todos os estad
 
 ## FE-06 — Apresentação dos resultados da busca
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -407,6 +407,15 @@ Transformar a resposta inicial da busca em uma visão útil e clara para o usuá
 - Testes de resultados preenchidos, parciais e vazios.
 - Testes de presença/ausência do link WhatsApp.
 - `npm run build`.
+
+### Resultado
+
+- A resposta confirmada pela API passou a exibir endereço de referência quando informado, raio, categorias, total retornado e data formatada.
+- Os leads são apresentados em uma lista responsiva com nome, categoria, endereço, telefone, score e temperatura somente quando esses dados existem.
+- A temperatura possui rótulo textual além da diferenciação visual, e o WhatsApp só aparece quando o backend retorna `whatsappUrl`, abrindo em nova aba com `noopener noreferrer`.
+- O resultado vazio permanece como uma busca concluída, orienta ajustes de raio, ponto ou categorias e mantém disponível a navegação para o Kanban.
+- Os testes cobrem respostas preenchidas, parciais, vazias e presença ou ausência do WhatsApp; a suíte concluiu 61 testes sem falhas e o build de produção foi gerado com sucesso.
+- A auditoria com axe-core 4.13.0 no Firefox não encontrou violações na rota `/busca`; os estados dinâmicos dos resultados foram verificados pelos testes de componente.
 
 ---
 
@@ -752,4 +761,4 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** a **FE-05** estão concluídos e validados. O próximo sprint autorizado é o **FE-06 — Apresentação dos resultados da busca**.
+Os sprints **FE-00** a **FE-06** estão concluídos e validados. O próximo sprint é o **FE-07 — Consulta e filtros de leads**.

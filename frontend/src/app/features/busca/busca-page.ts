@@ -5,13 +5,14 @@ import { getApiErrorMessage } from '../../core/api/api-error-message';
 import { BuscaRequest, BuscaResponse } from '../../shared/models/busca.model';
 import { BuscaForm } from './busca-form';
 import { criarBuscaFormInicial } from './busca-form.model';
+import { BuscaResultados } from './busca-resultados';
 import { MapaBusca } from './mapa-busca';
 import { PontoMapa } from './mapa.model';
 
 type EstadoOperacaoBusca = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 @Component({
-  imports: [BuscaForm, MapaBusca],
+  imports: [BuscaForm, BuscaResultados, MapaBusca],
   selector: 'app-busca-page',
   styleUrl: './busca-page.scss',
   templateUrl: './busca-page.html',

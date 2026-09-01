@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Component, input, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { API_ROUTES } from '../../core/api/api-routes';
 import { ApiErrorResponse } from '../../shared/models/api-error-response.model';
@@ -58,7 +59,7 @@ describe('BuscaPage', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [BuscaPage],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     });
     TestBed.overrideComponent(BuscaPage, {
       remove: { imports: [MapaBusca] },
@@ -175,7 +176,8 @@ describe('BuscaPage', () => {
     expect(fixture.componentInstance['resultadoBusca']()).toEqual(RESPONSE);
     expect(button.disabled).toBe(false);
     expect(fixture.nativeElement.textContent).toContain('Busca #42 concluída');
-    expect(fixture.nativeElement.textContent).toContain('1 lead(s)');
+    expect(fixture.nativeElement.textContent).toContain('1 lead encontrado');
+    expect(fixture.nativeElement.textContent).toContain('Mercado Central');
   });
 
   it.each([

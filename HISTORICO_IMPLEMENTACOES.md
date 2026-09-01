@@ -567,3 +567,29 @@ Os erros previstos para validação, rate limit, integração com a Google e fal
 - `frontend/src/app/features/busca/busca-page.scss`
 - `frontend/src/app/features/busca/busca-page.spec.ts`
 - `frontend/src/app/features/busca/busca-page.ts`
+
+---
+
+## 22. Apresentação dos resultados da busca no frontend — 31/08/2026
+
+A resposta de uma busca concluída passou a ser apresentada em uma visão resumida e responsiva. A tela mostra os parâmetros e a data da execução, lista os leads com os dados realmente disponíveis e identifica a temperatura por texto. O link manual de WhatsApp só é exibido quando retornado pelo backend e abre em nova aba com proteção apropriada.
+
+Buscas sem leads continuam registradas como concluídas, apresentam orientação para ajustar a configuração e permitem seguir para o Kanban. Foram adicionados testes para resultados completos, parciais e vazios, incluindo a presença e a ausência do link de WhatsApp.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/features/busca/busca-resultados.html`
+- `frontend/src/app/features/busca/busca-resultados.scss`
+- `frontend/src/app/features/busca/busca-resultados.spec.ts`
+- `frontend/src/app/features/busca/busca-resultados.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/src/app/features/busca/busca-page.html`
+- `frontend/src/app/features/busca/busca-page.scss`
+- `frontend/src/app/features/busca/busca-page.spec.ts`
+- `frontend/src/app/features/busca/busca-page.ts`

@@ -1,0 +1,120 @@
+<section class="resultados" aria-labelledby="resultados-title">
+  <header class="resultados__header">
+    <div>
+      <p class="resultados__contexto" role="status">Busca #{{ resultado().id }} concluída</p>
+      <h2 id="resultados-title">
+        @if (resultado().leads.length === 0) {
+          Nenhum lead encontrado
+        } @else {
+          {{ resultado().leads.length }}
+          {{ resultado().leads.length === 1 ? 'lead encontrado' : 'leads encontrados' }}
+        }
+      </h2>
+    </div>
+    <a class="resultados__kanban" routerLink="/kanban">Seguir para o Kanban</a>
+  </header>
+
+  <dl class="resultados__resumo" aria-label="Resumo da busca">
+    @if (resultado().enderecoBase) {
+      <div class="resultados__resumo-local">
+        <dt>Endereço de referência</dt>
+        <dd>{{ resultado().enderecoBase }}</dd>
+      </div>
+    }
+    <div>
+      <dt>Raio</dt>
+      <dd>{{ resultado().raioKm }} km</dd>
+    </div>
+    <div>
+      <dt>Total retornado</dt>
+      <dd>{{ resultado().totalEncontrados }}</dd>
+    </div>
+    <div>
+      <dt>Data</dt>
+      <dd>
+        <time [attr.datetime]="resultado().criadoEm">
+          {{ resultado().criadoEm | date: "dd/MM/yyyy 'às' HH:mm" }}
+        </time>
+      </dd>
+    </div>
+    <div class="resultados__resumo-categorias">
+      <dt>Categorias</dt>
+      <dd>
+        @for (categoria of resultado().categorias; track categoria) {
+          <span>{{ rotuloCategoria(categoria) }}</span>
+        }
+      </dd>
+    </div>
+  </dl>
+
+  @if (resultado().leads.length === 0) {
+    <div class="resultados__vazio" role="status">
+      <h3>Nenhum estabelecimento correspondeu a esta configuração.</h3>
+      <p>Tente aumentar o raio, mover o ponto no mapa ou selecionar outras categorias.</p>
+    </div>
+  } @else {
+    <ul class="resultados__lista" aria-label="Leads encontrados">
+      @for (lead of resultado().leads; track lead.id) {
+        <li>
+          <article class="lead-resumo" [attr.aria-labelledby]="'lead-' + lead.id + '-nome'">
+            <header class="lead-resumo__header">
+              <div>
+                @if (lead.categoria) {
+                  <p class="lead-resumo__categoria">{{ rotuloCategoria(lead.categoria) }}</p>
+                }
+                <h3 [id]="'lead-' + lead.id + '-nome'">
+                  {{ lead.nome || 'Lead #' + lead.id }}
+                </h3>
+              </div>
+              @if (lead.temperatura) {
+                <span
+                  class="lead-resumo__temperatura"
+                  [class.lead-resumo__temperatura--quente]="lead.temperatura === 'QUENTE'"
+                  [class.lead-resumo__temperatura--morno]="lead.temperatura === 'MORNO'"
+                  [class.lead-resumo__temperatura--frio]="lead.temperatura === 'FRIO'"
+                >
+                  {{ rotuloTemperatura(lead.temperatura) }}
+                </span>
+              }
+            </header>
+
+            @if (lead.enderecoFormatado) {
+              <p class="lead-resumo__endereco">{{ lead.enderecoFormatado }}</p>
+            }
+
+            @if (lead.telefone || lead.score !== null) {
+              <dl class="lead-resumo__dados">
+                @if (lead.telefone) {
+                  <div>
+                    <dt>Telefone</dt>
+                    <dd>{{ lead.telefone }}</dd>
+                  </div>
+                }
+                @if (lead.score !== null) {
+                  <div>
+                    <dt>Score</dt>
+                    <dd>{{ lead.score }}</dd>
+                  </div>
+                }
+              </dl>
+            }
+
+            @if (lead.whatsappUrl) {
+              <a
+                class="lead-resumo__whatsapp"
+                [href]="lead.whatsappUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                [attr.aria-label]="
+                  'Abrir WhatsApp de ' + (lead.nome || 'lead ' + lead.id) + ' em nova aba'
+                "
+              >
+                Abrir WhatsApp
+              </a>
+            }
+          </article>
+        </li>
+      }
+    </ul>
+  }
+</section>
