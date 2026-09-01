@@ -168,6 +168,22 @@ describe('MapaBusca', () => {
     expect(leaflet.map).toHaveBeenCalledTimes(1);
   });
 
+  it('mantém as últimas camadas válidas enquanto o formulário contém valor inválido', async () => {
+    const fixture = await createMapFixture();
+    leaflet.markerInstance.setLatLng.mockClear();
+    leaflet.circleInstance.setLatLng.mockClear();
+    leaflet.circleInstance.setRadius.mockClear();
+
+    fixture.componentRef.setInput('pontoCentral', { latitude: 91, longitude: -49 });
+    fixture.componentRef.setInput('raioKm', 0);
+    await fixture.whenStable();
+
+    expect(leaflet.markerInstance.setLatLng).not.toHaveBeenCalled();
+    expect(leaflet.circleInstance.setLatLng).not.toHaveBeenCalled();
+    expect(leaflet.circleInstance.setRadius).not.toHaveBeenCalled();
+    expect(leaflet.map).toHaveBeenCalledTimes(1);
+  });
+
   it('permite confirmar por teclado o centro visível do mapa', async () => {
     const fixture = await createMapFixture();
     const emitted: PontoMapa[] = [];

@@ -1,0 +1,189 @@
+<form class="busca-form" novalidate (submit)="confirmarConfiguracao($event)">
+  <header class="busca-form__header">
+    <h2>Parâmetros</h2>
+    <p>As coordenadas começam em um ponto de referência e também podem ser editadas.</p>
+  </header>
+
+  <div class="busca-form__field">
+    <div class="busca-form__label-row">
+      <label for="endereco-base">Endereço de referência</label>
+      <span>Opcional</span>
+    </div>
+    <input
+      id="endereco-base"
+      type="text"
+      autocomplete="off"
+      [attr.aria-describedby]="
+        (buscaForm.enderecoBase().touched() || buscaForm.enderecoBase().dirty()) &&
+        buscaForm.enderecoBase().invalid()
+          ? 'endereco-base-hint endereco-base-error'
+          : 'endereco-base-hint'
+      "
+      [attr.aria-invalid]="
+        (buscaForm.enderecoBase().touched() || buscaForm.enderecoBase().dirty()) &&
+        buscaForm.enderecoBase().invalid()
+      "
+      [formField]="buscaForm.enderecoBase"
+    />
+    <p id="endereco-base-hint" class="busca-form__hint">
+      Serve apenas para identificar a busca no histórico. Não move o mapa.
+    </p>
+    @if (
+      (buscaForm.enderecoBase().touched() || buscaForm.enderecoBase().dirty()) &&
+      buscaForm.enderecoBase().invalid()
+    ) {
+      <p id="endereco-base-error" class="busca-form__error" role="alert">
+        {{ buscaForm.enderecoBase().errors()[0].message }}
+      </p>
+    }
+  </div>
+
+  <fieldset class="busca-form__group">
+    <legend>Coordenadas</legend>
+    <p id="coordenadas-hint" class="busca-form__hint">
+      Altere pelo mapa ou informe valores geográficos válidos.
+    </p>
+
+    <div class="busca-form__coordinates-grid">
+      <div class="busca-form__field">
+        <label for="latitude">Latitude</label>
+        <input
+          id="latitude"
+          type="number"
+          inputmode="decimal"
+          [attr.aria-describedby]="
+            (buscaForm.latitude().touched() || buscaForm.latitude().dirty()) &&
+            buscaForm.latitude().invalid()
+              ? 'coordenadas-hint latitude-error'
+              : 'coordenadas-hint'
+          "
+          [attr.aria-invalid]="
+            (buscaForm.latitude().touched() || buscaForm.latitude().dirty()) &&
+            buscaForm.latitude().invalid()
+          "
+          [formField]="buscaForm.latitude"
+        />
+        @if (
+          (buscaForm.latitude().touched() || buscaForm.latitude().dirty()) &&
+          buscaForm.latitude().invalid()
+        ) {
+          <p id="latitude-error" class="busca-form__error" role="alert">
+            {{ buscaForm.latitude().errors()[0].message }}
+          </p>
+        }
+      </div>
+
+      <div class="busca-form__field">
+        <label for="longitude">Longitude</label>
+        <input
+          id="longitude"
+          type="number"
+          inputmode="decimal"
+          [attr.aria-describedby]="
+            (buscaForm.longitude().touched() || buscaForm.longitude().dirty()) &&
+            buscaForm.longitude().invalid()
+              ? 'coordenadas-hint longitude-error'
+              : 'coordenadas-hint'
+          "
+          [attr.aria-invalid]="
+            (buscaForm.longitude().touched() || buscaForm.longitude().dirty()) &&
+            buscaForm.longitude().invalid()
+          "
+          [formField]="buscaForm.longitude"
+        />
+        @if (
+          (buscaForm.longitude().touched() || buscaForm.longitude().dirty()) &&
+          buscaForm.longitude().invalid()
+        ) {
+          <p id="longitude-error" class="busca-form__error" role="alert">
+            {{ buscaForm.longitude().errors()[0].message }}
+          </p>
+        }
+      </div>
+    </div>
+  </fieldset>
+
+  <div class="busca-form__field busca-form__radius">
+    <div class="busca-form__radius-heading">
+      <label for="raio-km">Raio da busca</label>
+      <output for="raio-km">{{ modelo().raioKm }} km</output>
+    </div>
+    <input
+      id="raio-km"
+      type="range"
+      [attr.aria-describedby]="
+        (buscaForm.raioKm().touched() || buscaForm.raioKm().dirty()) && buscaForm.raioKm().invalid()
+          ? 'raio-km-hint raio-km-error'
+          : 'raio-km-hint'
+      "
+      [attr.aria-invalid]="
+        (buscaForm.raioKm().touched() || buscaForm.raioKm().dirty()) && buscaForm.raioKm().invalid()
+      "
+      [formField]="buscaForm.raioKm"
+    />
+    <div class="busca-form__range-limits" aria-hidden="true">
+      <span>1 km</span>
+      <span>20 km</span>
+    </div>
+    <p id="raio-km-hint" class="busca-form__hint">Use um valor inteiro entre 1 e 20 km.</p>
+    @if (
+      (buscaForm.raioKm().touched() || buscaForm.raioKm().dirty()) && buscaForm.raioKm().invalid()
+    ) {
+      <p id="raio-km-error" class="busca-form__error" role="alert">
+        {{ buscaForm.raioKm().errors()[0].message }}
+      </p>
+    }
+  </div>
+
+  <fieldset
+    class="busca-form__group busca-form__categories"
+    [attr.aria-describedby]="
+      (buscaForm.categorias().touched() || buscaForm.categorias().dirty()) &&
+      buscaForm.categorias().invalid()
+        ? 'categorias-hint categorias-error'
+        : 'categorias-hint'
+    "
+    [attr.aria-invalid]="
+      (buscaForm.categorias().touched() || buscaForm.categorias().dirty()) &&
+      buscaForm.categorias().invalid()
+    "
+  >
+    <legend>Categorias</legend>
+    <p id="categorias-hint" class="busca-form__hint">Selecione uma ou mais opções.</p>
+
+    <div class="busca-form__category-list">
+      @for (opcao of opcoesCategoria; track opcao.valor) {
+        <label>
+          <input
+            type="checkbox"
+            [attr.data-categoria]="opcao.valor"
+            [formField]="buscaForm.categorias[opcao.valor]"
+          />
+          <span>{{ opcao.rotulo }}</span>
+        </label>
+      }
+    </div>
+
+    @if (
+      (buscaForm.categorias().touched() || buscaForm.categorias().dirty()) &&
+      buscaForm.categorias().invalid()
+    ) {
+      <p id="categorias-error" class="busca-form__error" role="alert">
+        {{ buscaForm.categorias().errors()[0].message }}
+      </p>
+    }
+  </fieldset>
+
+  <div class="busca-form__actions">
+    <button type="submit" [disabled]="buscaForm().invalid() || buscaForm().submitting()">
+      Confirmar configuração
+    </button>
+    <p>Uma busca só poderá ser executada quando todos os parâmetros forem válidos.</p>
+  </div>
+
+  @if (configuracaoConfirmada()) {
+    <p class="busca-form__success" role="status">
+      Configuração válida. A área está pronta para a próxima etapa.
+    </p>
+  }
+</form>

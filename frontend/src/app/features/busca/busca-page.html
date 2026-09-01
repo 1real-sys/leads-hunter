@@ -1,41 +1,33 @@
 <section class="busca-page" aria-labelledby="busca-page-title">
   <header class="busca-page__header">
     <p class="busca-page__eyebrow">Área de prospecção</p>
-    <h1 id="busca-page-title">Busca por localização</h1>
-    <p>Clique no mapa ou arraste o marcador para posicionar o centro da futura busca de leads.</p>
+    <h1 id="busca-page-title">Busca de leads por localização</h1>
+    <p>
+      Posicione o centro no mapa, ajuste o alcance e escolha os tipos de negócio que deseja
+      encontrar.
+    </p>
   </header>
 
   <div class="busca-page__workspace">
-    <app-mapa-busca
-      [pontoCentral]="pontoCentral()"
-      [raioKm]="raioKm()"
-      (pontoCentralChange)="atualizarPontoCentral($event)"
-    />
-
-    <aside class="busca-page__context" aria-labelledby="area-selecionada-title">
-      <div>
-        <p class="busca-page__context-label">Ponto selecionado</p>
-        <h2 id="area-selecionada-title">Área da busca</h2>
+    <section class="busca-page__map" aria-labelledby="mapa-title">
+      <div class="busca-page__map-heading">
+        <div>
+          <h2 id="mapa-title">Centro e alcance</h2>
+          <p>O círculo representa o raio definido no formulário.</p>
+        </div>
+        <p class="busca-page__coordinates" aria-live="polite">
+          <span>{{ pontoCentral().latitude.toFixed(6) }}</span>
+          <span>{{ pontoCentral().longitude.toFixed(6) }}</span>
+        </p>
       </div>
 
-      <dl aria-live="polite">
-        <div>
-          <dt>Latitude</dt>
-          <dd>{{ pontoCentral().latitude.toFixed(6) }}</dd>
-        </div>
-        <div>
-          <dt>Longitude</dt>
-          <dd>{{ pontoCentral().longitude.toFixed(6) }}</dd>
-        </div>
-        <div>
-          <dt>Raio atual</dt>
-          <dd>{{ raioKm() }} km</dd>
-        </div>
-      </dl>
+      <app-mapa-busca
+        [pontoCentral]="pontoCentral()"
+        [raioKm]="raioKm()"
+        (pontoCentralChange)="atualizarPontoCentral($event)"
+      />
+    </section>
 
-      <p class="busca-page__hint">
-        O formulário para ajustar raio, endereço e categorias será adicionado no próximo sprint.
-      </p>
-    </aside>
+    <app-busca-form [(modelo)]="buscaModel" />
   </div>
 </section>

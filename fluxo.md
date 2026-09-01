@@ -1,6 +1,6 @@
 # Fluxo do Leads Hunter
 
-Este documento descreve o fluxo real do projeto no estado atual. O backend está concluído e os sprints FE-00 a FE-03 do frontend foram entregues; o próximo passo do MVP é o formulário de busca sincronizado ao mapa.
+Este documento descreve o fluxo real do projeto no estado atual. O backend está concluído e os sprints FE-00 a FE-04 do frontend foram entregues; o próximo passo do MVP é executar a busca pela API.
 
 ## Visão geral
 
@@ -387,7 +387,7 @@ O planejamento detalhado e os critérios de aceite estão em [FRONTEND_SPRINTS.m
 | FE-01 | Contratos TypeScript e base HTTP | CONCLUÍDO |
 | FE-02 | Shell, navegação e rotas | CONCLUÍDO |
 | FE-03 | Mapa Leaflet interativo | CONCLUÍDO |
-| FE-04 | Formulário de busca sincronizado ao mapa | PENDENTE |
+| FE-04 | Formulário de busca sincronizado ao mapa | CONCLUÍDO |
 | FE-05 | Execução da busca pela API | PENDENTE |
 | FE-06 | Apresentação dos resultados da busca | PENDENTE |
 | FE-07 | Consulta e filtros de leads | PENDENTE |
@@ -414,11 +414,11 @@ Decisões preservadas para o ciclo:
 - Signals para estado simples e RxJS somente quando o fluxo assíncrono justificar;
 - sem biblioteca de estado global, dashboard avançado ou abstrações sem necessidade.
 
-O FE-01 deixou disponível `provideHttpClient()`, os contratos TypeScript da API em `frontend/src/app/shared/models`, o prefixo relativo `/api` em `frontend/src/app/core/api/api-routes.ts` e o mapeamento seguro de falhas HTTP em `frontend/src/app/core/api/api-error-message.ts`. Após revisão, `AtualizarLeadRequest` passou a exigir em compilação ao menos um campo não nulo, e os testes passaram a exercer os DTOs aninhados das buscas. O FE-02 adicionou o shell navegável, as rotas lazy de Busca, Kanban e Histórico, placeholders acessíveis e o fallback de rota desconhecida. O FE-03 adicionou o mapa Leaflet reutilizável à Busca, com ponto central tipado, marcador arrastável, seleção por clique ou teclado, círculo de raio atualizado incrementalmente, tiles OpenStreetMap atribuídos e cleanup no ciclo de vida. Nenhum formulário, categoria, geocodificação, busca HTTP ou integração com a Google foi antecipado.
+O FE-01 deixou disponível `provideHttpClient()`, os contratos TypeScript da API em `frontend/src/app/shared/models`, o prefixo relativo `/api` em `frontend/src/app/core/api/api-routes.ts` e o mapeamento seguro de falhas HTTP em `frontend/src/app/core/api/api-error-message.ts`. Após revisão, `AtualizarLeadRequest` passou a exigir em compilação ao menos um campo não nulo, e os testes passaram a exercer os DTOs aninhados das buscas. O FE-02 adicionou o shell navegável, as rotas lazy de Busca, Kanban e Histórico, placeholders acessíveis e o fallback de rota desconhecida. O FE-03 adicionou o mapa Leaflet reutilizável à Busca, com ponto central tipado, marcador arrastável, seleção por clique ou teclado, círculo de raio atualizado incrementalmente, tiles OpenStreetMap atribuídos e cleanup no ciclo de vida. O FE-04 adicionou o formulário com Signal Forms para endereço descritivo, coordenadas, raio e múltiplas categorias, usando as restrições reais do backend e um único estado sincronizado com o mapa. A confirmação válida emite um `BuscaRequest` tipado, mas ainda não faz chamada HTTP, geocodificação ou integração com a Google.
 
 ### Próximo passo
 
-Os sprints **FE-00** a **FE-03** estão concluídos e validados. O próximo passo é executar o **FE-04 — Formulário de busca sincronizado ao mapa**; os demais sprints permanecem pendentes.
+Os sprints **FE-00** a **FE-04** estão concluídos e validados. O próximo passo é executar o **FE-05 — Execução da busca pela API**; os demais sprints permanecem pendentes.
 
 ## Padrão de boilerplate com Lombok
 

@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-04 — Formulário de busca sincronizado ao mapa**.
+- Próximo sprint: **FE-05 — Execução da busca pela API**.
 
 ## Decisões do plano
 
@@ -104,7 +104,7 @@ Esta verificação é responsabilidade do agente que implementa e também do age
 | FE-01 | Contratos TypeScript e base HTTP | FE-00 | CONCLUÍDO |
 | FE-02 | Shell, navegação e rotas | FE-00 | CONCLUÍDO |
 | FE-03 | Mapa Leaflet interativo | FE-01, FE-02 | CONCLUÍDO |
-| FE-04 | Formulário de busca sincronizado ao mapa | FE-03 | PENDENTE |
+| FE-04 | Formulário de busca sincronizado ao mapa | FE-03 | CONCLUÍDO |
 | FE-05 | Execução da busca pela API | FE-04 | PENDENTE |
 | FE-06 | Apresentação dos resultados da busca | FE-05 | PENDENTE |
 | FE-07 | Consulta e filtros de leads | FE-01, FE-02 | PENDENTE |
@@ -292,7 +292,7 @@ Entregar um mapa reutilizável que controle o ponto central e o raio da busca.
 
 ## FE-04 — Formulário de busca sincronizado ao mapa
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -320,6 +320,16 @@ Permitir configurar uma busca válida usando mapa e formulário sincronizados.
 
 - Testes de limites, categorias vazias e sincronização com o mapa.
 - `npm run build`.
+
+### Resultado
+
+- Signal Forms foi adotado como estratégia única na versão Angular 22.1.4, com um modelo tipado compartilhado entre o formulário e a página.
+- Endereço opcional, coordenadas, raio e categorias possuem as mesmas restrições do `BuscaRequest` do backend, incluindo endereço de até 255 caracteres, limites geográficos, raio inteiro de 1 a 20 km e ao menos uma categoria.
+- Mapa, inputs numéricos e slider usam o mesmo estado: clique ou drag atualizam o formulário, e alterações válidas no formulário atualizam ponto e círculo sem recriar o mapa.
+- As oito categorias exibem rótulos em português e mantêm no request os valores exatos de `CategoriaNegocio`.
+- O estado inicial é explícito, o endereço é descrito como referência sem geocodificação e mensagens de erro são associadas aos controles.
+- A confirmação local permanece bloqueada para payload inválido e não realiza HTTP; a execução real continua reservada ao FE-05.
+- A suíte isolada validou limites, categoria vazia, payload tipado e sincronização nos dois sentidos, e a revisão com axe-core não encontrou violações automatizadas.
 
 ---
 
@@ -732,4 +742,4 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** a **FE-03** estão concluídos e validados. O próximo sprint autorizado é o **FE-04 — Formulário de busca sincronizado ao mapa**.
+Os sprints **FE-00** a **FE-04** estão concluídos e validados. O próximo sprint autorizado é o **FE-05 — Execução da busca pela API**.

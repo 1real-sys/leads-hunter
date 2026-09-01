@@ -509,3 +509,33 @@ Foi adicionado à tela de Busca um mapa interativo para escolher o ponto central
 - `frontend/package-lock.json`
 - `frontend/package.json`
 - `frontend/src/app/features/busca/busca-page.ts`
+
+---
+
+## 20. Formulário de busca sincronizado ao mapa — 31/08/2026
+
+Foi adicionado à tela de Busca um formulário baseado em Signal Forms para configurar endereço de referência, coordenadas, raio e múltiplas categorias. O formulário aplica os limites reais do backend, mantém o submit bloqueado para configurações inválidas e converte os rótulos amigáveis para os valores exatos do enum no request tipado.
+
+O formulário e o mapa compartilham o mesmo estado: clique ou arraste do marcador atualizam as coordenadas exibidas, enquanto alterações nas coordenadas e no slider atualizam o mapa e seu círculo. O endereço permanece apenas descritivo, sem geocodificação ou autocomplete, e nenhuma chamada HTTP foi antecipada.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/features/busca/busca-form.html`
+- `frontend/src/app/features/busca/busca-form.model.spec.ts`
+- `frontend/src/app/features/busca/busca-form.model.ts`
+- `frontend/src/app/features/busca/busca-form.scss`
+- `frontend/src/app/features/busca/busca-form.spec.ts`
+- `frontend/src/app/features/busca/busca-form.ts`
+- `frontend/src/app/features/busca/busca-page.spec.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/src/app/features/busca/busca-page.html`
+- `frontend/src/app/features/busca/busca-page.scss`
+- `frontend/src/app/features/busca/busca-page.ts`
+- `frontend/src/app/features/busca/mapa-busca.spec.ts`
+- `frontend/src/app/features/busca/mapa-busca.ts`

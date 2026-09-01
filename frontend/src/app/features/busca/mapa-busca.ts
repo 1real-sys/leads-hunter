@@ -58,11 +58,13 @@ export class MapaBusca {
     afterRenderEffect({
       mixedReadWrite: () => {
         const point = this.pontoCentral();
-        const radiusInMeters = raioKmParaMetros(this.raioKm());
+        const radiusKm = this.raioKm();
 
-        if (!pontoMapaValido(point)) {
-          throw new RangeError('O ponto central do mapa possui coordenadas inválidas.');
+        if (!pontoMapaValido(point) || !Number.isFinite(radiusKm) || radiusKm <= 0) {
+          return;
         }
+
+        const radiusInMeters = raioKmParaMetros(radiusKm);
 
         if (!this.mapInstance) {
           this.initializeMap(point, radiusInMeters);
