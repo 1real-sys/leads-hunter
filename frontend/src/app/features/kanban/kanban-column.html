@@ -1,0 +1,22 @@
+@if (coluna(); as colunaAtual) {
+  <section
+    class="kanban-column"
+    [attr.aria-labelledby]="tituloId()"
+    [attr.data-status]="colunaAtual.status ?? 'SEM_ETAPA'"
+  >
+    <header class="kanban-column__header">
+      <h2 [id]="tituloId()">{{ colunaAtual.rotulo }}</h2>
+      <span [attr.aria-label]="colunaAtual.leads.length + ' leads nesta etapa'">
+        {{ colunaAtual.leads.length }}
+      </span>
+    </header>
+
+    <ul class="kanban-column__leads">
+      @for (lead of colunaAtual.leads; track lead.id) {
+        <li><app-lead-card [lead]="lead" /></li>
+      } @empty {
+        <li class="kanban-column__empty">Nenhum lead nesta etapa.</li>
+      }
+    </ul>
+  </section>
+}

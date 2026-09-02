@@ -1,0 +1,61 @@
+<form class="lead-filters" aria-labelledby="lead-filters-title" (submit)="confirmar($event)">
+  <div class="lead-filters__heading">
+    <h2 id="lead-filters-title">Filtros</h2>
+    <p>As opções podem ser usadas separadamente ou em conjunto.</p>
+  </div>
+
+  <div class="lead-filters__field">
+    <label for="lead-status">Etapa</label>
+    <select
+      id="lead-status"
+      name="status"
+      [value]="filtros().status ?? ''"
+      [disabled]="carregando()"
+      (change)="alterarStatus($event)"
+    >
+      <option value="">Todas as etapas</option>
+      @for (opcao of opcoesStatus; track opcao.valor) {
+        <option [value]="opcao.valor">{{ opcao.rotulo }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="lead-filters__field">
+    <label for="lead-categoria">Categoria</label>
+    <select
+      id="lead-categoria"
+      name="categoria"
+      [value]="filtros().categoria ?? ''"
+      [disabled]="carregando()"
+      (change)="alterarCategoria($event)"
+    >
+      <option value="">Todas as categorias</option>
+      @for (opcao of opcoesCategoria; track opcao.valor) {
+        <option [value]="opcao.valor">{{ opcao.rotulo }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="lead-filters__field">
+    <label for="lead-temperatura">Temperatura</label>
+    <select
+      id="lead-temperatura"
+      name="temperatura"
+      [value]="filtros().temperatura ?? ''"
+      [disabled]="carregando()"
+      (change)="alterarTemperatura($event)"
+    >
+      <option value="">Todas as temperaturas</option>
+      @for (opcao of opcoesTemperatura; track opcao.valor) {
+        <option [value]="opcao.valor">{{ opcao.rotulo }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="lead-filters__actions">
+    <button type="submit" [disabled]="carregando()" [attr.aria-busy]="carregando()">
+      {{ carregando() ? 'Carregando...' : 'Aplicar filtros' }}
+    </button>
+    <button type="button" [disabled]="carregando()" (click)="limpar.emit()">Limpar</button>
+  </div>
+</form>

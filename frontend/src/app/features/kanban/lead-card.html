@@ -1,0 +1,57 @@
+@if (lead(); as item) {
+  <article class="lead-card" [attr.aria-labelledby]="tituloId()">
+    <header class="lead-card__header">
+      <div>
+        @if (item.categoria; as categoria) {
+          <p class="lead-card__category">{{ rotulosCategoria[categoria] }}</p>
+        }
+        <h3 [id]="tituloId()">{{ item.nome ?? 'Lead #' + item.id }}</h3>
+      </div>
+
+      @if (item.temperatura; as temperatura) {
+        <span class="lead-card__temperature" [attr.data-temperature]="temperatura">
+          {{ rotulosTemperatura[temperatura] }}
+        </span>
+      }
+    </header>
+
+    @if (item.enderecoFormatado; as endereco) {
+      <p class="lead-card__address" [title]="endereco">{{ endereco }}</p>
+    }
+
+    @if (item.telefone; as telefone) {
+      <p class="lead-card__phone">
+        <span>Telefone</span>
+        <strong>{{ telefone }}</strong>
+      </p>
+    }
+
+    @if (item.ratingGoogle !== null || item.totalReviews !== null || item.score !== null) {
+      <dl class="lead-card__metrics">
+        @if (item.ratingGoogle !== null) {
+          <div>
+            <dt>Nota</dt>
+            <dd>{{ item.ratingGoogle }}</dd>
+          </div>
+        }
+        @if (item.totalReviews !== null) {
+          <div>
+            <dt>Avaliações</dt>
+            <dd>{{ item.totalReviews }}</dd>
+          </div>
+        }
+        @if (item.score !== null) {
+          <div>
+            <dt>Score</dt>
+            <dd>{{ item.score }}</dd>
+          </div>
+        }
+      </dl>
+    }
+
+    <footer class="lead-card__footer">
+      <span>Etapa</span>
+      <strong>{{ rotuloStatus() }}</strong>
+    </footer>
+  </article>
+}

@@ -1,0 +1,57 @@
+<section class="kanban-page" aria-labelledby="kanban-page-title">
+  <header class="kanban-page__header">
+    <div>
+      <p class="kanban-page__eyebrow">Acompanhamento comercial</p>
+      <h1 id="kanban-page-title">Leads do Kanban</h1>
+      <p>Consulte a base persistida e combine os filtros antes de organizar o funil.</p>
+    </div>
+
+    @if (estadoConsulta() !== 'loading' || leads().length > 0) {
+      <p class="kanban-page__total" aria-live="polite">
+        <strong>{{ leads().length }}</strong>
+        {{ leads().length === 1 ? 'lead carregado' : 'leads carregados' }}
+      </p>
+    }
+  </header>
+
+  <app-lead-filters
+    [(filtros)]="filtros"
+    [carregando]="carregando()"
+    (aplicar)="aplicarFiltros()"
+    (limpar)="limparFiltros()"
+  />
+
+  @if (carregando()) {
+    <div class="kanban-page__feedback" role="status">
+      <strong>Carregando leads</strong>
+      <span>Aguarde a resposta da base persistida.</span>
+    </div>
+  }
+
+  @if (estadoConsulta() === 'error') {
+    <div class="kanban-page__feedback kanban-page__feedback--error" role="alert">
+      <div>
+        <strong>Não foi possível atualizar os leads</strong>
+        <span>{{ mensagemErro() }}</span>
+        @if (leads().length > 0) {
+          <span>A lista anterior foi mantida.</span>
+        }
+      </div>
+      <button type="button" (click)="tentarNovamente()">Tentar novamente</button>
+    </div>
+  }
+
+  @if (estadoConsulta() === 'empty') {
+    <section class="kanban-page__empty" aria-labelledby="empty-leads-title">
+      <h2 id="empty-leads-title">Nenhum lead encontrado</h2>
+      <p>Limpe ou altere os filtros para consultar outras oportunidades.</p>
+      @if (filtrosAplicados()) {
+        <button type="button" (click)="limparFiltros()">Limpar filtros</button>
+      }
+    </section>
+  }
+
+  @if (leads().length > 0) {
+    <app-kanban-board [leads]="leads()" />
+  }
+</section>

@@ -593,3 +593,64 @@ Buscas sem leads continuam registradas como concluídas, apresentam orientação
 - `frontend/src/app/features/busca/busca-page.scss`
 - `frontend/src/app/features/busca/busca-page.spec.ts`
 - `frontend/src/app/features/busca/busca-page.ts`
+
+---
+
+## 23. Consulta e filtros de leads no frontend — 02/09/2026
+
+A rota Kanban foi conectada à listagem real de leads persistidos. A tela agora consulta os dados ao entrar, permite combinar ou limpar filtros de etapa, categoria e temperatura e apresenta estados claros de carregamento, resultado vazio e falha com nova tentativa. Consultas simultâneas são bloqueadas, a ordenação recebida do backend é mantida e uma falha posterior não apaga a última lista válida.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/core/api/lead-api.spec.ts`
+- `frontend/src/app/core/api/lead-api.ts`
+- `frontend/src/app/features/kanban/kanban-page.html`
+- `frontend/src/app/features/kanban/kanban-page.scss`
+- `frontend/src/app/features/kanban/kanban-page.spec.ts`
+- `frontend/src/app/features/kanban/lead-filters.html`
+- `frontend/src/app/features/kanban/lead-filters.scss`
+- `frontend/src/app/features/kanban/lead-filters.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/src/app/features/kanban/kanban-page.ts`
+
+---
+
+## 24. Kanban somente leitura e cards de leads — 02/09/2026
+
+A lista filtrada de leads passou a ser apresentada em um quadro Kanban somente leitura com as cinco etapas reais do funil. O agrupamento mantém cada lead em uma única coluna, calcula os contadores a partir das listas e preserva registros sem status válido em uma etapa separada, sem classificá-los como novos.
+
+Os cards mostram de forma compacta apenas os dados disponíveis e identificam status e temperatura por texto. O quadro mantém os filtros existentes, distingue a lista global vazia de uma coluna vazia e oferece rolagem horizontal acessível para conservar a leitura dos cards em telas estreitas. A direção visual foi mantida contida e operacional, sem efeitos decorativos que prejudiquem a densidade de informação.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/features/kanban/kanban-board.html`
+- `frontend/src/app/features/kanban/kanban-board.scss`
+- `frontend/src/app/features/kanban/kanban-board.spec.ts`
+- `frontend/src/app/features/kanban/kanban-board.ts`
+- `frontend/src/app/features/kanban/kanban-column.html`
+- `frontend/src/app/features/kanban/kanban-column.scss`
+- `frontend/src/app/features/kanban/kanban-column.ts`
+- `frontend/src/app/features/kanban/kanban.model.spec.ts`
+- `frontend/src/app/features/kanban/kanban.model.ts`
+- `frontend/src/app/features/kanban/lead-card.html`
+- `frontend/src/app/features/kanban/lead-card.scss`
+- `frontend/src/app/features/kanban/lead-card.spec.ts`
+- `frontend/src/app/features/kanban/lead-card.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/src/app/features/kanban/kanban-page.html`
+- `frontend/src/app/features/kanban/kanban-page.scss`
+- `frontend/src/app/features/kanban/kanban-page.spec.ts`
+- `frontend/src/app/features/kanban/kanban-page.ts`
+- `frontend/src/app/features/kanban/lead-filters.ts`

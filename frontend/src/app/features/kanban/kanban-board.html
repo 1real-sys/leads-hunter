@@ -1,0 +1,20 @@
+<p id="kanban-scroll-hint" class="kanban-board__hint">
+  Role horizontalmente para comparar todas as etapas.
+</p>
+
+<div
+  class="kanban-board__viewport"
+  role="region"
+  aria-label="Quadro Kanban por etapa comercial"
+  aria-describedby="kanban-scroll-hint"
+  tabindex="0"
+>
+  <div class="kanban-board">
+    @for (coluna of agrupamento().colunas; track coluna.status) {
+      <app-kanban-column [coluna]="coluna" />
+    }
+    @if (agrupamento().semEtapa; as semEtapa) {
+      <app-kanban-column [coluna]="semEtapa" />
+    }
+  </div>
+</div>

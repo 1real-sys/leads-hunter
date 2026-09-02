@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-07 — Consulta e filtros de leads**.
+- Próximo sprint: **FE-09 — Drag-and-drop com persistência de status**.
 
 ## Decisões do plano
 
@@ -107,8 +107,8 @@ Esta verificação é responsabilidade do agente que implementa e também do age
 | FE-04 | Formulário de busca sincronizado ao mapa | FE-03 | CONCLUÍDO |
 | FE-05 | Execução da busca pela API | FE-04 | CONCLUÍDO |
 | FE-06 | Apresentação dos resultados da busca | FE-05 | CONCLUÍDO |
-| FE-07 | Consulta e filtros de leads | FE-01, FE-02 | PENDENTE |
-| FE-08 | Kanban somente leitura e cards | FE-07 | PENDENTE |
+| FE-07 | Consulta e filtros de leads | FE-01, FE-02 | CONCLUÍDO |
+| FE-08 | Kanban somente leitura e cards | FE-07 | CONCLUÍDO |
 | FE-09 | Drag-and-drop com persistência de status | FE-08 | PENDENTE |
 | FE-10 | Detalhe do lead e WhatsApp manual | FE-08 | PENDENTE |
 | FE-11 | Observações e último contato | FE-10 | PENDENTE |
@@ -421,7 +421,7 @@ Transformar a resposta inicial da busca em uma visão útil e clara para o usuá
 
 ## FE-07 — Consulta e filtros de leads
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -450,11 +450,20 @@ Criar a fonte de dados real do Kanban com filtros combináveis.
 - Testes da aplicação/limpeza de filtros e estados da tela.
 - `npm run build`.
 
+### Resultado
+
+- `LeadApi.listar` consulta `GET /api/leads` e envia somente os filtros definidos entre status, categoria e temperatura.
+- A rota Kanban carrega a base persistida ao entrar e oferece uma barra compacta com filtros isolados ou combinados, aplicação, limpeza e retry.
+- Os valores dos selects são limitados pelos enums conhecidos; valores manipulados e desconhecidos são descartados antes da chamada HTTP.
+- Loading e chamadas simultâneas ficam bloqueados, enquanto sucesso, vazio e erro possuem feedback próprio. Uma falha posterior conserva a última lista válida visível e informa explicitamente esse comportamento.
+- A prévia mantém a ordem recebida da API sem antecipar as colunas e os cards do FE-08.
+- A suíte frontend concluiu 71 testes sem falhas e o build de produção foi gerado sem warnings. O smoke local confirmou HTTP 200 no backend e na rota `/kanban`, com capturas responsivas em desktop e mobile.
+
 ---
 
 ## FE-08 — Kanban somente leitura e cards
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -481,6 +490,15 @@ Apresentar os leads nas cinco colunas do funil antes de adicionar mutações por
 
 - Testes de agrupamento, contagens e renderização parcial.
 - `npm run build`.
+
+### Resultado
+
+- O board apresenta as cinco etapas reais do funil, com agrupamento puro por status, contadores derivados das listas e `track` pelo ID do lead.
+- Cada coluna possui estado vazio próprio, enquanto a página mantém o estado global sem resultados do FE-07. Registros com status nulo ou inesperado não são classificados incorretamente e aparecem em uma coluna condicional `Sem etapa`.
+- Os cards compactos mostram somente os dados disponíveis entre nome, categoria, endereço, telefone, nota, avaliações, score e temperatura; status e temperatura permanecem identificáveis por texto.
+- Os filtros continuam integrados à mesma lista e o quadro permite comparação horizontal em telas estreitas sem comprometer a leitura vertical dos cards.
+- A interface seguiu a direção visual operacional da skill antislop: hierarquia tipográfica contida, superfícies neutras, ausência de gradientes e sombras decorativas e cor semântica reservada à temperatura.
+- A suíte frontend concluiu 80 testes sem falhas e o build de produção foi gerado sem warnings. A validação integrada carregou 18 leads pelo backend local no Firefox, gerou capturas em `1440x1200` e `390x1200` e terminou com zero violações no axe.
 
 ---
 
@@ -761,4 +779,4 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** a **FE-06** estão concluídos e validados. O próximo sprint é o **FE-07 — Consulta e filtros de leads**.
+Os sprints **FE-00** a **FE-08** estão concluídos e validados. O próximo sprint é o **FE-09 — Drag-and-drop com persistência de status**.
