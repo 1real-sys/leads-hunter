@@ -74,6 +74,16 @@ describe('KanbanPage', () => {
     form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
   }
 
+  function botaoMover(
+    fixture: Awaited<ReturnType<typeof createFixture>>,
+    nome: string,
+    destino: string,
+  ): HTMLButtonElement {
+    return fixture.nativeElement.querySelector(
+      `[aria-label="Mover ${nome} para ${destino}"]`,
+    ) as HTMLButtonElement;
+  }
+
   it('consulta a lista completa ao entrar, representa loading e preserva a ordem da API', async () => {
     const fixture = await createFixture();
     const request = httpTesting.expectOne(API_ROUTES.leads);
@@ -229,5 +239,98 @@ describe('KanbanPage', () => {
     const requests = httpTesting.match(API_ROUTES.leads);
     expect(requests).toHaveLength(1);
     requests[0].flush([]);
+  });
+
+  it('move de forma otimista e usa a resposta completa do PATCH como estado confirmado', async () => {
+    const fixture = await createFixture();
+    httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_MORNO]);
+    await fixture.whenStable();
+
+    botaoMover(fixture, 'Mercado Bairro', 'Qualificado').click();
+    await fixture.whenStable();
+
+    const request = httpTesting.expectOne(API_ROUTES.lead(8));
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ status: 'QUALIFICADO' });
+    expect(fixture.componentInstance['leads']()[0].status).toBe('QUALIFICADO');
+    expect(fixture.nativeElement.textContent).toContain('Salvando etapa');
+
+    const confirmado: LeadResponse = {
+      ...LEAD_MORNO,
+      nome: 'Mercado confirmado',
+      score: 61,
+      status: 'QUALIFICADO',
+    };
+    request.flush(confirmado);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['leads']()).toEqual([confirmado]);
+    expect(fixture.componentInstance['idsEmMovimento']().size).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain(
+      'Mercado confirmado movido para Qualificado',
+    );
+  });
+
+  it('reverte o card e informa o erro quando o PATCH falha', async () => {
+    const fixture = await createFixture();
+    httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_QUENTE]);
+    await fixture.whenStable();
+
+    botaoMover(fixture, 'Padaria Central', 'Contatado').click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance['leads']()[0].status).toBe('CONTATADO');
+
+    httpTesting.expectOne(API_ROUTES.lead(7)).flush(
+      {
+        timestamp: '2026-09-02T12:00:00Z',
+        status: 500,
+        codigo: 'ERRO_INTERNO',
+        mensagem: 'Não foi possível atualizar o lead.',
+        path: API_ROUTES.lead(7),
+      } satisfies ApiErrorResponse,
+      { status: 500, statusText: 'Internal Server Error' },
+    );
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['leads']()).toEqual([LEAD_QUENTE]);
+    expect(fixture.componentInstance['idsEmMovimento']().size).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain('Não foi possível mover Padaria Central');
+    expect(
+      fixture.nativeElement.querySelector('[data-status="QUALIFICADO"]')?.textContent,
+    ).toContain('Padaria Central');
+  });
+
+  it('bloqueia movimentos concorrentes do mesmo lead', async () => {
+    const fixture = await createFixture();
+    httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_MORNO]);
+    await fixture.whenStable();
+
+    fixture.componentInstance['mudarStatus']({ lead: LEAD_MORNO, status: 'QUALIFICADO' });
+    fixture.componentInstance['mudarStatus']({ lead: LEAD_MORNO, status: 'CONTATADO' });
+
+    const requests = httpTesting.match(API_ROUTES.lead(8));
+    expect(requests).toHaveLength(1);
+    expect(requests[0].request.body).toEqual({ status: 'QUALIFICADO' });
+    requests[0].flush({ ...LEAD_MORNO, status: 'QUALIFICADO' });
+  });
+
+  it('mantém o filtro e remove da visão um lead que deixou de atendê-lo após a confirmação', async () => {
+    const fixture = await createFixture();
+    httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_MORNO]);
+    await fixture.whenStable();
+
+    selecionar(fixture, '#lead-status', 'NOVO');
+    aplicar(fixture);
+    httpTesting.expectOne(`${API_ROUTES.leads}?status=NOVO`).flush([LEAD_MORNO]);
+    await fixture.whenStable();
+
+    botaoMover(fixture, 'Mercado Bairro', 'Qualificado').click();
+    httpTesting.expectOne(API_ROUTES.lead(8)).flush({ ...LEAD_MORNO, status: 'QUALIFICADO' });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['filtros']().status).toBe('NOVO');
+    expect(fixture.componentInstance['leads']()).toEqual([]);
+    expect(fixture.componentInstance['estadoConsulta']()).toBe('empty');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum lead encontrado');
   });
 });

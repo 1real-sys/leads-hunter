@@ -89,4 +89,35 @@ describe('LeadCard', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Sem etapa');
   });
+
+  it('oferece destinos adjacentes por controles textuais acionáveis pelo teclado', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const destinos: string[] = [];
+    fixture.componentInstance.mudancaStatusSolicitada.subscribe((status) => destinos.push(status));
+    const botoes = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
+
+    expect(botoes.map((botao) => botao.textContent?.trim())).toEqual([
+      'Para Novo',
+      'Para Contatado',
+    ]);
+    expect(botoes[1].getAttribute('aria-label')).toContain('Padaria Central para Contatado');
+
+    botoes[1].click();
+
+    expect(destinos).toEqual(['CONTATADO']);
+  });
+
+  it('bloqueia drag e controles enquanto a etapa está sendo salva', async () => {
+    const fixture = TestBed.createComponent(LeadCard);
+    fixture.componentRef.setInput('lead', LEAD_COMPLETO);
+    fixture.componentRef.setInput('movendo', true);
+    await fixture.whenStable();
+    const card = fixture.nativeElement.querySelector('.lead-card') as HTMLElement;
+    const handle = fixture.nativeElement.querySelector('.lead-card__drag-handle') as HTMLElement;
+
+    expect(card.getAttribute('aria-busy')).toBe('true');
+    expect(handle.classList).toContain('lead-card__drag-handle--disabled');
+    expect(fixture.nativeElement.querySelectorAll('button')).toHaveLength(0);
+    expect(fixture.nativeElement.textContent).toContain('Salvando etapa');
+  });
 });

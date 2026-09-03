@@ -31,9 +31,10 @@ function criarLead(id: number, status: StatusFunil): LeadResponse {
 describe('KanbanBoard', () => {
   beforeEach(() => TestBed.configureTestingModule({ imports: [KanbanBoard] }));
 
-  async function renderizar(leads: readonly LeadResponse[]) {
+  async function renderizar(leads: readonly LeadResponse[], idsEmMovimento = new Set<number>()) {
     const fixture = TestBed.createComponent(KanbanBoard);
     fixture.componentRef.setInput('leads', leads);
+    fixture.componentRef.setInput('idsEmMovimento', idsEmMovimento);
     await fixture.whenStable();
     return fixture;
   }
@@ -82,5 +83,35 @@ describe('KanbanBoard', () => {
     expect(viewport.getAttribute('role')).toBe('region');
     expect(viewport.getAttribute('aria-label')).toContain('Quadro Kanban');
     expect(viewport.tabIndex).toBe(0);
+  });
+
+  it('conecta as colunas ao CDK e encaminha a alternativa de movimento por botão', async () => {
+    const lead = criarLead(1, 'NOVO');
+    const fixture = await renderizar([lead]);
+    const mudancas: Array<{ lead: LeadResponse; status: StatusFunil }> = [];
+    fixture.componentInstance.mudancaStatusSolicitada.subscribe((mudanca) =>
+      mudancas.push(mudanca),
+    );
+
+    expect(fixture.nativeElement.querySelectorAll('.cdk-drop-list')).toHaveLength(5);
+    expect(fixture.nativeElement.querySelectorAll('.cdk-drag')).toHaveLength(1);
+
+    const botao = fixture.nativeElement.querySelector(
+      '[aria-label="Mover Lead 1 para Qualificado"]',
+    ) as HTMLButtonElement;
+    botao.click();
+
+    expect(mudancas).toEqual([{ lead, status: 'QUALIFICADO' }]);
+  });
+
+  it('marca e bloqueia somente o card com atualização em andamento', async () => {
+    const fixture = await renderizar([criarLead(1, 'NOVO'), criarLead(2, 'NOVO')], new Set([1]));
+    const cards = fixture.nativeElement.querySelectorAll('.lead-card');
+    const drags = fixture.nativeElement.querySelectorAll('.cdk-drag');
+
+    expect(cards[0].getAttribute('aria-busy')).toBe('true');
+    expect(cards[1].getAttribute('aria-busy')).toBe('false');
+    expect(drags[0].classList).toContain('cdk-drag-disabled');
+    expect(drags[1].classList).not.toContain('cdk-drag-disabled');
   });
 });

@@ -72,4 +72,19 @@ describe('LeadApi', () => {
 
     expect(received).toEqual(LEADS);
   });
+
+  it('atualiza o lead pela rota real com somente os campos permitidos no payload', () => {
+    const atualizado = { ...LEADS[0], status: 'CONTATADO' as const };
+    let received: LeadResponse | undefined;
+
+    api.atualizar(7, { status: 'CONTATADO' }).subscribe((response) => (received = response));
+
+    const request = httpTesting.expectOne(API_ROUTES.lead(7));
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ status: 'CONTATADO' });
+
+    request.flush(atualizado);
+
+    expect(received).toEqual(atualizado);
+  });
 });

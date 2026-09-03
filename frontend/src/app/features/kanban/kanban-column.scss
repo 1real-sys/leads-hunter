@@ -46,6 +46,30 @@
   list-style: none;
 }
 
+.kanban-column__leads.cdk-drop-list-receiving {
+  outline: 2px solid var(--accent);
+  outline-offset: var(--space-1);
+}
+
+.kanban-column__lead {
+  display: block;
+}
+
+.kanban-column__lead.cdk-drag-preview {
+  box-sizing: border-box;
+  opacity: 0.94;
+  box-shadow: 0 0.45rem 1rem rgb(19 54 49 / 18%);
+}
+
+.kanban-column__lead.cdk-drag-placeholder {
+  opacity: 0.28;
+}
+
+.kanban-column__lead.cdk-drag-animating,
+.kanban-column__leads.cdk-drop-list-dragging .kanban-column__lead:not(.cdk-drag-placeholder) {
+  transition: transform 120ms ease-out;
+}
+
 .kanban-column__empty {
   padding: var(--space-4) var(--space-2);
   border-top: 1px solid var(--border);
@@ -53,4 +77,11 @@
   font-size: var(--font-size-xs);
   line-height: var(--line-height-body);
   text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanban-column__lead.cdk-drag-animating,
+  .kanban-column__leads.cdk-drop-list-dragging .kanban-column__lead:not(.cdk-drag-placeholder) {
+    transition: none;
+  }
 }

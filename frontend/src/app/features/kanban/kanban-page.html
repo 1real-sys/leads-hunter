@@ -17,9 +17,20 @@
   <app-lead-filters
     [(filtros)]="filtros"
     [carregando]="carregando()"
+    [bloqueado]="movimentoEmAndamento()"
     (aplicar)="aplicarFiltros()"
     (limpar)="limparFiltros()"
   />
+
+  @if (mensagemMovimento()) {
+    <p class="kanban-page__movement-feedback" role="status">{{ mensagemMovimento() }}</p>
+  }
+
+  @if (erroMovimento()) {
+    <p class="kanban-page__movement-feedback kanban-page__movement-feedback--error" role="alert">
+      {{ erroMovimento() }}
+    </p>
+  }
 
   @if (carregando()) {
     <div class="kanban-page__feedback" role="status">
@@ -52,6 +63,11 @@
   }
 
   @if (leads().length > 0) {
-    <app-kanban-board [leads]="leads()" />
+    <app-kanban-board
+      [leads]="leads()"
+      [idsEmMovimento]="idsEmMovimento()"
+      [bloqueado]="carregando()"
+      (mudancaStatusSolicitada)="mudarStatus($event)"
+    />
   }
 </section>

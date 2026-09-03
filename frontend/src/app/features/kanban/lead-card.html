@@ -1,5 +1,5 @@
 @if (lead(); as item) {
-  <article class="lead-card" [attr.aria-labelledby]="tituloId()">
+  <article class="lead-card" [attr.aria-labelledby]="tituloId()" [attr.aria-busy]="movendo()">
     <header class="lead-card__header">
       <div>
         @if (item.categoria; as categoria) {
@@ -8,11 +8,20 @@
         <h3 [id]="tituloId()">{{ item.nome ?? 'Lead #' + item.id }}</h3>
       </div>
 
-      @if (item.temperatura; as temperatura) {
-        <span class="lead-card__temperature" [attr.data-temperature]="temperatura">
-          {{ rotulosTemperatura[temperatura] }}
-        </span>
-      }
+      <div class="lead-card__tools">
+        <span
+          cdkDragHandle
+          class="lead-card__drag-handle"
+          [class.lead-card__drag-handle--disabled]="controlesDesabilitados()"
+          [cdkDragHandleDisabled]="controlesDesabilitados()"
+          >Arrastar</span
+        >
+        @if (item.temperatura; as temperatura) {
+          <span class="lead-card__temperature" [attr.data-temperature]="temperatura">
+            {{ rotulosTemperatura[temperatura] }}
+          </span>
+        }
+      </div>
     </header>
 
     @if (item.enderecoFormatado; as endereco) {
@@ -50,8 +59,41 @@
     }
 
     <footer class="lead-card__footer">
-      <span>Etapa</span>
-      <strong>{{ rotuloStatus() }}</strong>
+      <div class="lead-card__stage">
+        <span>Etapa</span>
+        <strong>{{ rotuloStatus() }}</strong>
+      </div>
+
+      @if (movendo()) {
+        <span class="lead-card__saving" role="status">Salvando etapa...</span>
+      } @else {
+        <div
+          class="lead-card__stage-actions"
+          role="group"
+          [attr.aria-label]="'Alterar etapa de ' + nomeAcessivel()"
+        >
+          @if (etapasAdjacentes().anterior; as anterior) {
+            <button
+              type="button"
+              [disabled]="controlesDesabilitados()"
+              [attr.aria-label]="'Mover ' + nomeAcessivel() + ' para ' + rotulosStatus[anterior]"
+              (click)="solicitarMudanca(anterior)"
+            >
+              Para {{ rotulosStatus[anterior] }}
+            </button>
+          }
+          @if (etapasAdjacentes().proxima; as proxima) {
+            <button
+              type="button"
+              [disabled]="controlesDesabilitados()"
+              [attr.aria-label]="'Mover ' + nomeAcessivel() + ' para ' + rotulosStatus[proxima]"
+              (click)="solicitarMudanca(proxima)"
+            >
+              Para {{ rotulosStatus[proxima] }}
+            </button>
+          }
+        </div>
+      }
     </footer>
   </article>
 }

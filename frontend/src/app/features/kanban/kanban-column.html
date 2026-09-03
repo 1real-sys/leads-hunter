@@ -11,9 +11,29 @@
       </span>
     </header>
 
-    <ul class="kanban-column__leads">
+    <ul
+      cdkDropList
+      class="kanban-column__leads"
+      [cdkDropListData]="colunaAtual"
+      [cdkDropListDisabled]="bloqueado()"
+      [cdkDropListEnterPredicate]="aceitaDestino"
+      [cdkDropListSortingDisabled]="true"
+      (cdkDropListDropped)="soltar($event)"
+    >
       @for (lead of colunaAtual.leads; track lead.id) {
-        <li><app-lead-card [lead]="lead" /></li>
+        <li
+          cdkDrag
+          class="kanban-column__lead"
+          [cdkDragData]="lead"
+          [cdkDragDisabled]="interacaoDesabilitada(lead.id)"
+        >
+          <app-lead-card
+            [lead]="lead"
+            [movendo]="emMovimento(lead.id)"
+            [interacaoDesabilitada]="interacaoDesabilitada(lead.id)"
+            (mudancaStatusSolicitada)="solicitarMudanca(lead, $event)"
+          />
+        </li>
       } @empty {
         <li class="kanban-column__empty">Nenhum lead nesta etapa.</li>
       }

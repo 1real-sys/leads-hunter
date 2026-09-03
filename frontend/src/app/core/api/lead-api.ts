@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CategoriaNegocio, StatusFunil, Temperatura } from '../../shared/models/enums.model';
-import { LeadResponse } from '../../shared/models/lead.model';
+import { AtualizarLeadRequest, LeadResponse } from '../../shared/models/lead.model';
 import { API_ROUTES } from './api-routes';
 
 export interface FiltrosLead {
@@ -29,5 +29,9 @@ export class LeadApi {
     }
 
     return this.http.get<LeadResponse[]>(API_ROUTES.leads, { params });
+  }
+
+  atualizar(id: number, request: AtualizarLeadRequest): Observable<LeadResponse> {
+    return this.http.patch<LeadResponse>(API_ROUTES.lead(id), request);
   }
 }

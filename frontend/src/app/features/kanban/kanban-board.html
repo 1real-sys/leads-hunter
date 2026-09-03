@@ -1,5 +1,6 @@
 <p id="kanban-scroll-hint" class="kanban-board__hint">
-  Role horizontalmente para comparar todas as etapas.
+  Arraste pelo controle do card ou use os botões de etapa. Role horizontalmente para comparar o
+  funil.
 </p>
 
 <div
@@ -9,12 +10,22 @@
   aria-describedby="kanban-scroll-hint"
   tabindex="0"
 >
-  <div class="kanban-board">
+  <div cdkDropListGroup class="kanban-board">
     @for (coluna of agrupamento().colunas; track coluna.status) {
-      <app-kanban-column [coluna]="coluna" />
+      <app-kanban-column
+        [coluna]="coluna"
+        [idsEmMovimento]="idsEmMovimento()"
+        [bloqueado]="bloqueado()"
+        (mudancaStatusSolicitada)="mudancaStatusSolicitada.emit($event)"
+      />
     }
     @if (agrupamento().semEtapa; as semEtapa) {
-      <app-kanban-column [coluna]="semEtapa" />
+      <app-kanban-column
+        [coluna]="semEtapa"
+        [idsEmMovimento]="idsEmMovimento()"
+        [bloqueado]="bloqueado()"
+        (mudancaStatusSolicitada)="mudancaStatusSolicitada.emit($event)"
+      />
     }
   </div>
 </div>

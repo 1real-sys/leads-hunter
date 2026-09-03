@@ -109,6 +109,21 @@
   font-size: var(--font-size-sm);
 }
 
+.kanban-page__movement-feedback {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--accent);
+  background: var(--surface-subtle);
+  color: var(--ink);
+  font-size: var(--font-size-xs);
+}
+
+.kanban-page__movement-feedback--error {
+  border-left-color: #a43a2e;
+  background: #fff5f3;
+  color: #7a271a;
+}
+
 .kanban-page__feedback > div {
   display: grid;
   gap: var(--space-1);

@@ -10,7 +10,7 @@
       id="lead-status"
       name="status"
       [value]="filtros().status ?? ''"
-      [disabled]="carregando()"
+      [disabled]="desabilitado()"
       (change)="alterarStatus($event)"
     >
       <option value="">Todas as etapas</option>
@@ -26,7 +26,7 @@
       id="lead-categoria"
       name="categoria"
       [value]="filtros().categoria ?? ''"
-      [disabled]="carregando()"
+      [disabled]="desabilitado()"
       (change)="alterarCategoria($event)"
     >
       <option value="">Todas as categorias</option>
@@ -42,7 +42,7 @@
       id="lead-temperatura"
       name="temperatura"
       [value]="filtros().temperatura ?? ''"
-      [disabled]="carregando()"
+      [disabled]="desabilitado()"
       (change)="alterarTemperatura($event)"
     >
       <option value="">Todas as temperaturas</option>
@@ -53,9 +53,9 @@
   </div>
 
   <div class="lead-filters__actions">
-    <button type="submit" [disabled]="carregando()" [attr.aria-busy]="carregando()">
+    <button type="submit" [disabled]="desabilitado()" [attr.aria-busy]="carregando()">
       {{ carregando() ? 'Carregando...' : 'Aplicar filtros' }}
     </button>
-    <button type="button" [disabled]="carregando()" (click)="limpar.emit()">Limpar</button>
+    <button type="button" [disabled]="desabilitado()" (click)="limparFiltros()">Limpar</button>
   </div>
 </form>

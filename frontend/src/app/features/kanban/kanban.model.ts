@@ -42,10 +42,33 @@ export interface AgrupamentoKanban {
   semEtapa: ColunaKanban | null;
 }
 
+export interface MudancaStatusLead {
+  lead: LeadResponse;
+  status: StatusFunil;
+}
+
+export interface EtapasAdjacentes {
+  anterior: StatusFunil | null;
+  proxima: StatusFunil | null;
+}
+
 export function obterRotuloStatus(status: StatusFunil | null): string {
   return status !== null && STATUS_FUNIL.some((statusConhecido) => statusConhecido === status)
     ? ROTULOS_STATUS[status]
     : 'Sem etapa';
+}
+
+export function obterEtapasAdjacentes(status: StatusFunil | null): EtapasAdjacentes {
+  const indice = status === null ? -1 : STATUS_FUNIL.indexOf(status);
+
+  if (indice < 0) {
+    return { anterior: null, proxima: 'NOVO' };
+  }
+
+  return {
+    anterior: indice > 0 ? STATUS_FUNIL[indice - 1] : null,
+    proxima: indice < STATUS_FUNIL.length - 1 ? STATUS_FUNIL[indice + 1] : null,
+  };
 }
 
 function possuiStatusConhecido(lead: LeadResponse): lead is LeadResponse & { status: StatusFunil } {

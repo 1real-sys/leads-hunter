@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { StatusFunil } from '../../shared/models/enums.model';
 import { LeadResponse } from '../../shared/models/lead.model';
-import { agruparLeadsPorStatus } from './kanban.model';
+import { agruparLeadsPorStatus, obterEtapasAdjacentes } from './kanban.model';
 
 function criarLead(id: number, status: StatusFunil | null): LeadResponse {
   return {
@@ -74,6 +74,25 @@ describe('agruparLeadsPorStatus', () => {
       status: null,
       rotulo: 'Sem etapa',
       leads: [semStatus, statusDesconhecido],
+    });
+  });
+});
+
+describe('obterEtapasAdjacentes', () => {
+  it('retorna somente destinos válidos do funil', () => {
+    expect(obterEtapasAdjacentes('NOVO')).toEqual({ anterior: null, proxima: 'QUALIFICADO' });
+    expect(obterEtapasAdjacentes('CONTATADO')).toEqual({
+      anterior: 'QUALIFICADO',
+      proxima: 'GANHO',
+    });
+    expect(obterEtapasAdjacentes('PERDIDO')).toEqual({ anterior: 'GANHO', proxima: null });
+  });
+
+  it('oferece Novo como único destino para um status ausente ou desconhecido', () => {
+    expect(obterEtapasAdjacentes(null)).toEqual({ anterior: null, proxima: 'NOVO' });
+    expect(obterEtapasAdjacentes('ARQUIVADO' as StatusFunil)).toEqual({
+      anterior: null,
+      proxima: 'NOVO',
     });
   });
 });

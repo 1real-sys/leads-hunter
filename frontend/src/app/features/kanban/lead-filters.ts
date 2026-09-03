@@ -1,4 +1,4 @@
-import { Component, input, model, output } from '@angular/core';
+import { Component, computed, input, model, output } from '@angular/core';
 import {
   CATEGORIAS_NEGOCIO,
   CategoriaNegocio,
@@ -43,8 +43,11 @@ function valorSelect(event: Event): string {
 export class LeadFilters {
   readonly filtros = model.required<FiltrosLeadForm>();
   readonly carregando = input(false);
+  readonly bloqueado = input(false);
   readonly aplicar = output<void>();
   readonly limpar = output<void>();
+
+  protected readonly desabilitado = computed(() => this.carregando() || this.bloqueado());
 
   protected readonly opcoesStatus = criarOpcoes(STATUS_FUNIL, ROTULOS_STATUS);
   protected readonly opcoesCategoria = criarOpcoes(CATEGORIAS_NEGOCIO, ROTULOS_CATEGORIA);
@@ -67,6 +70,14 @@ export class LeadFilters {
 
   protected confirmar(event: SubmitEvent): void {
     event.preventDefault();
-    this.aplicar.emit();
+    if (!this.desabilitado()) {
+      this.aplicar.emit();
+    }
+  }
+
+  protected limparFiltros(): void {
+    if (!this.desabilitado()) {
+      this.limpar.emit();
+    }
   }
 }
