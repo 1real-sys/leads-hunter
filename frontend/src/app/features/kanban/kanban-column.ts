@@ -16,6 +16,7 @@ export class KanbanColumn {
   readonly idsEmMovimento = input.required<ReadonlySet<number>>();
   readonly bloqueado = input(false);
   readonly mudancaStatusSolicitada = output<MudancaStatusLead>();
+  readonly detalheSolicitado = output<LeadResponse>();
 
   protected readonly tituloId = computed(() => {
     const status = this.coluna().status?.toLowerCase() ?? 'sem-etapa';

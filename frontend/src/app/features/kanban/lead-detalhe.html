@@ -1,0 +1,155 @@
+@if (lead(); as item) {
+  <div class="lead-detalhe-backdrop" (click)="fechar()">
+    <section
+      cdkTrapFocus
+      class="lead-detalhe-panel"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="tituloId()"
+      (click)="$event.stopPropagation()"
+      (keydown.escape)="fechar()"
+    >
+      <header class="lead-detalhe-panel__header">
+        <div class="lead-detalhe-panel__heading">
+          <p class="lead-detalhe-panel__contexto">Detalhe do lead</p>
+          <h2 [id]="tituloId()">{{ item.nome ?? 'Lead #' + item.id }}</h2>
+          <ul class="lead-detalhe-panel__chips">
+            @if (item.categoria; as categoria) {
+              <li>{{ rotulosCategoria[categoria] }}</li>
+            }
+            <li>{{ rotuloStatus() }}</li>
+            @if (item.temperatura; as temperatura) {
+              <li class="lead-detalhe-panel__chip-temperatura" [attr.data-temperature]="temperatura">
+                {{ rotulosTemperatura[temperatura] }}
+              </li>
+            }
+          </ul>
+        </div>
+
+        <button
+          #botaoFechar
+          type="button"
+          class="lead-detalhe-panel__fechar"
+          [attr.aria-label]="'Fechar detalhes de ' + (item.nome ?? 'Lead ' + item.id)"
+          (click)="fechar()"
+        >
+          Fechar
+        </button>
+      </header>
+
+      <div class="lead-detalhe-panel__corpo">
+        @if (item.whatsappUrl; as url) {
+          <a
+            class="lead-detalhe-panel__whatsapp"
+            [href]="url"
+            target="_blank"
+            rel="noopener noreferrer"
+            [attr.aria-label]="
+              'Abrir WhatsApp de ' + (item.nome ?? 'lead ' + item.id) + ' em nova aba'
+            "
+          >
+            Abrir conversa no WhatsApp
+          </a>
+        } @else {
+          <p class="lead-detalhe-panel__sem-whatsapp">
+            WhatsApp indisponível: nenhum telefone válido registrado para contato manual.
+          </p>
+        }
+
+        @if (
+          item.score !== null ||
+          item.telefone ||
+          item.enderecoFormatado ||
+          item.latitude !== null ||
+          item.longitude !== null ||
+          item.ratingGoogle !== null ||
+          item.totalReviews !== null ||
+          item.ultimoContatoEm
+        ) {
+          <dl class="lead-detalhe-panel__dados" aria-label="Dados do lead">
+            @if (item.score !== null) {
+              <div class="lead-detalhe-panel__score">
+                <dt>Score</dt>
+                <dd>{{ item.score }}</dd>
+              </div>
+            }
+            @if (item.telefone; as telefone) {
+              <div>
+                <dt>Telefone</dt>
+                <dd>{{ telefone }}</dd>
+              </div>
+            }
+            @if (item.enderecoFormatado; as endereco) {
+              <div>
+                <dt>Endereço</dt>
+                <dd>{{ endereco }}</dd>
+              </div>
+            }
+            @if (item.latitude !== null && item.longitude !== null) {
+              <div>
+                <dt>Coordenadas</dt>
+                <dd>
+                  {{ item.latitude }}, {{ item.longitude }}
+                </dd>
+              </div>
+            }
+            @if (item.ratingGoogle !== null) {
+              <div>
+                <dt>Nota Google</dt>
+                <dd>{{ item.ratingGoogle }}</dd>
+              </div>
+            }
+            @if (item.totalReviews !== null) {
+              <div>
+                <dt>Avaliações</dt>
+                <dd>{{ item.totalReviews }}</dd>
+              </div>
+            }
+            <div>
+              <dt>Último contato</dt>
+              <dd>
+                @if (item.ultimoContatoEm; as ultimoContato) {
+                  <time [attr.datetime]="ultimoContato">
+                    {{ ultimoContato | date: "dd/MM/yyyy 'às' HH:mm" }}
+                  </time>
+                } @else {
+                  <span class="lead-detalhe-panel__sem-valor">Nunca registrado</span>
+                }
+              </dd>
+            </div>
+          </dl>
+        }
+
+        <section class="lead-detalhe-panel__observacoes" aria-labelledby="observacoes-title">
+          <h3 id="observacoes-title">Observações</h3>
+          @if (item.observacoes) {
+            <p>{{ item.observacoes }}</p>
+          } @else {
+            <p class="lead-detalhe-panel__sem-valor">Nenhuma observação registrada.</p>
+          }
+        </section>
+      </div>
+
+      @if (item.criadoEm || item.atualizadoEm) {
+        <footer class="lead-detalhe-panel__rodape">
+          @if (item.criadoEm; as criadoEm) {
+            <span>
+              Criado em
+              <time [attr.datetime]="criadoEm">
+                {{ criadoEm | date: "dd/MM/yyyy 'às' HH:mm" }}
+              </time>
+            </span>
+          }
+          @if (item.atualizadoEm; as atualizadoEm) {
+            <span>
+              Atualizado em
+              <time [attr.datetime]="atualizadoEm">
+                {{ atualizadoEm | date: "dd/MM/yyyy 'às' HH:mm" }}
+              </time>
+            </span>
+          }
+        </footer>
+      }
+    </section>
+  </div>
+}

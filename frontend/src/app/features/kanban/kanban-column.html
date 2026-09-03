@@ -32,6 +32,7 @@
             [movendo]="emMovimento(lead.id)"
             [interacaoDesabilitada]="interacaoDesabilitada(lead.id)"
             (mudancaStatusSolicitada)="solicitarMudanca(lead, $event)"
+            (detalheSolicitado)="detalheSolicitado.emit($event)"
           />
         </li>
       } @empty {

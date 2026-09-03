@@ -95,19 +95,39 @@ describe('LeadCard', () => {
     const destinos: string[] = [];
     fixture.componentInstance.mudancaStatusSolicitada.subscribe((status) => destinos.push(status));
     const botoes = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
+    const acoesEtapa = [
+      ...fixture.nativeElement.querySelectorAll('.lead-card__stage-actions button'),
+    ] as HTMLButtonElement[];
 
-    expect(botoes.map((botao) => botao.textContent?.trim())).toEqual([
+    expect(botoes[0].textContent?.trim()).toBe('Padaria Central');
+    expect(acoesEtapa.map((botao) => botao.textContent?.trim())).toEqual([
       'Para Novo',
       'Para Contatado',
     ]);
-    expect(botoes[1].getAttribute('aria-label')).toContain('Padaria Central para Contatado');
+    expect(acoesEtapa[1].getAttribute('aria-label')).toContain(
+      'Padaria Central para Contatado',
+    );
 
-    botoes[1].click();
+    acoesEtapa[1].click();
 
     expect(destinos).toEqual(['CONTATADO']);
   });
 
-  it('bloqueia drag e controles enquanto a etapa está sendo salva', async () => {
+  it('emite a solicitação de detalhe ao acionar o título do card', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const detalhes: LeadResponse[] = [];
+    fixture.componentInstance.detalheSolicitado.subscribe((lead) => detalhes.push(lead));
+    const titulo = fixture.nativeElement.querySelector(
+      '.lead-card__title-button',
+    ) as HTMLButtonElement;
+
+    expect(titulo.getAttribute('aria-label')).toBe('Ver detalhes de Padaria Central');
+    titulo.click();
+
+    expect(detalhes).toEqual([LEAD_COMPLETO]);
+  });
+
+  it('bloqueia drag e controles de etapa enquanto a etapa está sendo salva', async () => {
     const fixture = TestBed.createComponent(LeadCard);
     fixture.componentRef.setInput('lead', LEAD_COMPLETO);
     fixture.componentRef.setInput('movendo', true);
@@ -117,7 +137,8 @@ describe('LeadCard', () => {
 
     expect(card.getAttribute('aria-busy')).toBe('true');
     expect(handle.classList).toContain('lead-card__drag-handle--disabled');
-    expect(fixture.nativeElement.querySelectorAll('button')).toHaveLength(0);
+    expect(fixture.nativeElement.querySelector('.lead-card__stage-actions')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Salvando etapa');
+    expect(fixture.nativeElement.querySelector('.lead-card__title-button')).not.toBeNull();
   });
 });

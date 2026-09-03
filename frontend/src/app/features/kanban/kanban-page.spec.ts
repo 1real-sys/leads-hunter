@@ -84,6 +84,15 @@ describe('KanbanPage', () => {
     ) as HTMLButtonElement;
   }
 
+  function botaoDetalhe(
+    fixture: Awaited<ReturnType<typeof createFixture>>,
+    nome: string,
+  ): HTMLButtonElement {
+    return fixture.nativeElement.querySelector(
+      `[aria-label="Ver detalhes de ${nome}"]`,
+    ) as HTMLButtonElement;
+  }
+
   it('consulta a lista completa ao entrar, representa loading e preserva a ordem da API', async () => {
     const fixture = await createFixture();
     const request = httpTesting.expectOne(API_ROUTES.leads);
@@ -332,5 +341,71 @@ describe('KanbanPage', () => {
     expect(fixture.componentInstance['leads']()).toEqual([]);
     expect(fixture.componentInstance['estadoConsulta']()).toBe('empty');
     expect(fixture.nativeElement.textContent).toContain('Nenhum lead encontrado');
+  });
+
+  it('abre o painel de detalhe a partir de um card com os dados completos do lead', async () => {
+    const fixture = await createFixture();
+    httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_QUENTE]);
+    await fixture.whenStable();
+
+    botaoDetalhe(fixture, 'Padaria Central').click();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['leadSelecionado']()).toEqual(LEAD_QUENTE);
+    const painel = fixture.nativeElement.querySelector(
+      '.lead-detalhe-panel',
+    ) as HTMLElement;
+    expect(painel).not.toBeNull();
+    expect(painel.textContent).toContain('Padaria Central');
+    expect(painel.textContent).toContain('Abrir conversa no WhatsApp');
+    expect(painel.getAttribute('aria-labelledby')).toBe('detalhe-lead-7-titulo');
+  });
+
+  it('não abre o painel enquanto não existir um lead selecionado', async () => {
+    const fixture = await createFixture();
+    httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_QUENTE]);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['leadSelecionado']()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lead-detalhe-panel')).toBeNull();
+  });
+
+  it('fecha o painel com Escape e devolve o foco ao botão que abriu o detalhe', async () => {
+    const fixture = await createFixture();
+    httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_QUENTE]);
+    await fixture.whenStable();
+
+    const gatilho = botaoDetalhe(fixture, 'Padaria Central');
+    gatilho.focus();
+    gatilho.click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance['leadSelecionado']()).toEqual(LEAD_QUENTE);
+
+    const painel = fixture.nativeElement.querySelector('.lead-detalhe-panel') as HTMLElement;
+    painel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['leadSelecionado']()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lead-detalhe-panel')).toBeNull();
+    expect(document.activeElement).toBe(gatilho);
+  });
+
+  it('fecha o painel ao clicar no backdrop', async () => {
+    const fixture = await createFixture();
+    httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_MORNO]);
+    await fixture.whenStable();
+
+    botaoDetalhe(fixture, 'Mercado Bairro').click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance['leadSelecionado']()).toEqual(LEAD_MORNO);
+
+    const backdrop = fixture.nativeElement.querySelector(
+      '.lead-detalhe-backdrop',
+    ) as HTMLElement;
+    backdrop.click();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['leadSelecionado']()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lead-detalhe-panel')).toBeNull();
   });
 });

@@ -68,6 +68,11 @@
       [idsEmMovimento]="idsEmMovimento()"
       [bloqueado]="carregando()"
       (mudancaStatusSolicitada)="mudarStatus($event)"
+      (detalheSolicitado)="abrirDetalhe($event)"
     />
+  }
+
+  @if (leadSelecionado(); as lead) {
+    <app-lead-detalhe [lead]="lead" (fechado)="fecharDetalhe()" />
   }
 </section>

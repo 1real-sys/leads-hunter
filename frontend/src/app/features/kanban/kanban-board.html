@@ -17,6 +17,7 @@
         [idsEmMovimento]="idsEmMovimento()"
         [bloqueado]="bloqueado()"
         (mudancaStatusSolicitada)="mudancaStatusSolicitada.emit($event)"
+        (detalheSolicitado)="detalheSolicitado.emit($event)"
       />
     }
     @if (agrupamento().semEtapa; as semEtapa) {
@@ -25,6 +26,7 @@
         [idsEmMovimento]="idsEmMovimento()"
         [bloqueado]="bloqueado()"
         (mudancaStatusSolicitada)="mudancaStatusSolicitada.emit($event)"
+        (detalheSolicitado)="detalheSolicitado.emit($event)"
       />
     }
   </div>

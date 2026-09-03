@@ -5,7 +5,16 @@
         @if (item.categoria; as categoria) {
           <p class="lead-card__category">{{ rotulosCategoria[categoria] }}</p>
         }
-        <h3 [id]="tituloId()">{{ item.nome ?? 'Lead #' + item.id }}</h3>
+        <h3 class="lead-card__title" [id]="tituloId()">
+          <button
+            type="button"
+            class="lead-card__title-button"
+            [attr.aria-label]="'Ver detalhes de ' + nomeAcessivel()"
+            (click)="solicitarDetalhe()"
+          >
+            {{ item.nome ?? 'Lead #' + item.id }}
+          </button>
+        </h3>
       </div>
 
       <div class="lead-card__tools">

@@ -15,6 +15,7 @@ export class KanbanBoard {
   readonly idsEmMovimento = input<ReadonlySet<number>>(new Set());
   readonly bloqueado = input(false);
   readonly mudancaStatusSolicitada = output<MudancaStatusLead>();
+  readonly detalheSolicitado = output<LeadResponse>();
 
   protected readonly agrupamento = computed(() => agruparLeadsPorStatus(this.leads()));
 }

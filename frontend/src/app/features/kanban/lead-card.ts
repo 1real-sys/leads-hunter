@@ -21,6 +21,7 @@ export class LeadCard {
   readonly movendo = input(false);
   readonly interacaoDesabilitada = input(false);
   readonly mudancaStatusSolicitada = output<StatusFunil>();
+  readonly detalheSolicitado = output<LeadResponse>();
 
   protected readonly tituloId = computed(() => `lead-${this.lead().id}-title`);
   protected readonly rotuloStatus = computed(() => obterRotuloStatus(this.lead().status));
@@ -37,5 +38,9 @@ export class LeadCard {
     if (!this.controlesDesabilitados()) {
       this.mudancaStatusSolicitada.emit(status);
     }
+  }
+
+  protected solicitarDetalhe(): void {
+    this.detalheSolicitado.emit(this.lead());
   }
 }

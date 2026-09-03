@@ -6,6 +6,7 @@ import { getApiErrorMessage } from '../../core/api/api-error-message';
 import { STATUS_FUNIL } from '../../shared/models/enums.model';
 import { LeadResponse } from '../../shared/models/lead.model';
 import { KanbanBoard } from './kanban-board';
+import { LeadDetalhe } from './lead-detalhe';
 import { FiltrosLeadForm, LeadFilters } from './lead-filters';
 import { MudancaStatusLead, ROTULOS_STATUS } from './kanban.model';
 
@@ -26,7 +27,7 @@ function paraFiltrosApi(filtros: FiltrosLeadForm): FiltrosLead {
 }
 
 @Component({
-  imports: [KanbanBoard, LeadFilters],
+  imports: [KanbanBoard, LeadDetalhe, LeadFilters],
   selector: 'app-kanban-page',
   styleUrl: './kanban-page.scss',
   templateUrl: './kanban-page.html',
@@ -46,6 +47,9 @@ export class KanbanPage {
   protected readonly movimentoEmAndamento = computed(() => this.idsEmMovimento().size > 0);
   protected readonly mensagemMovimento = signal<string | null>(null);
   protected readonly erroMovimento = signal<string | null>(null);
+  protected readonly leadSelecionado = signal<LeadResponse | null>(null);
+
+  private gatilhoDoDetalhe: HTMLElement | null = null;
 
   constructor() {
     this.consultar({});
@@ -108,6 +112,19 @@ export class KanbanPage {
           this.erroMovimento.set(`Não foi possível mover ${nome}. ${getApiErrorMessage(error)}`);
         },
       });
+  }
+
+  protected abrirDetalhe(lead: LeadResponse): void {
+    const ativo = document.activeElement;
+    this.gatilhoDoDetalhe = ativo instanceof HTMLElement ? ativo : null;
+    this.leadSelecionado.set(lead);
+  }
+
+  protected fecharDetalhe(): void {
+    const gatilho = this.gatilhoDoDetalhe;
+    this.gatilhoDoDetalhe = null;
+    this.leadSelecionado.set(null);
+    gatilho?.focus();
   }
 
   private consultar(filtros: FiltrosLead): void {

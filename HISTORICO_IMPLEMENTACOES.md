@@ -654,3 +654,72 @@ Os cards mostram de forma compacta apenas os dados disponíveis e identificam st
 - `frontend/src/app/features/kanban/kanban-page.spec.ts`
 - `frontend/src/app/features/kanban/kanban-page.ts`
 - `frontend/src/app/features/kanban/lead-filters.ts`
+
+---
+
+## 25. Movimentação persistida de leads no Kanban — 02/09/2026
+
+Os cards do Kanban passaram a ser movimentados entre as cinco etapas com Angular CDK Drag and Drop. A interface atualiza a coluna imediatamente e persiste somente o novo status pela rota real de atualização do lead, substituindo o estado provisório pela resposta completa do backend.
+
+Durante o salvamento, novas mudanças do mesmo card ficam bloqueadas. Se a operação falhar, o card retorna à etapa anterior e a tela apresenta uma mensagem segura. Os filtros permanecem selecionados e continuam coerentes com a lista após a confirmação. Também foram adicionados controles textuais de etapa anterior e próxima para permitir a mesma operação por teclado, sem depender do drag.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/package-lock.json`
+- `frontend/package.json`
+- `frontend/src/app/core/api/api-routes.ts`
+- `frontend/src/app/core/api/lead-api.spec.ts`
+- `frontend/src/app/core/api/lead-api.ts`
+- `frontend/src/app/features/kanban/kanban-board.html`
+- `frontend/src/app/features/kanban/kanban-board.spec.ts`
+- `frontend/src/app/features/kanban/kanban-board.ts`
+- `frontend/src/app/features/kanban/kanban-column.html`
+- `frontend/src/app/features/kanban/kanban-column.scss`
+- `frontend/src/app/features/kanban/kanban-column.ts`
+- `frontend/src/app/features/kanban/kanban-page.html`
+- `frontend/src/app/features/kanban/kanban-page.scss`
+- `frontend/src/app/features/kanban/kanban-page.spec.ts`
+- `frontend/src/app/features/kanban/kanban-page.ts`
+- `frontend/src/app/features/kanban/kanban.model.spec.ts`
+- `frontend/src/app/features/kanban/kanban.model.ts`
+- `frontend/src/app/features/kanban/lead-card.html`
+- `frontend/src/app/features/kanban/lead-card.scss`
+- `frontend/src/app/features/kanban/lead-card.spec.ts`
+- `frontend/src/app/features/kanban/lead-card.ts`
+- `frontend/src/app/features/kanban/lead-filters.html`
+- `frontend/src/app/features/kanban/lead-filters.ts`
+
+---
+
+## 26. Detalhe do lead e WhatsApp manual no Kanban — 03/09/2026
+
+O título de cada card do Kanban passou a abrir um painel lateral de detalhe do lead. O painel usa o contrato completo já carregado pela listagem e exibe dados externos, classificação e dados comerciais, omitindo campos nulos, e apresenta o link manual de WhatsApp somente quando o backend retorna `whatsappUrl`. O painel é um diálogo acessível que abre por teclado, mantém o foco preso, fecha por botão, tecla Escape ou clique no backdrop, e devolve o foco ao controle que o abriu.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/features/kanban/lead-detalhe.html`
+- `frontend/src/app/features/kanban/lead-detalhe.scss`
+- `frontend/src/app/features/kanban/lead-detalhe.spec.ts`
+- `frontend/src/app/features/kanban/lead-detalhe.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/src/app/features/kanban/kanban-board.html`
+- `frontend/src/app/features/kanban/kanban-board.ts`
+- `frontend/src/app/features/kanban/kanban-column.html`
+- `frontend/src/app/features/kanban/kanban-column.ts`
+- `frontend/src/app/features/kanban/kanban-page.html`
+- `frontend/src/app/features/kanban/kanban-page.spec.ts`
+- `frontend/src/app/features/kanban/kanban-page.ts`
+- `frontend/src/app/features/kanban/lead-card.html`
+- `frontend/src/app/features/kanban/lead-card.scss`
+- `frontend/src/app/features/kanban/lead-card.spec.ts`
+- `frontend/src/app/features/kanban/lead-card.ts`
