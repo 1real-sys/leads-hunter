@@ -408,4 +408,41 @@ describe('KanbanPage', () => {
     expect(fixture.componentInstance['leadSelecionado']()).toBeNull();
     expect(fixture.nativeElement.querySelector('.lead-detalhe-panel')).toBeNull();
   });
+
+  it('atualiza a lista da página com o lead confirmado pelo PATCH do detalhe', async () => {
+    const fixture = await createFixture();
+    httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_QUENTE]);
+    await fixture.whenStable();
+
+    botaoDetalhe(fixture, 'Padaria Central').click();
+    await fixture.whenStable();
+
+    const editar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (botao: HTMLButtonElement) => botao.textContent?.trim() === 'Editar',
+    ) as HTMLButtonElement;
+    editar.click();
+    await fixture.whenStable();
+
+    const textarea = fixture.nativeElement.querySelector(
+      '#detalhe-observacoes',
+    ) as HTMLTextAreaElement;
+    textarea.value = 'Voltou a contatar.';
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+
+    const form = fixture.nativeElement.querySelector(
+      '.lead-detalhe-panel__formulario',
+    ) as HTMLFormElement;
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+
+    const request = httpTesting.expectOne(API_ROUTES.lead(7));
+    expect(request.request.body).toEqual({ observacoes: 'Voltou a contatar.' });
+    const atualizado: LeadResponse = { ...LEAD_QUENTE, observacoes: 'Voltou a contatar.' };
+    request.flush(atualizado);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance['leads']()).toEqual([atualizado]);
+    expect(fixture.componentInstance['leadSelecionado']()).toEqual(atualizado);
+  });
 });

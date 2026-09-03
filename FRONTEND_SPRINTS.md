@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-11 — Observações e último contato**.
+- Próximo sprint: **FE-12 — Lista do histórico de buscas**.
 
 ## Decisões do plano
 
@@ -111,7 +111,7 @@ Esta verificação é responsabilidade do agente que implementa e também do age
 | FE-08  | Kanban somente leitura e cards | FE-07          | CONCLUÍDO    |
 | FE-09  | Drag-and-drop com persistência de status | FE-08          | CONCLUÍDO    |
 | FE-10  | Detalhe do lead e WhatsApp manual | FE-08          | CONCLUÍDO    |
-| FE-11  | Observações e último contato | FE-10          | PENDENTE     |
+| FE-11  | Observações e último contato | FE-10          | CONCLUÍDO    |
 | FE-12  | Lista do histórico de buscas | FE-01, FE-02   | PENDENTE     |
 | FE-13  | Detalhe de uma busca anterior | FE-12          | PENDENTE     |
 | FE-14  | Downloads CSV e XLSX | FE-07          | PENDENTE     |
@@ -590,7 +590,7 @@ Permitir consultar os dados completos de um lead e iniciar contato manual.
 
 ## FE-11 — Observações e último contato
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -619,6 +619,15 @@ Editar os dados comerciais do lead com salvamento explícito e feedback confiáv
 - Testes dos payloads parciais, resposta confirmada e preservação em erro.
 - Testes de submit vazio e formato de data.
 - `npm run build`.
+
+### Resultado
+
+- A área de dados comerciais do painel de detalhe virou uma seção própria ("Dados comerciais") com botão `Editar`; a edição pré-preenche observações e o último contato atuais.
+- O formulário de edição usa `input[type=datetime-local]` (valor compatível com `LocalDateTime`) e uma `textarea` de observações, sem salvar a cada tecla.
+- O salvamento envia para `PATCH /api/leads/{id}` somente os campos realmente alterados — observações, contato ou ambos — e nunca envia `ultimoContatoEm: null`. Observações podem ser limpas com string vazia, e a interface explica que limpar o campo de contato não remove o registro no contrato atual.
+- O submit permanece desabilitado sem alteração salvável. A resposta confirmada do backend atualiza o detalhe e é repassada à página para manter a lista do Kanban coerente. Falhas (`400`, `404`, `500`) preservam o texto digitado e mantêm a edição aberta com mensagem segura.
+- Tentar fechar o painel com alterações não salvas exibe um aviso e mantém a edição até salvar ou cancelar, sem fluxo de confirmação complexo.
+- A suíte frontend concluiu 114 testes sem falhas e o build de produção passou sem warnings. Os novos testes cobrem pré-preenchimento, payloads parciais e combinados, limpeza de observações, bloqueio de submit vazio e de tentativa de limpar o contato, preservação em erro, aviso ao fechar e integração com a lista da página.
 
 ---
 
@@ -921,4 +930,4 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** a **FE-10** estão concluídos e validados. O próximo sprint é o **FE-11 — Observações e último contato**.
+Os sprints **FE-00** a **FE-11** estão concluídos e validados. O próximo sprint é o **FE-12 — Lista do histórico de buscas**.

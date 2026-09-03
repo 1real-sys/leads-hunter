@@ -73,6 +73,6 @@
   }
 
   @if (leadSelecionado(); as lead) {
-    <app-lead-detalhe [lead]="lead" (fechado)="fecharDetalhe()" />
+    <app-lead-detalhe [lead]="lead" (fechado)="fecharDetalhe()" (leadAtualizado)="aplicarLeadAtualizado($event)" />
   }
 </section>

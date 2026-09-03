@@ -63,8 +63,7 @@
           item.latitude !== null ||
           item.longitude !== null ||
           item.ratingGoogle !== null ||
-          item.totalReviews !== null ||
-          item.ultimoContatoEm
+          item.totalReviews !== null
         ) {
           <dl class="lead-detalhe-panel__dados" aria-label="Dados do lead">
             @if (item.score !== null) {
@@ -105,27 +104,112 @@
                 <dd>{{ item.totalReviews }}</dd>
               </div>
             }
-            <div>
-              <dt>Último contato</dt>
-              <dd>
-                @if (item.ultimoContatoEm; as ultimoContato) {
-                  <time [attr.datetime]="ultimoContato">
-                    {{ ultimoContato | date: "dd/MM/yyyy 'às' HH:mm" }}
-                  </time>
-                } @else {
-                  <span class="lead-detalhe-panel__sem-valor">Nunca registrado</span>
-                }
-              </dd>
-            </div>
           </dl>
         }
 
-        <section class="lead-detalhe-panel__observacoes" aria-labelledby="observacoes-title">
-          <h3 id="observacoes-title">Observações</h3>
-          @if (item.observacoes) {
-            <p>{{ item.observacoes }}</p>
+        <section class="lead-detalhe-panel__comercial" aria-labelledby="comercial-title">
+          <header class="lead-detalhe-panel__comercial-head">
+            <h3 id="comercial-title">Dados comerciais</h3>
+            @if (!editando()) {
+              <button type="button" class="lead-detalhe-panel__editar" (click)="iniciarEdicao()">
+                Editar
+              </button>
+            }
+          </header>
+
+          @if (salvouRecente()) {
+            <p class="lead-detalhe-panel__feedback lead-detalhe-panel__feedback--sucesso" role="status">
+              Alterações salvas.
+            </p>
+          }
+
+          @if (!editando()) {
+            <dl class="lead-detalhe-panel__dados-comerciais">
+              <div>
+                <dt>Último contato</dt>
+                <dd>
+                  @if (item.ultimoContatoEm; as ultimoContato) {
+                    <time [attr.datetime]="ultimoContato">
+                      {{ ultimoContato | date: "dd/MM/yyyy 'às' HH:mm" }}
+                    </time>
+                  } @else {
+                    <span class="lead-detalhe-panel__sem-valor">Nunca registrado</span>
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt>Observações</dt>
+                <dd>
+                  @if (item.observacoes) {
+                    <span>{{ item.observacoes }}</span>
+                  } @else {
+                    <span class="lead-detalhe-panel__sem-valor">Nenhuma observação registrada.</span>
+                  }
+                </dd>
+              </div>
+            </dl>
           } @else {
-            <p class="lead-detalhe-panel__sem-valor">Nenhuma observação registrada.</p>
+            <form class="lead-detalhe-panel__formulario" (submit)="salvar($event)">
+              <div class="lead-detalhe-panel__campo">
+                <label for="detalhe-ultimo-contato">Último contato</label>
+                <input
+                  id="detalhe-ultimo-contato"
+                  type="datetime-local"
+                  [value]="contatoDigitado()"
+                  [disabled]="camposDesabilitados()"
+                  (input)="alterarContato($event)"
+                />
+                <p class="lead-detalhe-panel__dica">
+                  Limpar este campo não remove o último contato no contrato atual; escolha uma nova
+                  data e hora para atualizá-lo.
+                </p>
+              </div>
+
+              <div class="lead-detalhe-panel__campo">
+                <label for="detalhe-observacoes">Observações</label>
+                <textarea
+                  id="detalhe-observacoes"
+                  rows="5"
+                  [value]="observacoesDigitadas()"
+                  [disabled]="camposDesabilitados()"
+                  (input)="alterarObservacoes($event)"
+                ></textarea>
+              </div>
+
+              @if (avisoAlteracoes()) {
+                <p class="lead-detalhe-panel__feedback lead-detalhe-panel__feedback--aviso" role="status">
+                  Há alterações ainda não salvas. Salve ou cancele a edição antes de fechar.
+                </p>
+              }
+
+              @if (mensagemErro(); as erro) {
+                <p class="lead-detalhe-panel__feedback lead-detalhe-panel__feedback--erro" role="alert">
+                  {{ erro }}
+                </p>
+              }
+
+              @if (salvando()) {
+                <p class="lead-detalhe-panel__feedback" role="status">Salvando alterações...</p>
+              }
+
+              <div class="lead-detalhe-panel__acoes">
+                <button
+                  type="button"
+                  class="lead-detalhe-panel__botao lead-detalhe-panel__botao--secundario"
+                  [disabled]="camposDesabilitados()"
+                  (click)="cancelarEdicao()"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  class="lead-detalhe-panel__botao lead-detalhe-panel__botao--primario"
+                  [disabled]="camposDesabilitados() || !temAlteracaoSalvavel()"
+                >
+                  Salvar alterações
+                </button>
+              </div>
+            </form>
           }
         </section>
       </div>

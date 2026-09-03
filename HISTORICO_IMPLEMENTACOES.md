@@ -723,3 +723,24 @@ O título de cada card do Kanban passou a abrir um painel lateral de detalhe do 
 - `frontend/src/app/features/kanban/lead-card.scss`
 - `frontend/src/app/features/kanban/lead-card.spec.ts`
 - `frontend/src/app/features/kanban/lead-card.ts`
+
+---
+
+## 27. Edição de observações e último contato no detalhe — 03/09/2026
+
+A área de dados comerciais do painel de detalhe do lead passou a permitir edição com salvamento explícito. O usuário altera as observações e o último contato, e o painel envia somente os campos alterados para `PATCH /api/leads/{id}`, usando a resposta confirmada para atualizar o detalhe e a lista do Kanban. Observações podem ser limpas com string vazia, enquanto a interface explica que o último contato não pode ser removido no contrato atual. Falhas preservam o texto digitado, e fechar com alterações não salvas exibe um aviso até salvar ou cancelar.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/angular.json`
+- `frontend/src/app/features/kanban/kanban-page.html`
+- `frontend/src/app/features/kanban/kanban-page.spec.ts`
+- `frontend/src/app/features/kanban/kanban-page.ts`
+- `frontend/src/app/features/kanban/lead-detalhe.html`
+- `frontend/src/app/features/kanban/lead-detalhe.scss`
+- `frontend/src/app/features/kanban/lead-detalhe.spec.ts`
+- `frontend/src/app/features/kanban/lead-detalhe.ts`

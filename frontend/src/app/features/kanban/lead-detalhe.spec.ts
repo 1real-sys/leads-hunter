@@ -1,5 +1,9 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { API_ROUTES } from '../../core/api/api-routes';
+import { ApiErrorResponse } from '../../shared/models/api-error-response.model';
 import { LeadResponse } from '../../shared/models/lead.model';
 import { LeadDetalhe } from './lead-detalhe';
 
@@ -26,13 +30,40 @@ const LEAD_COMPLETO: LeadResponse = {
 };
 
 describe('LeadDetalhe', () => {
-  beforeEach(() => TestBed.configureTestingModule({ imports: [LeadDetalhe] }));
+  let httpTesting: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [LeadDetalhe],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    httpTesting = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpTesting.verify());
 
   async function renderizar(lead: LeadResponse) {
     const fixture = TestBed.createComponent(LeadDetalhe);
     fixture.componentRef.setInput('lead', lead);
     await fixture.whenStable();
     return fixture;
+  }
+
+  function preencherCampo(
+    fixture: Awaited<ReturnType<typeof renderizar>>,
+    seletor: string,
+    valor: string,
+  ): void {
+    const campo = fixture.nativeElement.querySelector(seletor) as HTMLInputElement;
+    campo.value = valor;
+    campo.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function enviarFormulario(fixture: Awaited<ReturnType<typeof renderizar>>): void {
+    const form = fixture.nativeElement.querySelector(
+      '.lead-detalhe-panel__formulario',
+    ) as HTMLFormElement;
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
   }
 
   it('apresenta um diálogo rotulado com os dados completos do lead', async () => {
@@ -113,7 +144,6 @@ describe('LeadDetalhe', () => {
     const fixture = await renderizar({ ...LEAD_COMPLETO, ultimoContatoEm: null });
 
     expect(fixture.nativeElement.textContent).toContain('Nunca registrado');
-    expect(fixture.nativeElement.querySelector('.lead-detalhe-panel__dados')).not.toBeNull();
   });
 
   it('emite o evento de fechamento ao clicar no botão Fechar', async () => {
@@ -148,5 +178,237 @@ describe('LeadDetalhe', () => {
     const painel = document.activeElement?.closest('.lead-detalhe-panel');
 
     expect(painel).not.toBeNull();
+  });
+
+  it('inicia a edição pré-preenchida com os valores comerciais atuais', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const editar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (botao: HTMLButtonElement) => botao.textContent?.trim() === 'Editar',
+    ) as HTMLButtonElement;
+    editar.click();
+    await fixture.whenStable();
+
+    const textarea = fixture.nativeElement.querySelector(
+      '#detalhe-observacoes',
+    ) as HTMLTextAreaElement;
+    const contato = fixture.nativeElement.querySelector(
+      '#detalhe-ultimo-contato',
+    ) as HTMLInputElement;
+
+    expect(textarea.value).toBe('Pediu retorno na próxima semana.');
+    expect(contato.value).toBe('2026-09-01T14:00');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Limpar este campo não remove o último contato',
+    );
+  });
+
+  it('salva somente as observações alteradas e emite o lead confirmado', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const confirmados: LeadResponse[] = [];
+    fixture.componentInstance.leadAtualizado.subscribe((lead) => confirmados.push(lead));
+
+    const editar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (botao: HTMLButtonElement) => botao.textContent?.trim() === 'Editar',
+    ) as HTMLButtonElement;
+    editar.click();
+    await fixture.whenStable();
+
+    preencherCampo(fixture, '#detalhe-observacoes', 'Dono pediu retorno na sexta-feira.');
+    await fixture.whenStable();
+    expect(fixture.componentInstance['observacoesAlteradas']()).toBe(true);
+    expect(fixture.componentInstance['temAlteracaoSalvavel']()).toBe(true);
+    enviarFormulario(fixture);
+    await fixture.whenStable();
+
+    const request = httpTesting.expectOne(API_ROUTES.lead(7));
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ observacoes: 'Dono pediu retorno na sexta-feira.' });
+
+    const confirmado: LeadResponse = {
+      ...LEAD_COMPLETO,
+      observacoes: 'Dono pediu retorno na sexta-feira.',
+    };
+    request.flush(confirmado);
+    await fixture.whenStable();
+
+    expect(confirmados).toEqual([confirmado]);
+    expect(fixture.componentInstance['editando']()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Alterações salvas.');
+  });
+
+  it('salva somente o último contato quando apenas ele muda', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const editar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (botao: HTMLButtonElement) => botao.textContent?.trim() === 'Editar',
+    ) as HTMLButtonElement;
+    editar.click();
+    await fixture.whenStable();
+
+    preencherCampo(fixture, '#detalhe-ultimo-contato', '2026-09-02T09:30');
+    await fixture.whenStable();
+    enviarFormulario(fixture);
+    await fixture.whenStable();
+
+    const request = httpTesting.expectOne(API_ROUTES.lead(7));
+    expect(request.request.body).toEqual({ ultimoContatoEm: '2026-09-02T09:30' });
+    const confirmado: LeadResponse = {
+      ...LEAD_COMPLETO,
+      ultimoContatoEm: '2026-09-02T09:30:00',
+    };
+    request.flush(confirmado);
+    fixture.componentRef.setInput('lead', confirmado);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('02/09/2026');
+  });
+
+  it('envia juntas as alterações de observações e contato quando ambas mudam', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const editar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (botao: HTMLButtonElement) => botao.textContent?.trim() === 'Editar',
+    ) as HTMLButtonElement;
+    editar.click();
+    await fixture.whenStable();
+
+    preencherCampo(fixture, '#detalhe-observacoes', 'Contato realizado.');
+    preencherCampo(fixture, '#detalhe-ultimo-contato', '2026-09-03T08:00');
+    await fixture.whenStable();
+    enviarFormulario(fixture);
+    await fixture.whenStable();
+
+    const request = httpTesting.expectOne(API_ROUTES.lead(7));
+    expect(request.request.body).toEqual({
+      observacoes: 'Contato realizado.',
+      ultimoContatoEm: '2026-09-03T08:00',
+    });
+    request.flush({ ...LEAD_COMPLETO, observacoes: 'Contato realizado.' });
+    await fixture.whenStable();
+  });
+
+  it('permite limpar as observações com string vazia', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const editar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (botao: HTMLButtonElement) => botao.textContent?.trim() === 'Editar',
+    ) as HTMLButtonElement;
+    editar.click();
+    await fixture.whenStable();
+
+    preencherCampo(fixture, '#detalhe-observacoes', '');
+    await fixture.whenStable();
+    enviarFormulario(fixture);
+    await fixture.whenStable();
+
+    const request = httpTesting.expectOne(API_ROUTES.lead(7));
+    expect(request.request.body).toEqual({ observacoes: '' });
+    request.flush({ ...LEAD_COMPLETO, observacoes: null });
+    await fixture.whenStable();
+  });
+
+  it('bloqueia o envio sem alteração e o libera ao alterar um campo', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const editar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (botao: HTMLButtonElement) => botao.textContent?.trim() === 'Editar',
+    ) as HTMLButtonElement;
+    editar.click();
+    await fixture.whenStable();
+
+    const salvar = fixture.nativeElement.querySelector(
+      'button[type="submit"]',
+    ) as HTMLButtonElement;
+    expect(salvar.disabled).toBe(true);
+
+    preencherCampo(fixture, '#detalhe-observacoes', 'Nova observação.');
+    await fixture.whenStable();
+    expect(salvar.disabled).toBe(false);
+  });
+
+  it('não envia quando o usuário apenas limpa o último contato, explicando a limitação', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const editar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (botao: HTMLButtonElement) => botao.textContent?.trim() === 'Editar',
+    ) as HTMLButtonElement;
+    editar.click();
+    await fixture.whenStable();
+
+    preencherCampo(fixture, '#detalhe-ultimo-contato', '');
+    await fixture.whenStable();
+    enviarFormulario(fixture);
+    await fixture.whenStable();
+
+    const salvar = fixture.nativeElement.querySelector(
+      'button[type="submit"]',
+    ) as HTMLButtonElement;
+    expect(salvar.disabled).toBe(true);
+    httpTesting.expectNone(API_ROUTES.lead(7));
+  });
+
+  it('preserva o texto digitado e mantém a edição aberta quando o PATCH falha', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const editar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (botao: HTMLButtonElement) => botao.textContent?.trim() === 'Editar',
+    ) as HTMLButtonElement;
+    editar.click();
+    await fixture.whenStable();
+
+    preencherCampo(fixture, '#detalhe-observacoes', 'Texto que não pode se perder.');
+    await fixture.whenStable();
+    enviarFormulario(fixture);
+    await fixture.whenStable();
+
+    httpTesting.expectOne(API_ROUTES.lead(7)).flush(
+      {
+        timestamp: '2026-09-03T12:00:00Z',
+        status: 500,
+        codigo: 'ERRO_INTERNO',
+        mensagem: 'Não foi possível atualizar o lead.',
+        path: API_ROUTES.lead(7),
+      } satisfies ApiErrorResponse,
+      { status: 500, statusText: 'Internal Server Error' },
+    );
+    await fixture.whenStable();
+
+    const textarea = fixture.nativeElement.querySelector(
+      '#detalhe-observacoes',
+    ) as HTMLTextAreaElement;
+    expect(fixture.componentInstance['editando']()).toBe(true);
+    expect(textarea.value).toBe('Texto que não pode se perder.');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Não foi possível atualizar o lead.',
+    );
+  });
+
+  it('avisa sobre alterações não salvas ao tentar fechar e só fecha após descartar', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    let fechou = false;
+    fixture.componentInstance.fechado.subscribe(() => (fechou = true));
+
+    const editar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (botao: HTMLButtonElement) => botao.textContent?.trim() === 'Editar',
+    ) as HTMLButtonElement;
+    editar.click();
+    await fixture.whenStable();
+
+    preencherCampo(fixture, '#detalhe-observacoes', 'Alteração não salva.');
+    await fixture.whenStable();
+
+    const painel = fixture.nativeElement.querySelector('.lead-detalhe-panel') as HTMLElement;
+    painel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+
+    expect(fechou).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain(
+      'Há alterações ainda não salvas. Salve ou cancele a edição antes de fechar.',
+    );
+
+    const cancelar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (botao: HTMLButtonElement) => botao.textContent?.trim() === 'Cancelar',
+    ) as HTMLButtonElement;
+    cancelar.click();
+    await fixture.whenStable();
+
+    painel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+
+    expect(fechou).toBe(true);
   });
 });

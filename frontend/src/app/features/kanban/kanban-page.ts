@@ -127,6 +127,11 @@ export class KanbanPage {
     gatilho?.focus();
   }
 
+  protected aplicarLeadAtualizado(leadAtualizado: LeadResponse): void {
+    this.leadSelecionado.set(leadAtualizado);
+    this.substituirLead(leadAtualizado);
+  }
+
   private consultar(filtros: FiltrosLead): void {
     if (this.carregando() || this.movimentoEmAndamento()) {
       return;
