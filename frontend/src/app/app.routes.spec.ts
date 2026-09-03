@@ -1,9 +1,11 @@
+import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { describe, expect, it, beforeEach } from 'vitest';
 import { BuscaPage } from './features/busca/busca-page';
 import { HistoricoPage } from './features/historico/historico-page';
+import { HistoricoDetalhePage } from './features/historico/historico-detalhe-page';
 import { KanbanPage } from './features/kanban/kanban-page';
 import { NotFoundPage } from './features/not-found/not-found-page';
 import { routes } from './app.routes';
@@ -13,7 +15,7 @@ describe('rotas do shell', () => {
 
   beforeEach(async () => {
     TestBed.configureTestingModule({
-      providers: [provideRouter(routes)]
+      providers: [provideRouter(routes)],
     });
     harness = await RouterTestingHarness.create();
   });
@@ -26,10 +28,10 @@ describe('rotas do shell', () => {
   });
 
   it('carrega as três áreas por suas URLs', async () => {
-    const pages = [
+    const pages: { url: string; component: Type<unknown>; title: string }[] = [
       { url: '/busca', component: BuscaPage, title: 'Busca' },
       { url: '/kanban', component: KanbanPage, title: 'Kanban' },
-      { url: '/historico', component: HistoricoPage, title: 'Histórico' }
+      { url: '/historico', component: HistoricoPage, title: 'Histórico' },
     ];
 
     for (const page of pages) {
@@ -44,8 +46,17 @@ describe('rotas do shell', () => {
     const instance = await harness.navigateByUrl('/rota-inexistente', NotFoundPage);
 
     expect(instance).toBeInstanceOf(NotFoundPage);
-    expect(harness.routeNativeElement?.querySelector('h1')?.textContent)
-      .toContain('Página não encontrada');
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain(
+      'Página não encontrada',
+    );
     expect(harness.routeNativeElement?.querySelector('a[routerLink="/busca"]')).toBeTruthy();
+  });
+
+  it('carrega a rota de detalhe da busca com o identificador informado', async () => {
+    const instance = await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+
+    expect(instance).toBeInstanceOf(HistoricoDetalhePage);
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain('Busca #42');
+    expect(harness.routeNativeElement?.querySelector('a[routerLink="/historico"]')).toBeTruthy();
   });
 });

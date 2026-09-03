@@ -9,8 +9,13 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 })
 export class App {
   protected readonly navigationItems = [
-    { label: 'Busca', path: '/busca', description: 'Encontrar leads' },
-    { label: 'Kanban', path: '/kanban', description: 'Acompanhar oportunidades' },
-    { label: 'Histórico', path: '/historico', description: 'Revisar buscas anteriores' }
+    { label: 'Busca', path: '/busca', description: 'Encontrar leads', exact: true },
+    { label: 'Kanban', path: '/kanban', description: 'Acompanhar oportunidades', exact: true },
+    {
+      label: 'Histórico',
+      path: '/historico',
+      description: 'Revisar buscas anteriores',
+      exact: false,
+    },
   ] as const;
 }

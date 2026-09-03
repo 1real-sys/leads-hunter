@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-12 — Lista do histórico de buscas**.
+- Próximo sprint: **FE-13 — Detalhe de uma busca anterior**.
 
 ## Decisões do plano
 
@@ -112,7 +112,7 @@ Esta verificação é responsabilidade do agente que implementa e também do age
 | FE-09  | Drag-and-drop com persistência de status | FE-08          | CONCLUÍDO    |
 | FE-10  | Detalhe do lead e WhatsApp manual | FE-08          | CONCLUÍDO    |
 | FE-11  | Observações e último contato | FE-10          | CONCLUÍDO    |
-| FE-12  | Lista do histórico de buscas | FE-01, FE-02   | PENDENTE     |
+| FE-12  | Lista do histórico de buscas | FE-01, FE-02   | CONCLUÍDO    |
 | FE-13  | Detalhe de uma busca anterior | FE-12          | PENDENTE     |
 | FE-14  | Downloads CSV e XLSX | FE-07          | PENDENTE     |
 | FE-15  | Refatoração do shell para workspace operacional        | FE-00 a FE-14  | Pendente     |
@@ -633,7 +633,7 @@ Editar os dados comerciais do lead com salvamento explícito e feedback confiáv
 
 ## FE-12 — Lista do histórico de buscas
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -660,6 +660,15 @@ Permitir revisar todas as buscas anteriores sem chamar novamente a Google.
 - Testes HTTP e dos quatro estados da tela.
 - Testes de navegação para o detalhe.
 - `npm run build`.
+
+### Resultado
+
+- `BuscaApi.listarHistorico` consulta `GET /api/buscas` sem parâmetros e devolve o contrato tipado `BuscaResumoResponse[]`, sem acionar a criação de uma nova busca.
+- A rota `/historico` apresenta as buscas em uma tabela operacional, preservando a ordem da API e exibindo data local, endereço-base, categorias, raio e total encontrado. Endereços nulos ou vazios recebem um texto neutro, sem inventar localização.
+- A tela diferencia carregamento, lista vazia, erro e dados disponíveis. O estado vazio orienta o usuário a iniciar uma busca, e o erro utiliza o contrato seguro existente e oferece nova tentativa.
+- Cada busca possui um link acessível para `/historico/:id`. A rota mantém o contexto de Histórico ativo e apresenta uma transição explícita até que o conteúdo detalhado seja implementado no FE-13.
+- A data de `LocalDateTime` é formatada diretamente a partir do contrato textual, sem conversão para `Date` nem aplicação implícita de fuso horário.
+- A suíte frontend concluiu 122 testes sem falhas, o build de produção passou e os arquivos do FE-12 passaram na verificação do Prettier.
 
 ---
 
@@ -930,4 +939,4 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** a **FE-11** estão concluídos e validados. O próximo sprint é o **FE-12 — Lista do histórico de buscas**.
+Os sprints **FE-00** a **FE-12** estão concluídos e validados. O próximo sprint é o **FE-13 — Detalhe de uma busca anterior**.

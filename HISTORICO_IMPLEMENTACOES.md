@@ -744,3 +744,33 @@ A área de dados comerciais do painel de detalhe do lead passou a permitir ediç
 - `frontend/src/app/features/kanban/lead-detalhe.scss`
 - `frontend/src/app/features/kanban/lead-detalhe.spec.ts`
 - `frontend/src/app/features/kanban/lead-detalhe.ts`
+
+---
+
+## 28. Lista do histórico de buscas — 03/09/2026
+
+A área de Histórico passou a consultar as buscas persistidas por `GET /api/buscas` e apresentá-las na ordem fornecida pelo backend. A tabela mostra data local sem conversão de fuso horário, endereço-base, categorias, raio e total encontrado, com tratamento próprio para carregamento, lista vazia, erro e nova tentativa.
+
+Cada registro possui navegação acessível para a rota identificada `/historico/:id`. Essa rota mantém o contexto visual de Histórico e prepara a transição para o detalhe completo, que permanece no escopo do sprint seguinte.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/features/historico/historico-detalhe-page.ts`
+- `frontend/src/app/features/historico/historico-page.html`
+- `frontend/src/app/features/historico/historico-page.scss`
+- `frontend/src/app/features/historico/historico-page.spec.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/src/app/app.html`
+- `frontend/src/app/app.routes.spec.ts`
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/app.spec.ts`
+- `frontend/src/app/app.ts`
+- `frontend/src/app/core/api/busca-api.spec.ts`
+- `frontend/src/app/core/api/busca-api.ts`
+- `frontend/src/app/features/historico/historico-page.ts`

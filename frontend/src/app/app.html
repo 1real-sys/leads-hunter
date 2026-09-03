@@ -19,7 +19,7 @@
                 class="main-navigation__link"
                 [routerLink]="item.path"
                 routerLinkActive="is-active"
-                [routerLinkActiveOptions]="{ exact: true }"
+                [routerLinkActiveOptions]="{ exact: item.exact }"
                 ariaCurrentWhenActive="page"
                 [attr.title]="item.description"
               >

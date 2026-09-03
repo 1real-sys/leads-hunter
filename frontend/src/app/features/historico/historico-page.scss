@@ -1,0 +1,216 @@
+:host {
+  display: block;
+}
+
+.historico-page {
+  padding: var(--space-8) 0 var(--space-10);
+}
+
+.historico-page__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.historico-page__header > div {
+  max-width: 44rem;
+}
+
+.historico-page__eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--accent-strong);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.historico-page__header h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(1.85rem, 4vw, 2.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.historico-page__header > div > p:last-child {
+  margin: var(--space-3) 0 0;
+  color: var(--muted);
+  line-height: var(--line-height-body);
+}
+
+.historico-page__total {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  text-align: right;
+}
+
+.historico-page__total strong {
+  display: block;
+  color: var(--ink);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.historico-page__feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.historico-page__feedback > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.historico-page__feedback strong {
+  color: var(--ink);
+}
+
+.historico-page__feedback--error {
+  border-color: #e8b4ae;
+  background: #fff5f3;
+  color: #7a271a;
+}
+
+.historico-page__feedback--error strong {
+  color: #7a271a;
+}
+
+.historico-page__feedback button,
+.historico-page__empty a,
+.historico-page__open-link {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.historico-page__feedback button:hover,
+.historico-page__empty a:hover,
+.historico-page__open-link:hover {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--on-accent);
+}
+
+.historico-page__empty {
+  padding: var(--space-8) var(--space-4);
+  border-block: 1px solid var(--border);
+  text-align: center;
+}
+
+.historico-page__empty h2,
+.historico-page__empty p {
+  margin: 0;
+}
+
+.historico-page__empty h2 {
+  font-size: var(--font-size-lg);
+}
+
+.historico-page__empty p {
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.historico-page__empty a {
+  margin-top: var(--space-4);
+}
+
+.historico-page__table-region {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.historico-page__table {
+  width: 100%;
+  min-width: 52rem;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.historico-page__table caption {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  text-align: left;
+}
+
+.historico-page__table th,
+.historico-page__table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.historico-page__table th {
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.historico-page__table td {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.historico-page__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.historico-page__table tbody tr:hover {
+  background: var(--surface-subtle);
+}
+
+.historico-page__table td strong,
+.historico-page__table time {
+  color: var(--ink);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 42rem) {
+  .historico-page__header,
+  .historico-page__feedback {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .historico-page__total {
+    text-align: left;
+  }
+}

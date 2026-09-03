@@ -7,9 +7,8 @@ describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter(routes)]
-    })
-      .compileComponents();
+      providers: [provideRouter(routes)],
+    }).compileComponents();
   });
 
   it('should create the app', () => {
@@ -27,7 +26,11 @@ describe('App', () => {
 
     expect(navigation).toBeTruthy();
     expect(links.map((link) => link.textContent?.trim())).toEqual(['Busca', 'Kanban', 'Histórico']);
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/busca', '/kanban', '/historico']);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/busca',
+      '/kanban',
+      '/historico',
+    ]);
   });
 
   it('indica a rota ativa com aria-current', async () => {
@@ -39,6 +42,18 @@ describe('App', () => {
 
     const activeLink = fixture.nativeElement.querySelector('.main-navigation__link.is-active');
     expect(activeLink?.textContent?.trim()).toBe('Kanban');
+    expect(activeLink?.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('mantém Histórico ativo ao navegar para uma busca específica', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/historico/42');
+    await fixture.whenStable();
+
+    const activeLink = fixture.nativeElement.querySelector('.main-navigation__link.is-active');
+    expect(activeLink?.textContent?.trim()).toBe('Histórico');
     expect(activeLink?.getAttribute('aria-current')).toBe('page');
   });
 });

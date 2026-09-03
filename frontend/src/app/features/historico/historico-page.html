@@ -1,0 +1,92 @@
+<section class="historico-page" aria-labelledby="historico-page-title">
+  <header class="historico-page__header">
+    <div>
+      <p class="historico-page__eyebrow">Memória das buscas</p>
+      <h1 id="historico-page-title">Histórico</h1>
+      <p>Revise as consultas realizadas e retome o contexto de cada prospecção.</p>
+    </div>
+
+    @if (estado() === 'success') {
+      <p class="historico-page__total" aria-live="polite">
+        <strong>{{ buscas().length }}</strong>
+        {{ buscas().length === 1 ? 'busca registrada' : 'buscas registradas' }}
+      </p>
+    }
+  </header>
+
+  @if (estado() === 'loading') {
+    <div class="historico-page__feedback" role="status">
+      <strong>Carregando histórico</strong>
+      <span>Aguarde enquanto as buscas registradas são consultadas.</span>
+    </div>
+  }
+
+  @if (estado() === 'error') {
+    <div class="historico-page__feedback historico-page__feedback--error" role="alert">
+      <div>
+        <strong>Não foi possível carregar o histórico</strong>
+        <span>{{ mensagemErro() }}</span>
+      </div>
+      <button type="button" (click)="carregar()">Tentar novamente</button>
+    </div>
+  }
+
+  @if (estado() === 'empty') {
+    <section class="historico-page__empty" aria-labelledby="historico-empty-title">
+      <h2 id="historico-empty-title">Nenhuma busca registrada</h2>
+      <p>Execute uma busca para que ela apareça aqui e possa ser consultada depois.</p>
+      <a routerLink="/busca">Ir para Busca</a>
+    </section>
+  }
+
+  @if (estado() === 'success') {
+    <div
+      class="historico-page__table-region"
+      role="region"
+      aria-labelledby="historico-list-title"
+      tabindex="0"
+    >
+      <table class="historico-page__table">
+        <caption id="historico-list-title">
+          Buscas anteriores, na ordem retornada pela API
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Realizada em</th>
+            <th scope="col">Endereço-base</th>
+            <th scope="col">Categorias</th>
+            <th scope="col">Raio</th>
+            <th scope="col">Encontrados</th>
+            <th scope="col"><span class="visually-hidden">Ação</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (busca of buscas(); track busca.id) {
+            <tr>
+              <td>
+                <time [attr.datetime]="busca.criadoEm">
+                  {{ formatarDataLocal(busca.criadoEm) }}
+                </time>
+              </td>
+              <td>
+                <strong>{{ enderecoExibido(busca.enderecoBase) }}</strong>
+              </td>
+              <td>{{ formatarCategorias(busca.categorias) }}</td>
+              <td>{{ busca.raioKm }} km</td>
+              <td>{{ busca.totalEncontrados }}</td>
+              <td>
+                <a
+                  class="historico-page__open-link"
+                  [routerLink]="['/historico', busca.id]"
+                  [attr.aria-label]="'Abrir busca ' + busca.id"
+                >
+                  Abrir
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

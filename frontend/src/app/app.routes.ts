@@ -5,21 +5,32 @@ export const routes: Routes = [
   {
     path: 'busca',
     title: 'Busca | Leads Hunter',
-    loadComponent: () => import('./features/busca/busca-page').then(({ BuscaPage }) => BuscaPage)
+    loadComponent: () => import('./features/busca/busca-page').then(({ BuscaPage }) => BuscaPage),
   },
   {
     path: 'kanban',
     title: 'Kanban | Leads Hunter',
-    loadComponent: () => import('./features/kanban/kanban-page').then(({ KanbanPage }) => KanbanPage)
+    loadComponent: () =>
+      import('./features/kanban/kanban-page').then(({ KanbanPage }) => KanbanPage),
   },
   {
     path: 'historico',
     title: 'Histórico | Leads Hunter',
-    loadComponent: () => import('./features/historico/historico-page').then(({ HistoricoPage }) => HistoricoPage)
+    loadComponent: () =>
+      import('./features/historico/historico-page').then(({ HistoricoPage }) => HistoricoPage),
+  },
+  {
+    path: 'historico/:id',
+    title: 'Detalhe da busca | Leads Hunter',
+    loadComponent: () =>
+      import('./features/historico/historico-detalhe-page').then(
+        ({ HistoricoDetalhePage }) => HistoricoDetalhePage,
+      ),
   },
   {
     path: '**',
     title: 'Página não encontrada | Leads Hunter',
-    loadComponent: () => import('./features/not-found/not-found-page').then(({ NotFoundPage }) => NotFoundPage)
-  }
+    loadComponent: () =>
+      import('./features/not-found/not-found-page').then(({ NotFoundPage }) => NotFoundPage),
+  },
 ];
