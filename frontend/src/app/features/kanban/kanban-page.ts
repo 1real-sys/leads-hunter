@@ -5,6 +5,7 @@ import { FiltrosLead, LeadApi } from '../../core/api/lead-api';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
 import { STATUS_FUNIL } from '../../shared/models/enums.model';
 import { LeadResponse } from '../../shared/models/lead.model';
+import { ExportacaoLeads } from './exportacao-leads';
 import { KanbanBoard } from './kanban-board';
 import { LeadDetalhe } from './lead-detalhe';
 import { FiltrosLeadForm, LeadFilters } from './lead-filters';
@@ -27,7 +28,7 @@ function paraFiltrosApi(filtros: FiltrosLeadForm): FiltrosLead {
 }
 
 @Component({
-  imports: [KanbanBoard, LeadDetalhe, LeadFilters],
+  imports: [ExportacaoLeads, KanbanBoard, LeadDetalhe, LeadFilters],
   selector: 'app-kanban-page',
   styleUrl: './kanban-page.scss',
   templateUrl: './kanban-page.html',
@@ -38,6 +39,7 @@ export class KanbanPage {
   private filtrosDaUltimaConsulta: FiltrosLead = {};
 
   protected readonly filtros = signal<FiltrosLeadForm>({ ...FILTROS_INICIAIS });
+  protected readonly filtrosParaExportacao = computed(() => paraFiltrosApi(this.filtros()));
   protected readonly leads = signal<LeadResponse[]>([]);
   protected readonly estadoConsulta = signal<EstadoConsulta>('idle');
   protected readonly carregando = computed(() => this.estadoConsulta() === 'loading');

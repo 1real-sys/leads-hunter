@@ -774,3 +774,59 @@ Cada registro possui navegação acessível para a rota identificada `/historico
 - `frontend/src/app/core/api/busca-api.spec.ts`
 - `frontend/src/app/core/api/busca-api.ts`
 - `frontend/src/app/features/historico/historico-page.ts`
+
+---
+
+## 29. Detalhe de uma busca anterior — 03/09/2026
+
+A rota identificada do Histórico passou a consultar `GET /api/buscas/{id}` e apresentar os parâmetros e leads registrados naquela execução. Score e temperatura históricos ficam separados do status, das observações e do último contato atuais, preservando o significado de cada dado sem recalcular a busca.
+
+A tela mantém a ordem retornada pelo backend, oferece WhatsApp manual somente quando existe uma URL válida no contrato e trata carregamento, execução sem leads, identificador inválido, busca inexistente e erro com nova tentativa.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/features/historico/historico-detalhe-page.html`
+- `frontend/src/app/features/historico/historico-detalhe-page.scss`
+- `frontend/src/app/features/historico/historico-detalhe-page.spec.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `frontend/src/app/core/api/api-routes.ts`
+- `frontend/src/app/core/api/busca-api.spec.ts`
+- `frontend/src/app/core/api/busca-api.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.ts`
+
+---
+
+## 30. Downloads CSV e XLSX no Kanban — 03/09/2026
+
+O Kanban passou a baixar as exportações CSV e Excel produzidas pelo backend com os filtros de status, categoria e temperatura selecionados na interface. Cada formato possui carregamento independente, bloqueio contra repetição durante a geração e mensagens próprias de sucesso ou falha.
+
+A integração trata as respostas como arquivos binários, usa nome e tipo MIME dos headers com fallbacks seguros e converte erros JSON recebidos como blob antes de apresentá-los. O download cria uma URL temporária somente após sucesso e sempre a libera depois do clique.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/core/api/exportacao-api.spec.ts`
+- `frontend/src/app/core/api/exportacao-api.ts`
+- `frontend/src/app/core/browser/arquivo-downloader.spec.ts`
+- `frontend/src/app/core/browser/arquivo-downloader.ts`
+- `frontend/src/app/features/kanban/exportacao-leads.html`
+- `frontend/src/app/features/kanban/exportacao-leads.scss`
+- `frontend/src/app/features/kanban/exportacao-leads.spec.ts`
+- `frontend/src/app/features/kanban/exportacao-leads.ts`
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `frontend/src/app/features/kanban/kanban-page.html`
+- `frontend/src/app/features/kanban/kanban-page.spec.ts`
+- `frontend/src/app/features/kanban/kanban-page.ts`

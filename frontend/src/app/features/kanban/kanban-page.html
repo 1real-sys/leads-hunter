@@ -22,6 +22,8 @@
     (limpar)="limparFiltros()"
   />
 
+  <app-exportacao-leads [filtros]="filtrosParaExportacao()" />
+
   @if (mensagemMovimento()) {
     <p class="kanban-page__movement-feedback" role="status">{{ mensagemMovimento() }}</p>
   }
@@ -73,6 +75,10 @@
   }
 
   @if (leadSelecionado(); as lead) {
-    <app-lead-detalhe [lead]="lead" (fechado)="fecharDetalhe()" (leadAtualizado)="aplicarLeadAtualizado($event)" />
+    <app-lead-detalhe
+      [lead]="lead"
+      (fechado)="fecharDetalhe()"
+      (leadAtualizado)="aplicarLeadAtualizado($event)"
+    />
   }
 </section>

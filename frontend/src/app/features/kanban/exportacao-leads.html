@@ -1,0 +1,37 @@
+<section class="exportacao-leads" aria-labelledby="exportacao-leads-title">
+  <div class="exportacao-leads__heading">
+    <h2 id="exportacao-leads-title">Exportar leads</h2>
+    <p>Os arquivos usam os filtros selecionados acima.</p>
+  </div>
+
+  <div class="exportacao-leads__actions">
+    <button
+      type="button"
+      [disabled]="exportandoCsv()"
+      [attr.aria-busy]="exportandoCsv()"
+      (click)="exportarCsv()"
+    >
+      {{ exportandoCsv() ? 'Gerando CSV...' : 'Baixar CSV' }}
+    </button>
+    <button
+      type="button"
+      [disabled]="exportandoXlsx()"
+      [attr.aria-busy]="exportandoXlsx()"
+      (click)="exportarXlsx()"
+    >
+      {{ exportandoXlsx() ? 'Gerando Excel...' : 'Baixar Excel' }}
+    </button>
+  </div>
+
+  <div class="exportacao-leads__feedback">
+    @if (mensagemSucesso(); as mensagem) {
+      <p role="status">{{ mensagem }}</p>
+    }
+    @if (erroCsv(); as erro) {
+      <p class="exportacao-leads__error" role="alert">CSV: {{ erro }}</p>
+    }
+    @if (erroXlsx(); as erro) {
+      <p class="exportacao-leads__error" role="alert">Excel: {{ erro }}</p>
+    }
+  </div>
+</section>

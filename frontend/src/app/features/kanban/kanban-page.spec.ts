@@ -1,8 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_ROUTES } from '../../core/api/api-routes';
+import { ArquivoDownloader } from '../../core/browser/arquivo-downloader';
 import { ApiErrorResponse } from '../../shared/models/api-error-response.model';
 import { LeadResponse } from '../../shared/models/lead.model';
 import { KanbanPage } from './kanban-page';
@@ -42,11 +43,17 @@ const LEAD_MORNO: LeadResponse = {
 
 describe('KanbanPage', () => {
   let httpTesting: HttpTestingController;
+  const arquivoDownloader = { baixar: vi.fn() };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     TestBed.configureTestingModule({
       imports: [KanbanPage],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ArquivoDownloader, useValue: arquivoDownloader },
+      ],
     });
     httpTesting = TestBed.inject(HttpTestingController);
   });
@@ -146,6 +153,35 @@ describe('KanbanPage', () => {
     const request = httpTesting.expectOne(`${API_ROUTES.leads}?categoria=PADARIA`);
     expect(request.request.params.keys()).toEqual(['categoria']);
     request.flush([LEAD_QUENTE]);
+  });
+
+  it('exporta usando os filtros atualmente selecionados na interface', async () => {
+    const fixture = await createFixture();
+    httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_QUENTE]);
+    await fixture.whenStable();
+
+    selecionar(fixture, '#lead-status', 'QUALIFICADO');
+    selecionar(fixture, '#lead-categoria', 'PADARIA');
+    selecionar(fixture, '#lead-temperatura', 'QUENTE');
+    await fixture.whenStable();
+
+    const exportarCsv = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (button: HTMLButtonElement) => button.textContent?.trim() === 'Baixar CSV',
+    ) as HTMLButtonElement;
+    exportarCsv.click();
+
+    const request = httpTesting.expectOne(
+      `${API_ROUTES.exportacaoLeadsCsv}?status=QUALIFICADO&categoria=PADARIA&temperatura=QUENTE`,
+    );
+    request.flush(new Blob(['id,nome\r\n7,Padaria Central\r\n']), {
+      headers: {
+        'Content-Disposition': 'attachment; filename="leads.csv"',
+        'Content-Type': 'text/csv;charset=UTF-8',
+      },
+    });
+    await fixture.whenStable();
+
+    expect(arquivoDownloader.baixar).toHaveBeenCalledWith(expect.any(Blob), 'leads.csv');
   });
 
   it('descarta um valor fora dos enums mesmo se o controle for manipulado', async () => {
@@ -352,9 +388,7 @@ describe('KanbanPage', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance['leadSelecionado']()).toEqual(LEAD_QUENTE);
-    const painel = fixture.nativeElement.querySelector(
-      '.lead-detalhe-panel',
-    ) as HTMLElement;
+    const painel = fixture.nativeElement.querySelector('.lead-detalhe-panel') as HTMLElement;
     expect(painel).not.toBeNull();
     expect(painel.textContent).toContain('Padaria Central');
     expect(painel.textContent).toContain('Abrir conversa no WhatsApp');
@@ -399,9 +433,7 @@ describe('KanbanPage', () => {
     await fixture.whenStable();
     expect(fixture.componentInstance['leadSelecionado']()).toEqual(LEAD_MORNO);
 
-    const backdrop = fixture.nativeElement.querySelector(
-      '.lead-detalhe-backdrop',
-    ) as HTMLElement;
+    const backdrop = fixture.nativeElement.querySelector('.lead-detalhe-backdrop') as HTMLElement;
     backdrop.click();
     await fixture.whenStable();
 

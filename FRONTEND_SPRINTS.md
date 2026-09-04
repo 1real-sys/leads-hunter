@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-13 — Detalhe de uma busca anterior**.
+- Próximo sprint: **FE-15 — Refatoração do shell para workspace operacional**.
 
 ## Decisões do plano
 
@@ -113,8 +113,8 @@ Esta verificação é responsabilidade do agente que implementa e também do age
 | FE-10  | Detalhe do lead e WhatsApp manual | FE-08          | CONCLUÍDO    |
 | FE-11  | Observações e último contato | FE-10          | CONCLUÍDO    |
 | FE-12  | Lista do histórico de buscas | FE-01, FE-02   | CONCLUÍDO    |
-| FE-13  | Detalhe de uma busca anterior | FE-12          | PENDENTE     |
-| FE-14  | Downloads CSV e XLSX | FE-07          | PENDENTE     |
+| FE-13  | Detalhe de uma busca anterior | FE-12          | CONCLUÍDO    |
+| FE-14  | Downloads CSV e XLSX | FE-07          | CONCLUÍDO    |
 | FE-15  | Refatoração do shell para workspace operacional        | FE-00 a FE-14  | Pendente     |
 | FE-16  | Polimento integrado, responsividade e acessibilidade | FE-06 a FE-115 | PENDENTE     |
 | FE-17  | Testes de fluxo e fechamento do MVP | FE-15          | PENDENTE     |
@@ -674,7 +674,7 @@ Permitir revisar todas as buscas anteriores sem chamar novamente a Google.
 
 ## FE-13 — Detalhe de uma busca anterior
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -702,11 +702,20 @@ Exibir os leads encontrados em uma execução histórica, preservando a diferen�
 - Testes HTTP de sucesso/404 e renderização de snapshot.
 - `npm run build`.
 
+### Resultado
+
+- `BuscaApi.buscarHistoricoPorId` consulta somente `GET /api/buscas/{id}` e devolve o contrato tipado `BuscaDetalheResponse`, sem iniciar uma nova busca ou recalcular scoring.
+- A rota `/historico/:id` apresenta os parâmetros registrados e os leads exatamente na ordem retornada pela API. Datas locais são formatadas diretamente da string recebida, sem conversão implícita de fuso horário.
+- Score e temperatura aparecem como valores “naquela busca”, separados de status, observações e último contato, que são identificados como dados comerciais atuais.
+- O WhatsApp permanece uma ação manual em nova aba e só gera link quando `whatsappUrl` existe; a ausência da URL recebe texto neutro.
+- A tela diferencia carregamento, resultado, execução sem leads, identificador inválido sem chamada HTTP, busca inexistente e erro genérico com nova tentativa. Todos os estados mantêm retorno acessível ao histórico.
+- A suíte frontend concluiu 130 testes sem falhas e o build de produção passou sem warnings. Os testes do FE-13 cobrem o contrato HTTP de sucesso e 404, resumo, ordem dos leads, snapshot, dados atuais, ausência de WhatsApp, vazio, ID inválido e retry após erro.
+
 ---
 
 ## FE-14 — Downloads CSV e XLSX
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -734,6 +743,16 @@ Permitir baixar as exportações produzidas pelo backend usando os filtros da te
 - Testes HTTP de `blob`, query params, headers, fallback de nome e erro JSON.
 - Smoke test local dos dois downloads.
 - `npm run build`.
+
+### Resultado
+
+- `ExportacaoApi` consulta as rotas reais de CSV e XLSX como `blob`, envia somente os filtros selecionados de status, categoria e temperatura e preserva os tipos MIME retornados pelo backend.
+- O nome de `Content-Disposition`, inclusive `filename*` em UTF-8, é usado quando seguro e compatível com o formato. Headers ausentes ou nomes inválidos recebem os fallbacks `leads.csv` e `leads.xlsx`.
+- `ArquivoDownloader` cria um link temporário apenas após resposta HTTP bem-sucedida, aciona o download e remove o link e a object URL em bloco de finalização, inclusive se o navegador rejeitar o clique.
+- O Kanban apresenta uma faixa operacional compacta abaixo dos filtros com ações independentes para CSV e Excel. O mesmo formato bloqueia cliques repetidos enquanto está em andamento; os dois formatos podem ser gerados simultaneamente e possuem feedback próprio.
+- Respostas `400` e `500` recebidas como blob JSON são convertidas de volta ao contrato seguro de erro antes de chegar à interface. Uma falha não cria link nem arquivo.
+- A suíte frontend concluiu 145 testes sem falhas, o build de produção passou sem warnings e a auditoria axe da tela do Kanban encontrou zero violações. Os testes cobrem blobs, filtros, headers, nomes UTF-8 e fallback, nome inseguro, erros JSON, ciclo da object URL, bloqueio concorrente e integração com os filtros visíveis do Kanban.
+- No smoke local com `status=NOVO`, CSV e XLSX responderam HTTP 200 com `Content-Disposition` e `Content-Type` esperados. O CSV foi reconhecido como texto UTF-8 e o XLSX passou integralmente na verificação de sua estrutura compactada.
 
 ---
 
@@ -939,4 +958,4 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** a **FE-12** estão concluídos e validados. O próximo sprint é o **FE-13 — Detalhe de uma busca anterior**.
+Os sprints **FE-00** a **FE-14** estão concluídos e validados. O próximo sprint é o **FE-15 — Refatoração do shell para workspace operacional**.

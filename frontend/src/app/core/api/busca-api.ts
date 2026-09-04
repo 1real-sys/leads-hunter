@@ -1,7 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { Observable } from 'rxjs';
-import { BuscaRequest, BuscaResponse, BuscaResumoResponse } from '../../shared/models/busca.model';
+import {
+  BuscaDetalheResponse,
+  BuscaRequest,
+  BuscaResponse,
+  BuscaResumoResponse,
+} from '../../shared/models/busca.model';
 import { API_ROUTES } from './api-routes';
 
 @Service()
@@ -14,5 +19,9 @@ export class BuscaApi {
 
   listarHistorico(): Observable<BuscaResumoResponse[]> {
     return this.http.get<BuscaResumoResponse[]>(API_ROUTES.buscas);
+  }
+
+  buscarHistoricoPorId(id: number): Observable<BuscaDetalheResponse> {
+    return this.http.get<BuscaDetalheResponse>(API_ROUTES.busca(id));
   }
 }

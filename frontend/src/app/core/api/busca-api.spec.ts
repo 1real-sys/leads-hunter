@@ -3,7 +3,12 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ApiErrorResponse } from '../../shared/models/api-error-response.model';
-import { BuscaRequest, BuscaResponse, BuscaResumoResponse } from '../../shared/models/busca.model';
+import {
+  BuscaDetalheResponse,
+  BuscaRequest,
+  BuscaResponse,
+  BuscaResumoResponse,
+} from '../../shared/models/busca.model';
 import { API_ROUTES } from './api-routes';
 import { BuscaApi } from './busca-api';
 
@@ -61,6 +66,25 @@ const HISTORICO: BuscaResumoResponse[] = [
   },
 ];
 
+const DETALHE: BuscaDetalheResponse = {
+  ...HISTORICO[1],
+  leads: [
+    {
+      id: 7,
+      nome: 'Padaria Central',
+      categoria: 'PADARIA',
+      enderecoFormatado: 'Rua Central, 100',
+      telefone: '(27) 3333-4444',
+      whatsappUrl: 'https://wa.me/552733334444',
+      scoreNaBusca: 80,
+      temperaturaNaBusca: 'QUENTE',
+      status: 'CONTATADO',
+      observacoes: 'Retornar na sexta-feira.',
+      ultimoContatoEm: '2026-09-03T11:00:00',
+    },
+  ],
+};
+
 describe('BuscaApi', () => {
   let api: BuscaApi;
   let httpTesting: HttpTestingController;
@@ -100,6 +124,41 @@ describe('BuscaApi', () => {
     request.flush(HISTORICO);
 
     expect(recebido).toEqual(HISTORICO);
+  });
+
+  it('consulta uma busca anterior por id com GET tipado', () => {
+    let recebido: BuscaDetalheResponse | undefined;
+    api.buscarHistoricoPorId(42).subscribe((response) => (recebido = response));
+
+    const request = httpTesting.expectOne(API_ROUTES.busca(42));
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.keys()).toEqual([]);
+    expect(request.request.body).toBeNull();
+
+    request.flush(DETALHE);
+
+    expect(recebido).toEqual(DETALHE);
+  });
+
+  it('propaga 404 ao consultar uma busca inexistente', () => {
+    let receivedError: unknown;
+    api.buscarHistoricoPorId(999).subscribe({
+      error: (error: unknown) => (receivedError = error),
+    });
+
+    const request = httpTesting.expectOne(API_ROUTES.busca(999));
+    request.flush(
+      {
+        timestamp: '2026-09-03T12:00:00Z',
+        status: 404,
+        codigo: 'BUSCA_NAO_ENCONTRADA',
+        mensagem: 'Busca não encontrada.',
+        path: API_ROUTES.busca(999),
+      } satisfies ApiErrorResponse,
+      { status: 404, statusText: 'Not Found' },
+    );
+
+    expect(receivedError).toMatchObject({ status: 404 });
   });
 
   it.each([400, 429, 502, 503, 500])(
