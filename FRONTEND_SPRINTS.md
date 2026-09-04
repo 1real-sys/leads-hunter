@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-15 — Refatoração do shell para workspace operacional**.
+- Próximo sprint: **FE-15B — Adaptação das áreas ao workspace operacional**.
 
 ## Decisões do plano
 
@@ -98,26 +98,27 @@ Esta verificação é responsabilidade do agente que implementa e também do age
 
 ## Visão geral
 
-| Sprint | Entrega | Dependência    | Status       |
-|--------| --- |----------------|--------------|
-| FE-00  | Bootstrap Angular e execução local | Nenhuma        | CONCLUÍDO    |
-| FE-01  | Contratos TypeScript e base HTTP | FE-00          | CONCLUÍDO    |
-| FE-02  | Shell, navegação e rotas | FE-00          | CONCLUÍDO    |
-| FE-03  | Mapa Leaflet interativo | FE-01, FE-02   | CONCLUÍDO    |
-| FE-04  | Formulário de busca sincronizado ao mapa | FE-03          | CONCLUÍDO    |
-| FE-05  | Execução da busca pela API | FE-04          | CONCLUÍDO    |
-| FE-06  | Apresentação dos resultados da busca | FE-05          | CONCLUÍDO    |
-| FE-07  | Consulta e filtros de leads | FE-01, FE-02   | CONCLUÍDO    |
-| FE-08  | Kanban somente leitura e cards | FE-07          | CONCLUÍDO    |
-| FE-09  | Drag-and-drop com persistência de status | FE-08          | CONCLUÍDO    |
-| FE-10  | Detalhe do lead e WhatsApp manual | FE-08          | CONCLUÍDO    |
-| FE-11  | Observações e último contato | FE-10          | CONCLUÍDO    |
-| FE-12  | Lista do histórico de buscas | FE-01, FE-02   | CONCLUÍDO    |
-| FE-13  | Detalhe de uma busca anterior | FE-12          | CONCLUÍDO    |
-| FE-14  | Downloads CSV e XLSX | FE-07          | CONCLUÍDO    |
-| FE-15  | Refatoração do shell para workspace operacional        | FE-00 a FE-14  | Pendente     |
-| FE-16  | Polimento integrado, responsividade e acessibilidade | FE-06 a FE-115 | PENDENTE     |
-| FE-17  | Testes de fluxo e fechamento do MVP | FE-15          | PENDENTE     |
+| Sprint | Entrega | Dependência | Status |
+| --- | --- | --- | --- |
+| FE-00                    | Bootstrap Angular e execução local | Nenhuma        | CONCLUÍDO    |
+| FE-01                    | Contratos TypeScript e base HTTP | FE-00          | CONCLUÍDO    |
+| FE-02                    | Shell, navegação e rotas | FE-00          | CONCLUÍDO    |
+| FE-03                    | Mapa Leaflet interativo | FE-01, FE-02   | CONCLUÍDO    |
+| FE-04                    | Formulário de busca sincronizado ao mapa | FE-03          | CONCLUÍDO    |
+| FE-05                    | Execução da busca pela API | FE-04          | CONCLUÍDO    |
+| FE-06                    | Apresentação dos resultados da busca | FE-05          | CONCLUÍDO    |
+| FE-07                    | Consulta e filtros de leads | FE-01, FE-02   | CONCLUÍDO    |
+| FE-08                    | Kanban somente leitura e cards | FE-07          | CONCLUÍDO    |
+| FE-09                    | Drag-and-drop com persistência de status | FE-08          | CONCLUÍDO    |
+| FE-10                    | Detalhe do lead e WhatsApp manual | FE-08          | CONCLUÍDO    |
+| FE-11                    | Observações e último contato | FE-10          | CONCLUÍDO    |
+| FE-12                    | Lista do histórico de buscas | FE-01, FE-02   | CONCLUÍDO    |
+| FE-13                    | Detalhe de uma busca anterior | FE-12          | CONCLUÍDO    |
+| FE-14                    | Downloads CSV e XLSX | FE-07          | CONCLUÍDO    |
+| FE-15A | Shell operacional e workspace da Busca | FE-00 a FE-14 | CONCLUÍDO |
+| FE-15B | Adaptação das áreas ao workspace operacional | FE-15A | PENDENTE |
+| FE-16 | Polimento integrado, responsividade e acessibilidade | FE-15B | PENDENTE |
+| FE-17 | Testes de fluxo e fechamento do MVP | FE-16 | PENDENTE |
 
 ---
 
@@ -756,127 +757,105 @@ Permitir baixar as exportações produzidas pelo backend usando os filtros da te
 
 ---
 
-## FE-15 — Refatoração do shell para workspace operacional
+## FE-15A — Shell operacional e workspace da Busca
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
-Adaptar a estrutura visual da aplicação para o layout desktop definitivo do LeadRadar, preservando as funcionalidades já implementadas.
-
-A aplicação deve assumir aparência de ferramenta operacional/CRM leve, com sidebar compacta e uma área principal de trabalho ampla.
+Criar a estrutura desktop definitiva da aplicação e adaptar a tela de Busca a ela.
 
 ### Escopo
 
-- Substituir o shell desktop atual baseado em conteúdo centralizado por:
-    - sidebar operacional à esquerda;
-    - workspace principal ocupando o restante da viewport.
-- Remover desperdício de espaço horizontal e vertical.
-- Reduzir dependência do header atual quando suas funções puderem ser incorporadas à sidebar.
-- Remover footer permanente da área operacional quando não agregar função.
-- Preservar rotas e funcionalidades existentes.
-- Reorganizar componentes existentes sem reimplementar regras de negócio.
-- Manter navegação clara entre Busca, Kanban e Histórico.
+- substituir shell centralizado por sidebar + workspace;
+- reorganizar navegação Busca/Kanban/Histórico;
+- reduzir/remover header atual quando redundante;
+- remover footer permanente quando não tiver função;
+- aproveitar melhor largura e altura da viewport;
+- mover controles de busca para sidebar/região operacional;
+- tornar mapa o elemento dominante do workspace;
+- manter mapa e parâmetros utilizáveis simultaneamente;
+- acomodar resultados/leads de forma compacta quando aplicável;
+- preservar toda lógica existente;
+- preservar sincronização mapa/formulário;
+- seguir `leadradar-frontend`, `angular-developer` e `anti-ai-slop-ui`.
 
-### Tela de Busca
+### Não fazer ainda
 
-- Manter controles de busca na sidebar ou região operacional equivalente.
-- Fazer o mapa ocupar a maior parte do workspace.
-- Manter mapa e parâmetros utilizáveis simultaneamente.
-- Evitar mapa encapsulado em card pequeno centralizado.
-- Evitar grandes margens externas.
-- Exibir resultados/lista de leads de forma compacta quando aplicável.
-- Preservar sincronização existente entre mapa e formulário.
-
-Referência espacial:
-
-┌──────────────────┬─────────────────────────────────────┐
-│ Busca            │                                     │
-│ Categorias       │                                     │
-│ Raio             │                                     │
-│ Ações            │               MAPA                  │
-│ Filtros          │                                     │
-│                  │                                     │
-│ Leads/resultados │                                     │
-│                  │                                     │
-└──────────────────┴─────────────────────────────────────┘
-
-### Tela de Kanban
-
-- Preservar a sidebar/navegação da aplicação.
-- Utilizar o workspace para o Kanban.
-- Maximizar largura disponível para as cinco colunas.
-- Manter cards compactos.
-- Evitar containers externos desnecessários ao redor do board.
-
-### Tela de Histórico
-
-- Preservar a estrutura geral da aplicação.
-- Utilizar o workspace para histórico e detalhes.
-- Priorizar densidade, escaneabilidade e contexto.
-
-### Direção visual
-
-Seguir `leadradar-frontend` e `anti-ai-slop-ui`.
-
-Priorizar:
-
-- ferramenta operacional desktop;
-- alta utilização da viewport;
-- hierarquia simples;
-- densidade moderada;
-- poucos containers;
-- controles compactos;
-- mapa como elemento dominante na busca;
-- consistência entre telas.
-
-Evitar:
-
-- aparência de landing page;
-- conteúdo excessivamente centralizado;
-- grandes áreas vazias;
-- card dentro de card sem necessidade;
-- hero;
-- decoração sem função;
-- dashboard inventado;
-- refatorações funcionais não necessárias.
-
-### Restrições
-
-Esta sprint é principalmente estrutural e visual.
-
-Não:
-
-- alterar contratos da API sem necessidade;
-- alterar regras de negócio;
-- reimplementar features que já funcionam;
-- adicionar funcionalidades novas;
-- criar analytics/dashboard;
-- quebrar comportamento já validado nos sprints anteriores.
+- não reorganizar internamente o Kanban além do necessário para funcionar no novo shell;
+- não reorganizar internamente o Histórico além do necessário para funcionar no novo shell;
+- não fazer polimento final;
+- não adicionar funcionalidades;
+- não alterar contratos da API.
 
 ### Critérios de aceite
 
-- Sidebar e workspace formam a estrutura principal no desktop.
-- O mapa utiliza significativamente mais espaço que no shell anterior.
-- Busca continua funcionando.
-- Mapa e formulário continuam sincronizados.
-- Kanban continua funcionando.
-- Histórico continua funcionando.
-- Não existem regressões funcionais conhecidas.
-- A viewport desktop é utilizada de maneira eficiente.
-- Não existem grandes margens vazias sem função.
-- O resultado se aproxima da lógica espacial de uma ferramenta operacional/CRM, sem copiar identidade visual de terceiros.
+- sidebar + workspace funcionando;
+- Busca funcionando no novo shell;
+- mapa ocupa a maior parte da área principal;
+- navegação continua funcionando;
+- Kanban e Histórico continuam acessíveis, mesmo ainda não adaptados visualmente;
+- nenhuma regressão funcional conhecida;
+- testes relevantes passam;
+- `npm run build` passa.
 
-### Validação
+### Resultado
 
-- Revisão visual das principais rotas.
-- Testar Busca.
-- Testar mapa e formulário.
-- Testar Kanban.
-- Testar Histórico.
-- Testar exportação e ações existentes.
-- Testes automatizados relevantes.
-- `npm run build`.
+- O shell usa uma sidebar persistente com identidade, descrições e estado ativo para Busca, Kanban e Histórico; o header e o footer permanentes foram removidos.
+- A Busca possui uma região operacional compacta para o formulário e um workspace cartográfico que ocupa a maior parte da largura útil e praticamente toda a altura disponível em desktop.
+- A sincronização entre mapa e parâmetros, o envio da busca, os estados assíncronos e a apresentação dos resultados foram preservados. A lista de leads passou a usar uma grade mais densa no espaço disponível.
+- A suíte frontend concluiu 146 testes sem falhas e o build de produção passou sem warnings.
+- A revisão headless em 1440 × 1200 confirmou a composição desktop. A auditoria axe das rotas Busca, Kanban e Histórico encontrou zero violações WCAG A/AA; com o backend indisponível, Kanban e Histórico foram verificados em seus estados seguros de erro.
+
+## FE-15B — Adaptação das áreas ao workspace operacional
+
+**Status:** PENDENTE
+
+### Pré-condição
+
+A FE-15A já implementou o novo shell com sidebar + workspace.
+
+Não redesenhar nem substituir a arquitetura criada na FE-15A sem necessidade concreta.
+
+### Objetivo
+
+Adaptar Kanban e Histórico ao novo workspace e concluir a refatoração estrutural da FE-15.
+
+### Escopo
+
+- adaptar Kanban ao workspace existente;
+- maximizar largura disponível para as cinco colunas;
+- manter cards compactos;
+- remover containers externos desnecessários;
+- preservar drag-and-drop e atualização de status;
+- preservar drawer de detalhes;
+- adaptar Histórico ao workspace;
+- priorizar densidade e escaneabilidade;
+- verificar Busca, Kanban e Histórico juntos;
+- corrigir inconsistências estruturais decorrentes da migração;
+- seguir `leadradar-frontend`, `angular-developer` e `anti-ai-slop-ui`.
+
+### Não fazer
+
+- não redesenhar o shell criado na FE-15A sem necessidade;
+- não alterar contratos da API;
+- não alterar regras de negócio;
+- não adicionar funcionalidades;
+- não criar dashboard/analytics;
+- não realizar ainda o polimento final reservado ao próximo sprint.
+
+### Critérios de aceite
+
+- Busca continua funcionando;
+- Kanban utiliza adequadamente o workspace;
+- cinco colunas aproveitam a largura disponível;
+- drag-and-drop continua funcionando;
+- drawer de lead continua funcionando;
+- Histórico funciona dentro da nova estrutura;
+- navegação entre as três áreas funciona;
+- nenhuma regressão funcional conhecida;
+- testes relevantes passam;
+- `npm run build` passa.
 
 ## FE-16— Polimento integrado, responsividade e acessibilidade
 
@@ -958,4 +937,4 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** a **FE-14** estão concluídos e validados. O próximo sprint é o **FE-15 — Refatoração do shell para workspace operacional**.
+Os sprints **FE-00** a **FE-14** e **FE-15A** estão concluídos e validados. O próximo sprint é o **FE-15B — Adaptação das áreas ao workspace operacional**.

@@ -22,15 +22,23 @@ describe('App', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     const navigation = compiled.querySelector('nav[aria-label="Navegação principal"]');
+    const sidebar = compiled.querySelector('aside.app-sidebar');
     const links = [...compiled.querySelectorAll<HTMLAnchorElement>('.main-navigation__link')];
 
+    expect(sidebar).toBeTruthy();
     expect(navigation).toBeTruthy();
-    expect(links.map((link) => link.textContent?.trim())).toEqual(['Busca', 'Kanban', 'Histórico']);
+    expect(links.map((link) => link.querySelector('span')?.textContent?.trim())).toEqual([
+      'Busca',
+      'Kanban',
+      'Histórico',
+    ]);
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/busca',
       '/kanban',
       '/historico',
     ]);
+    expect(compiled.querySelector('header.app-header')).toBeNull();
+    expect(compiled.querySelector('footer')).toBeNull();
   });
 
   it('indica a rota ativa com aria-current', async () => {
@@ -41,7 +49,7 @@ describe('App', () => {
     await fixture.whenStable();
 
     const activeLink = fixture.nativeElement.querySelector('.main-navigation__link.is-active');
-    expect(activeLink?.textContent?.trim()).toBe('Kanban');
+    expect(activeLink?.querySelector('span')?.textContent?.trim()).toBe('Kanban');
     expect(activeLink?.getAttribute('aria-current')).toBe('page');
   });
 
@@ -53,7 +61,7 @@ describe('App', () => {
     await fixture.whenStable();
 
     const activeLink = fixture.nativeElement.querySelector('.main-navigation__link.is-active');
-    expect(activeLink?.textContent?.trim()).toBe('Histórico');
+    expect(activeLink?.querySelector('span')?.textContent?.trim()).toBe('Histórico');
     expect(activeLink?.getAttribute('aria-current')).toBe('page');
   });
 });

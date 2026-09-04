@@ -1,18 +1,22 @@
 :host {
-  display: block;
+  display: flex;
   min-width: 0;
+  flex: 1;
 }
 
 .mapa-busca {
+  display: flex;
+  width: 100%;
   overflow: hidden;
+  flex-direction: column;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
   background: var(--surface);
 }
 
 .mapa-busca__canvas {
   z-index: 0;
-  min-height: 30rem;
+  min-height: 32rem;
+  flex: 1;
   background: var(--surface-subtle);
 }
 

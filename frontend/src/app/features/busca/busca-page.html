@@ -1,21 +1,26 @@
 <section class="busca-page" aria-labelledby="busca-page-title">
-  <header class="busca-page__header">
-    <p class="busca-page__eyebrow">Área de prospecção</p>
-    <h1 id="busca-page-title">Busca de leads por localização</h1>
-    <p>
-      Posicione o centro no mapa, ajuste o alcance e escolha os tipos de negócio que deseja
-      encontrar.
-    </p>
-  </header>
+  <aside class="busca-page__controls" aria-labelledby="busca-page-title">
+    <header class="busca-page__header">
+      <h1 id="busca-page-title">Busca de leads</h1>
+      <p>Defina o ponto, o alcance e os tipos de negócio desta prospecção.</p>
+    </header>
+
+    <app-busca-form
+      [(modelo)]="buscaModel"
+      [executando]="carregando()"
+      (buscaConfirmada)="executarBusca($event)"
+    />
+  </aside>
 
   <div class="busca-page__workspace">
     <section class="busca-page__map" aria-labelledby="mapa-title">
       <div class="busca-page__map-heading">
         <div>
-          <h2 id="mapa-title">Centro e alcance</h2>
-          <p>O círculo representa o raio definido no formulário.</p>
+          <h2 id="mapa-title">Área de busca</h2>
+          <p>Clique ou arraste o marcador para reposicionar o centro.</p>
         </div>
         <p class="busca-page__coordinates" aria-live="polite">
+          <span class="visually-hidden">Coordenadas atuais:</span>
           <span>{{ pontoCentral().latitude.toFixed(6) }}</span>
           <span>{{ pontoCentral().longitude.toFixed(6) }}</span>
         </p>
@@ -28,38 +33,36 @@
       />
     </section>
 
-    <app-busca-form
-      [(modelo)]="buscaModel"
-      [executando]="carregando()"
-      (buscaConfirmada)="executarBusca($event)"
-    />
+    @switch (estadoOperacao()) {
+      @case ('loading') {
+        <section class="busca-page__feedback busca-page__feedback--loading" role="status">
+          <p class="busca-page__feedback-label">Busca em andamento</p>
+          <div>
+            <h2>Consultando estabelecimentos próximos</h2>
+            <p>Aguarde a confirmação do backend antes de iniciar outra busca.</p>
+          </div>
+        </section>
+      }
+      @case ('error') {
+        <section class="busca-page__feedback busca-page__feedback--error" role="alert">
+          <p class="busca-page__feedback-label">Não foi possível concluir</p>
+          <div>
+            <h2>A busca encontrou um problema</h2>
+            <p>{{ mensagemErro() }}</p>
+            <p>Revise os parâmetros, se necessário, e use “Buscar leads” para tentar novamente.</p>
+          </div>
+        </section>
+      }
+      @case ('empty') {
+        @if (resultadoBusca(); as resultado) {
+          <app-busca-resultados [resultado]="resultado" />
+        }
+      }
+      @case ('success') {
+        @if (resultadoBusca(); as resultado) {
+          <app-busca-resultados [resultado]="resultado" />
+        }
+      }
+    }
   </div>
-
-  @switch (estadoOperacao()) {
-    @case ('loading') {
-      <section class="busca-page__feedback busca-page__feedback--loading" role="status">
-        <p class="busca-page__feedback-label">Busca em andamento</p>
-        <h2>Consultando estabelecimentos próximos</h2>
-        <p>Aguarde a confirmação do backend antes de iniciar outra busca.</p>
-      </section>
-    }
-    @case ('error') {
-      <section class="busca-page__feedback busca-page__feedback--error" role="alert">
-        <p class="busca-page__feedback-label">Não foi possível concluir</p>
-        <h2>A busca encontrou um problema</h2>
-        <p>{{ mensagemErro() }}</p>
-        <p>Revise os parâmetros, se necessário, e use “Buscar leads” para tentar novamente.</p>
-      </section>
-    }
-    @case ('empty') {
-      @if (resultadoBusca(); as resultado) {
-        <app-busca-resultados [resultado]="resultado" />
-      }
-    }
-    @case ('success') {
-      @if (resultadoBusca(); as resultado) {
-        <app-busca-resultados [resultado]="resultado" />
-      }
-    }
-  }
 </section>

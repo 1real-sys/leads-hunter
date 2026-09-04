@@ -89,6 +89,19 @@ describe('BuscaPage', () => {
     form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
   }
 
+  it('organiza os parâmetros na região operacional e mantém o mapa no workspace principal', async () => {
+    const fixture = await createFixture();
+    const controls = fixture.nativeElement.querySelector(
+      'aside.busca-page__controls',
+    ) as HTMLElement;
+    const workspace = fixture.nativeElement.querySelector('.busca-page__workspace') as HTMLElement;
+
+    expect(controls.getAttribute('aria-labelledby')).toBe('busca-page-title');
+    expect(controls.querySelector('app-busca-form')).toBeTruthy();
+    expect(workspace.querySelector('app-mapa-busca')).toBeTruthy();
+    expect(workspace.contains(controls)).toBe(false);
+  });
+
   it('atualiza latitude e longitude do formulário quando o mapa emite um novo ponto', async () => {
     const fixture = await createFixture();
     const map = fixture.debugElement.query(By.directive(MapaBuscaStub))

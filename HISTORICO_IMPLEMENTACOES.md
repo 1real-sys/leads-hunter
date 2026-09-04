@@ -830,3 +830,35 @@ A integração trata as respostas como arquivos binários, usa nome e tipo MIME 
 - `frontend/src/app/features/kanban/kanban-page.html`
 - `frontend/src/app/features/kanban/kanban-page.spec.ts`
 - `frontend/src/app/features/kanban/kanban-page.ts`
+
+---
+
+## 31. Shell operacional e workspace da Busca — 04/09/2026
+
+O shell centralizado foi substituído por uma estrutura de aplicação operacional com sidebar persistente e workspace amplo. A navegação entre Busca, Kanban e Histórico passou para a lateral, com identificação textual da rota ativa, e o header e o footer permanentes foram removidos para liberar a viewport.
+
+Na Busca, os parâmetros passaram a ocupar uma região operacional compacta e simultânea ao mapa. O mapa tornou-se o elemento dominante do workspace, mantendo a sincronização com os campos, e os resultados foram adensados para aproveitar a largura disponível sem alterar regras de negócio ou contratos HTTP.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `.opencode/skills/leadradar-antislopUI/SKILL.md`
+
+**Modificados:**
+
+- `.opencode/skills/leadradar-frontend/SKILL.md`
+- `AGENTS.md`
+- `FRONTEND_SPRINTS.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `frontend/src/app/app.html`
+- `frontend/src/app/app.scss`
+- `frontend/src/app/app.spec.ts`
+- `frontend/src/app/features/busca/busca-form.html`
+- `frontend/src/app/features/busca/busca-form.scss`
+- `frontend/src/app/features/busca/busca-page.html`
+- `frontend/src/app/features/busca/busca-page.scss`
+- `frontend/src/app/features/busca/busca-page.spec.ts`
+- `frontend/src/app/features/busca/busca-resultados.scss`
+- `frontend/src/app/features/busca/mapa-busca.scss`

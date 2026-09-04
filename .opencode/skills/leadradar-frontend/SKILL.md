@@ -277,6 +277,71 @@ Não espalhar URLs de endpoints diretamente pelos componentes.
 
 ---
 
+# Direção de layout desktop
+
+A aplicação deve priorizar uma estrutura operacional desktop com duas regiões principais:
+
+## Sidebar operacional
+
+Manter uma coluna lateral persistente à esquerda para concentrar, conforme a tela e o contexto:
+
+- configuração da busca;
+- categorias;
+- raio;
+- ações principais;
+- filtros;
+- acesso rápido às áreas Busca, Kanban e Histórico;
+- resumo/lista de leads quando fizer sentido.
+
+A sidebar deve ser compacta e permitir escaneamento rápido.
+
+Evitar transformar cada controle da sidebar em card independente.
+
+## Área principal
+
+O restante da viewport deve ser utilizado como área principal de trabalho.
+
+Na tela de Busca:
+
+- o mapa deve ocupar a maior parte da área disponível;
+- evitar colocar o mapa dentro de um card pequeno centralizado;
+- priorizar mapa amplo, semelhante a uma ferramenta cartográfica;
+- formulário e mapa devem permanecer utilizáveis simultaneamente.
+
+Na tela de Kanban:
+
+- preservar a estrutura geral da aplicação;
+- utilizar a área principal para as cinco colunas do funil;
+- cards devem ser compactos;
+- maximizar espaço horizontal disponível.
+
+Na tela de Histórico:
+
+- utilizar a área principal para a listagem/detalhe;
+- preservar navegação e contexto.
+
+## Comportamento da viewport
+
+Em desktop:
+
+- priorizar uso eficiente de toda a largura e altura disponíveis;
+- evitar grandes margens externas;
+- evitar conteúdo central excessivamente estreito;
+- evitar grandes espaços vazios;
+- evitar estrutura de landing page;
+- evitar hero sections;
+- evitar footer ocupando espaço permanente de trabalho.
+
+A aplicação deve lembrar uma ferramenta operacional/CRM leve, não um site institucional.
+
+## Referência conceitual
+
+A composição desejada segue aproximadamente:
+
+sidebar operacional + área de trabalho principal.
+
+Não copiar identidade, textos ou assets de outros produtos, mas preservar essa lógica espacial.
+
 # Tela principal do MVP
 
 A tela principal deve permitir:
@@ -656,4 +721,5 @@ Use:
 
 * `angular-new-app` para criar o frontend **uma única vez**;
 * `angular-developer` para decidir **COMO implementar Angular corretamente**;
-* `leadradar-frontend` para decidir **O QUE o LeadRadar precisa fazer**.
+* `leadradar-frontend` para decidir **O QUE o LeadRadar precisa fazer**;
+* `leadradar-antislopUI`  complementar a todas as outras **para uma interface melhor**.

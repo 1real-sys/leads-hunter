@@ -1,42 +1,37 @@
 <a class="skip-link" href="#main-content">Pular para o conteúdo principal</a>
 
 <div class="app-shell">
-  <header class="app-header">
-    <div class="app-header__inner">
-      <a class="brand" routerLink="/busca" aria-label="Leads Hunter — ir para Busca">
-        <span class="brand__mark" aria-hidden="true">LH</span>
-        <span class="brand__text">
-          <span class="brand__name">Leads Hunter</span>
-          <span class="brand__tagline">Prospecção local organizada</span>
-        </span>
-      </a>
+  <aside class="app-sidebar" aria-label="Navegação do Leads Hunter">
+    <a class="brand" routerLink="/busca" aria-label="Leads Hunter — ir para Busca">
+      <span class="brand__mark" aria-hidden="true">LH</span>
+      <span class="brand__text">
+        <span class="brand__name">Leads Hunter</span>
+        <span class="brand__tagline">Prospecção local</span>
+      </span>
+    </a>
 
-      <nav class="main-navigation" aria-label="Navegação principal">
-        <ul class="main-navigation__list">
-          @for (item of navigationItems; track item.path) {
-            <li>
-              <a
-                class="main-navigation__link"
-                [routerLink]="item.path"
-                routerLinkActive="is-active"
-                [routerLinkActiveOptions]="{ exact: item.exact }"
-                ariaCurrentWhenActive="page"
-                [attr.title]="item.description"
-              >
-                {{ item.label }}
-              </a>
-            </li>
-          }
-        </ul>
-      </nav>
-    </div>
-  </header>
+    <nav class="main-navigation" aria-label="Navegação principal">
+      <p class="main-navigation__label">Áreas de trabalho</p>
+      <ul class="main-navigation__list">
+        @for (item of navigationItems; track item.path) {
+          <li>
+            <a
+              class="main-navigation__link"
+              [routerLink]="item.path"
+              routerLinkActive="is-active"
+              [routerLinkActiveOptions]="{ exact: item.exact }"
+              ariaCurrentWhenActive="page"
+            >
+              <span>{{ item.label }}</span>
+              <small>{{ item.description }}</small>
+            </a>
+          </li>
+        }
+      </ul>
+    </nav>
+  </aside>
 
   <main id="main-content" class="app-content" tabindex="-1">
     <router-outlet />
   </main>
-
-  <footer class="app-footer">
-    <p>Leads Hunter <span aria-hidden="true">·</span> prospecção com contexto local</p>
-  </footer>
 </div>

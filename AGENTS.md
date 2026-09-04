@@ -33,13 +33,16 @@ Skills disponíveis:
 - `.opencode/skills/leadradar-architecture/SKILL.md`
 - `.opencode/skills/leadradar-frontend/SKILL.md`
 - `.opencode/skills/leadradar-roadmap/SKILL.md`
+- `.opencode/skills/angular-developer/SKILL.md`
+- `.opencode/skills/leadradar-antislopUI/SKILL.md`
+
 
 Escolha automaticamente apenas a(s) skill(s) relevante(s):
 
 - entidade, migration, relacionamento, constraint, índice, persistência → `leadradar-database`;
 - service, controller, DTO, regra de negócio, validação, Places, cache, rate limit, exportação, API REST → `leadradar-backend`;
 - organização, fluxo, responsabilidades, decisão estrutural ou refatoração arquitetural → `leadradar-architecture`;
-- Angular/UI/integração frontend-backend → `leadradar-frontend`;
+- Angular/UI/integração frontend-backend → `leadradar-frontend`;  e também  `angular-developer`
 - priorização, próximo passo, MVP ou planejamento → `leadradar-roadmap`;
 - tarefa ampla/multidomínio → `leadradar-overview` quando necessário.
 
