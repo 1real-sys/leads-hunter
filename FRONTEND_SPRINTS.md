@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-15B — Adaptação das áreas ao workspace operacional**.
+- Próximo sprint: **FE-16 — Polimento integrado, responsividade e acessibilidade**.
 
 ## Decisões do plano
 
@@ -116,7 +116,7 @@ Esta verificação é responsabilidade do agente que implementa e também do age
 | FE-13                    | Detalhe de uma busca anterior | FE-12          | CONCLUÍDO    |
 | FE-14                    | Downloads CSV e XLSX | FE-07          | CONCLUÍDO    |
 | FE-15A | Shell operacional e workspace da Busca | FE-00 a FE-14 | CONCLUÍDO |
-| FE-15B | Adaptação das áreas ao workspace operacional | FE-15A | PENDENTE |
+| FE-15B | Adaptação das áreas ao workspace operacional | FE-15A | CONCLUÍDO |
 | FE-16 | Polimento integrado, responsividade e acessibilidade | FE-15B | PENDENTE |
 | FE-17 | Testes de fluxo e fechamento do MVP | FE-16 | PENDENTE |
 
@@ -809,7 +809,7 @@ Criar a estrutura desktop definitiva da aplicação e adaptar a tela de Busca a 
 
 ## FE-15B — Adaptação das áreas ao workspace operacional
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Pré-condição
 
@@ -857,7 +857,15 @@ Adaptar Kanban e Histórico ao novo workspace e concluir a refatoração estrutu
 - testes relevantes passam;
 - `npm run build` passa.
 
-## FE-16— Polimento integrado, responsividade e acessibilidade
+### Resultado
+
+- O Kanban passou a separar o cabeçalho, os controles e a área útil do quadro em regiões operacionais compactas, sem alterar filtros, exportações, drag-and-drop, atualização de status ou o drawer de detalhes.
+- O quadro usa toda a largura disponível no workspace: em 1440 px, as cinco colunas ocuparam os 1.188 px úteis, com 231 px por coluna e sem overflow da página. Larguras menores mantêm a rolagem horizontal localizada no próprio quadro.
+- A lista e o detalhe do Histórico passaram a usar cabeçalho compacto, workspace com padding próprio, resumo adensado e tabelas que priorizam leitura e escaneabilidade.
+- A navegação headless percorreu Busca, Kanban, Histórico, detalhe e retorno ao Histórico. A auditoria axe de Kanban e Histórico encontrou zero violações WCAG A/AA.
+- A suíte frontend concluiu 149 testes sem falhas e o build de produção passou sem warnings.
+
+## FE-16 — Polimento integrado, responsividade e acessibilidade
 
 **Status:** PENDENTE
 
@@ -937,4 +945,8 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** a **FE-14** e **FE-15A** estão concluídos e validados. O próximo sprint é o **FE-15B — Adaptação das áreas ao workspace operacional**.
+Os sprints **FE-00** a **FE-15B** estão concluídos e validados. O próximo sprint é o **FE-16 — Polimento integrado, responsividade e acessibilidade**.
+
+
+
+FE-100 PRIORIDADE

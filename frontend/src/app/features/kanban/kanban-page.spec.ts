@@ -122,6 +122,20 @@ describe('KanbanPage', () => {
     expect(fixture.componentInstance['leads']()).toEqual([LEAD_QUENTE, LEAD_MORNO]);
   });
 
+  it('organiza controles e quadro nas regiões operacionais do workspace', async () => {
+    const fixture = await createFixture();
+    httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_QUENTE]);
+    await fixture.whenStable();
+
+    const operacoes = fixture.nativeElement.querySelector('.kanban-page__operations');
+    const workspace = fixture.nativeElement.querySelector('.kanban-page__workspace');
+
+    expect(operacoes?.querySelector('app-lead-filters')).not.toBeNull();
+    expect(operacoes?.querySelector('app-exportacao-leads')).not.toBeNull();
+    expect(workspace?.querySelector('app-kanban-board')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.kanban-page__eyebrow')).toBeNull();
+  });
+
   it('combina status, categoria e temperatura usando somente enums válidos', async () => {
     const fixture = await createFixture();
     httpTesting.expectOne(API_ROUTES.leads).flush([LEAD_QUENTE, LEAD_MORNO]);

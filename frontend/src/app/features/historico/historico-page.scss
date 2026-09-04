@@ -3,41 +3,35 @@
 }
 
 .historico-page {
-  padding: var(--space-8) 0 var(--space-10);
+  min-height: 100dvh;
 }
 
 .historico-page__header {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-6);
-  margin-bottom: var(--space-6);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .historico-page__header > div {
   max-width: 44rem;
 }
 
-.historico-page__eyebrow {
-  margin: 0 0 var(--space-2);
-  color: var(--accent-strong);
-  font-size: var(--font-size-xs);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .historico-page__header h1 {
   margin: 0;
   color: var(--ink);
-  font-size: clamp(1.85rem, 4vw, 2.75rem);
-  line-height: 1.05;
-  letter-spacing: -0.04em;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
 }
 
 .historico-page__header > div > p:last-child {
-  margin: var(--space-3) 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--muted);
+  font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
 
@@ -49,10 +43,15 @@
 }
 
 .historico-page__total strong {
-  display: block;
+  margin-right: var(--space-1);
   color: var(--ink);
-  font-size: 1.75rem;
-  line-height: 1;
+  font-size: var(--font-size-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.historico-page__workspace {
+  min-width: 0;
+  padding: var(--space-4);
 }
 
 .historico-page__feedback {
@@ -162,7 +161,7 @@
 
 .historico-page__table th,
 .historico-page__table td {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3);
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
@@ -212,5 +211,9 @@
 
   .historico-page__total {
     text-align: left;
+  }
+
+  .historico-page__workspace {
+    padding-inline: var(--space-3);
   }
 }

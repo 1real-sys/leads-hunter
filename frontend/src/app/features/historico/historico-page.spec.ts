@@ -78,6 +78,17 @@ describe('HistoricoPage', () => {
     expect(fixture.componentInstance['buscas']()).toEqual(HISTORICO);
   });
 
+  it('mantém a tabela dentro da região útil do workspace', async () => {
+    const fixture = await renderizar();
+    httpTesting.expectOne(API_ROUTES.buscas).flush(HISTORICO);
+    await fixture.whenStable();
+
+    const workspace = fixture.nativeElement.querySelector('.historico-page__workspace');
+
+    expect(workspace?.querySelector('.historico-page__table-region')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.historico-page__eyebrow')).toBeNull();
+  });
+
   it('orienta o usuário quando ainda não existe histórico', async () => {
     const fixture = await renderizar();
     httpTesting.expectOne(API_ROUTES.buscas).flush([]);

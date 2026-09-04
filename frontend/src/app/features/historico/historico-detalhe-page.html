@@ -1,190 +1,191 @@
 <section class="historico-detalhe" aria-labelledby="historico-detalhe-title">
   <header class="historico-detalhe__header">
     <div>
-      <p class="historico-detalhe__eyebrow">Memória das buscas</p>
       <h1 id="historico-detalhe-title">Busca #{{ buscaId }}</h1>
       <p>Consulte os resultados registrados nesta execução e o estado comercial atual dos leads.</p>
     </div>
     <a class="historico-detalhe__back" routerLink="/historico">Voltar ao histórico</a>
   </header>
 
-  @if (estado() === 'loading') {
-    <div class="historico-detalhe__feedback" role="status">
-      <strong>Carregando busca</strong>
-      <span>Aguarde enquanto os dados desta execução são consultados.</span>
-    </div>
-  }
-
-  @if (estado() === 'invalid') {
-    <div class="historico-detalhe__feedback historico-detalhe__feedback--error" role="alert">
-      <strong>Identificador de busca inválido</strong>
-      <span>Use o histórico para escolher uma busca registrada.</span>
-    </div>
-  }
-
-  @if (estado() === 'not-found') {
-    <div class="historico-detalhe__feedback historico-detalhe__feedback--error" role="alert">
-      <strong>Busca não encontrada</strong>
-      <span>Ela pode ter sido removida ou o endereço acessado não existe.</span>
-    </div>
-  }
-
-  @if (estado() === 'error') {
-    <div class="historico-detalhe__feedback historico-detalhe__feedback--error" role="alert">
-      <div>
-        <strong>Não foi possível carregar esta busca</strong>
-        <span>{{ mensagemErro() }}</span>
+  <div class="historico-detalhe__workspace">
+    @if (estado() === 'loading') {
+      <div class="historico-detalhe__feedback" role="status">
+        <strong>Carregando busca</strong>
+        <span>Aguarde enquanto os dados desta execução são consultados.</span>
       </div>
-      <button type="button" (click)="carregar()">Tentar novamente</button>
-    </div>
-  }
-
-  @if (detalhe(); as busca) {
-    <section class="historico-detalhe__summary" aria-labelledby="resumo-busca-title">
-      <header>
-        <p>Parâmetros registrados</p>
-        <h2 id="resumo-busca-title">Resumo da execução</h2>
-      </header>
-      <dl>
-        <div>
-          <dt>Realizada em</dt>
-          <dd>
-            <time [attr.datetime]="busca.criadoEm">{{ formatarDataLocal(busca.criadoEm) }}</time>
-          </dd>
-        </div>
-        <div>
-          <dt>Endereço-base</dt>
-          <dd>{{ enderecoExibido(busca.enderecoBase) }}</dd>
-        </div>
-        <div>
-          <dt>Categorias</dt>
-          <dd>{{ formatarCategorias(busca.categorias) }}</dd>
-        </div>
-        <div>
-          <dt>Raio</dt>
-          <dd>{{ busca.raioKm }} km</dd>
-        </div>
-        <div>
-          <dt>Coordenadas</dt>
-          <dd>{{ busca.latitude }}, {{ busca.longitude }}</dd>
-        </div>
-        <div>
-          <dt>Total encontrado</dt>
-          <dd>{{ busca.totalEncontrados }}</dd>
-        </div>
-      </dl>
-    </section>
-
-    @if (estado() === 'empty') {
-      <section class="historico-detalhe__empty" aria-labelledby="historico-detalhe-empty-title">
-        <h2 id="historico-detalhe-empty-title">Nenhum lead foi registrado nesta busca</h2>
-        <p>Os parâmetros da execução permanecem disponíveis no resumo acima.</p>
-      </section>
     }
 
-    @if (estado() === 'success') {
-      <section class="historico-detalhe__results" aria-labelledby="leads-busca-title">
+    @if (estado() === 'invalid') {
+      <div class="historico-detalhe__feedback historico-detalhe__feedback--error" role="alert">
+        <strong>Identificador de busca inválido</strong>
+        <span>Use o histórico para escolher uma busca registrada.</span>
+      </div>
+    }
+
+    @if (estado() === 'not-found') {
+      <div class="historico-detalhe__feedback historico-detalhe__feedback--error" role="alert">
+        <strong>Busca não encontrada</strong>
+        <span>Ela pode ter sido removida ou o endereço acessado não existe.</span>
+      </div>
+    }
+
+    @if (estado() === 'error') {
+      <div class="historico-detalhe__feedback historico-detalhe__feedback--error" role="alert">
+        <div>
+          <strong>Não foi possível carregar esta busca</strong>
+          <span>{{ mensagemErro() }}</span>
+        </div>
+        <button type="button" (click)="carregar()">Tentar novamente</button>
+      </div>
+    }
+
+    @if (detalhe(); as busca) {
+      <section class="historico-detalhe__summary" aria-labelledby="resumo-busca-title">
         <header>
-          <div>
-            <p>Resultados registrados</p>
-            <h2 id="leads-busca-title">
-              {{ busca.leads.length }}
-              {{ busca.leads.length === 1 ? 'lead nesta busca' : 'leads nesta busca' }}
-            </h2>
-          </div>
-          <p class="historico-detalhe__snapshot-note">
-            Score e temperatura são valores preservados daquela execução. Status, observações e
-            último contato refletem os dados atuais.
-          </p>
+          <p>Parâmetros registrados</p>
+          <h2 id="resumo-busca-title">Resumo da execução</h2>
         </header>
-
-        <div
-          class="historico-detalhe__table-region"
-          role="region"
-          aria-labelledby="leads-busca-title"
-          tabindex="0"
-        >
-          <table class="historico-detalhe__table">
-            <caption>
-              Leads na ordem retornada pela API
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Estabelecimento</th>
-                <th scope="col">Naquela busca</th>
-                <th scope="col">Dados comerciais atuais</th>
-                <th scope="col">Contato manual</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (lead of busca.leads; track lead.id) {
-                <tr>
-                  <td class="historico-detalhe__identity">
-                    <strong>{{ lead.nome || 'Lead #' + lead.id }}</strong>
-                    <span>{{ rotuloCategoria(lead.categoria) }}</span>
-                    <span>{{ lead.enderecoFormatado || 'Endereço não informado' }}</span>
-                  </td>
-                  <td>
-                    <dl class="historico-detalhe__lead-data">
-                      <div>
-                        <dt>Score naquela busca</dt>
-                        <dd>{{ lead.scoreNaBusca ?? 'Não disponível' }}</dd>
-                      </div>
-                      <div>
-                        <dt>Temperatura naquela busca</dt>
-                        <dd>{{ rotuloTemperatura(lead.temperaturaNaBusca) }}</dd>
-                      </div>
-                    </dl>
-                  </td>
-                  <td>
-                    <dl class="historico-detalhe__lead-data">
-                      <div>
-                        <dt>Status atual</dt>
-                        <dd>{{ rotuloStatus(lead.status) }}</dd>
-                      </div>
-                      <div>
-                        <dt>Último contato atual</dt>
-                        <dd>
-                          @if (lead.ultimoContatoEm; as ultimoContato) {
-                            <time [attr.datetime]="ultimoContato">
-                              {{ formatarDataLocal(ultimoContato) }}
-                            </time>
-                          } @else {
-                            Nunca registrado
-                          }
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Observações atuais</dt>
-                        <dd>{{ lead.observacoes || 'Nenhuma observação registrada.' }}</dd>
-                      </div>
-                    </dl>
-                  </td>
-                  <td class="historico-detalhe__contact">
-                    @if (lead.telefone) {
-                      <span>{{ lead.telefone }}</span>
-                    }
-                    @if (lead.whatsappUrl; as whatsappUrl) {
-                      <a
-                        [href]="whatsappUrl"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        [attr.aria-label]="
-                          'Abrir WhatsApp de ' + (lead.nome || 'lead ' + lead.id) + ' em nova aba'
-                        "
-                      >
-                        Abrir WhatsApp
-                      </a>
-                    } @else {
-                      <span>WhatsApp indisponível</span>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+        <dl>
+          <div>
+            <dt>Realizada em</dt>
+            <dd>
+              <time [attr.datetime]="busca.criadoEm">{{ formatarDataLocal(busca.criadoEm) }}</time>
+            </dd>
+          </div>
+          <div>
+            <dt>Endereço-base</dt>
+            <dd>{{ enderecoExibido(busca.enderecoBase) }}</dd>
+          </div>
+          <div>
+            <dt>Categorias</dt>
+            <dd>{{ formatarCategorias(busca.categorias) }}</dd>
+          </div>
+          <div>
+            <dt>Raio</dt>
+            <dd>{{ busca.raioKm }} km</dd>
+          </div>
+          <div>
+            <dt>Coordenadas</dt>
+            <dd>{{ busca.latitude }}, {{ busca.longitude }}</dd>
+          </div>
+          <div>
+            <dt>Total encontrado</dt>
+            <dd>{{ busca.totalEncontrados }}</dd>
+          </div>
+        </dl>
       </section>
+
+      @if (estado() === 'empty') {
+        <section class="historico-detalhe__empty" aria-labelledby="historico-detalhe-empty-title">
+          <h2 id="historico-detalhe-empty-title">Nenhum lead foi registrado nesta busca</h2>
+          <p>Os parâmetros da execução permanecem disponíveis no resumo acima.</p>
+        </section>
+      }
+
+      @if (estado() === 'success') {
+        <section class="historico-detalhe__results" aria-labelledby="leads-busca-title">
+          <header>
+            <div>
+              <p>Resultados registrados</p>
+              <h2 id="leads-busca-title">
+                {{ busca.leads.length }}
+                {{ busca.leads.length === 1 ? 'lead nesta busca' : 'leads nesta busca' }}
+              </h2>
+            </div>
+            <p class="historico-detalhe__snapshot-note">
+              Score e temperatura são valores preservados daquela execução. Status, observações e
+              último contato refletem os dados atuais.
+            </p>
+          </header>
+
+          <div
+            class="historico-detalhe__table-region"
+            role="region"
+            aria-labelledby="leads-busca-title"
+            tabindex="0"
+          >
+            <table class="historico-detalhe__table">
+              <caption>
+                Leads na ordem retornada pela API
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Estabelecimento</th>
+                  <th scope="col">Naquela busca</th>
+                  <th scope="col">Dados comerciais atuais</th>
+                  <th scope="col">Contato manual</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (lead of busca.leads; track lead.id) {
+                  <tr>
+                    <td class="historico-detalhe__identity">
+                      <strong>{{ lead.nome || 'Lead #' + lead.id }}</strong>
+                      <span>{{ rotuloCategoria(lead.categoria) }}</span>
+                      <span>{{ lead.enderecoFormatado || 'Endereço não informado' }}</span>
+                    </td>
+                    <td>
+                      <dl class="historico-detalhe__lead-data">
+                        <div>
+                          <dt>Score naquela busca</dt>
+                          <dd>{{ lead.scoreNaBusca ?? 'Não disponível' }}</dd>
+                        </div>
+                        <div>
+                          <dt>Temperatura naquela busca</dt>
+                          <dd>{{ rotuloTemperatura(lead.temperaturaNaBusca) }}</dd>
+                        </div>
+                      </dl>
+                    </td>
+                    <td>
+                      <dl class="historico-detalhe__lead-data">
+                        <div>
+                          <dt>Status atual</dt>
+                          <dd>{{ rotuloStatus(lead.status) }}</dd>
+                        </div>
+                        <div>
+                          <dt>Último contato atual</dt>
+                          <dd>
+                            @if (lead.ultimoContatoEm; as ultimoContato) {
+                              <time [attr.datetime]="ultimoContato">
+                                {{ formatarDataLocal(ultimoContato) }}
+                              </time>
+                            } @else {
+                              Nunca registrado
+                            }
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Observações atuais</dt>
+                          <dd>{{ lead.observacoes || 'Nenhuma observação registrada.' }}</dd>
+                        </div>
+                      </dl>
+                    </td>
+                    <td class="historico-detalhe__contact">
+                      @if (lead.telefone) {
+                        <span>{{ lead.telefone }}</span>
+                      }
+                      @if (lead.whatsappUrl; as whatsappUrl) {
+                        <a
+                          [href]="whatsappUrl"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          [attr.aria-label]="
+                            'Abrir WhatsApp de ' + (lead.nome || 'lead ' + lead.id) + ' em nova aba'
+                          "
+                        >
+                          Abrir WhatsApp
+                        </a>
+                      } @else {
+                        <span>WhatsApp indisponível</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
     }
-  }
+  </div>
 </section>

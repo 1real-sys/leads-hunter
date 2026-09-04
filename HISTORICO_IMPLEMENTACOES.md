@@ -862,3 +862,30 @@ Na Busca, os parâmetros passaram a ocupar uma região operacional compacta e si
 - `frontend/src/app/features/busca/busca-page.spec.ts`
 - `frontend/src/app/features/busca/busca-resultados.scss`
 - `frontend/src/app/features/busca/mapa-busca.scss`
+
+---
+
+## 32. Adaptação de Kanban e Histórico ao workspace operacional — 04/09/2026
+
+O Kanban foi integrado ao workspace amplo criado na etapa anterior, com cabeçalho e controles mais compactos e cinco colunas usando simultaneamente a largura disponível no desktop. A rolagem horizontal ficou restrita ao quadro em larguras menores, enquanto cards, drag-and-drop, persistência de status, filtros, exportações e drawer de detalhes mantiveram o comportamento existente.
+
+A lista e o detalhe do Histórico passaram a seguir a mesma estrutura operacional, com regiões úteis próprias, resumo mais compacto e tabelas densas para facilitar a leitura. A navegação entre Busca, Kanban, Histórico e detalhe foi preservada sem alteração de contratos HTTP ou regras de negócio.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `frontend/src/app/features/historico/historico-detalhe-page.html`
+- `frontend/src/app/features/historico/historico-detalhe-page.scss`
+- `frontend/src/app/features/historico/historico-detalhe-page.spec.ts`
+- `frontend/src/app/features/historico/historico-page.html`
+- `frontend/src/app/features/historico/historico-page.scss`
+- `frontend/src/app/features/historico/historico-page.spec.ts`
+- `frontend/src/app/features/kanban/kanban-board.scss`
+- `frontend/src/app/features/kanban/kanban-page.html`
+- `frontend/src/app/features/kanban/kanban-page.scss`
+- `frontend/src/app/features/kanban/kanban-page.spec.ts`
+- `frontend/src/app/features/kanban/lead-filters.scss`

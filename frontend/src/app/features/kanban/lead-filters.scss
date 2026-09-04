@@ -5,10 +5,10 @@
 .lead-filters {
   display: grid;
   grid-template-columns: minmax(12rem, 1.25fr) repeat(3, minmax(9rem, 1fr)) auto;
-  gap: var(--space-4);
+  gap: var(--space-3);
   align-items: end;
-  padding: var(--space-4);
-  border-block: 1px solid var(--border);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
 

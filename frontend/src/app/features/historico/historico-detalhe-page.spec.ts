@@ -89,6 +89,18 @@ describe('HistoricoDetalhePage', () => {
     expect(linhas[1].textContent).toContain('Alfa Padaria');
   });
 
+  it('mantém resumo e resultados dentro da região útil do workspace', async () => {
+    await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    harness.detectChanges();
+
+    const workspace = harness.routeNativeElement?.querySelector('.historico-detalhe__workspace');
+
+    expect(workspace?.querySelector('.historico-detalhe__summary')).not.toBeNull();
+    expect(workspace?.querySelector('.historico-detalhe__results')).not.toBeNull();
+    expect(harness.routeNativeElement?.querySelector('.historico-detalhe__eyebrow')).toBeNull();
+  });
+
   it('distingue o snapshot da busca dos dados comerciais atuais e omite link inválido', async () => {
     await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
     httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
