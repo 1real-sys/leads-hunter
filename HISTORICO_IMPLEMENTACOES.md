@@ -933,3 +933,55 @@ O board agora ocupa a altura restante do workspace e cada coluna possui rolagem 
 - `src/main/java/dev/jlm/leadshunter/lead/LeadService.java`
 - `src/test/java/dev/jlm/leadshunter/lead/LeadControllerTest.java`
 - `src/test/java/dev/jlm/leadshunter/lead/LeadServiceTest.java`
+
+---
+
+## 34. Reorganização visual do detalhe do lead — 04/09/2026
+
+O drawer aberto pelo Kanban foi reorganizado para apresentar o lead em blocos compactos e fáceis de escanear. Score, nota e avaliações passaram a formar um resumo comercial; telefone, endereço e coordenadas ficaram agrupados como dados do estabelecimento; e último contato e observações ganharam uma seção comercial com leitura vertical e espaço adequado para textos maiores.
+
+A ação manual de WhatsApp permaneceu como ação principal, enquanto categoria, status, temperatura e metadados foram adensados conforme sua importância. A largura lateral e o comportamento responsivo foram ajustados sem alterar abertura, fechamento, foco, edição ou contratos HTTP.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `frontend/src/app/features/kanban/lead-detalhe.html`
+- `frontend/src/app/features/kanban/lead-detalhe.scss`
+- `frontend/src/app/features/kanban/lead-detalhe.spec.ts`
+
+---
+
+## 35. Refinamento de espaçamento do drawer de lead — 04/09/2026
+
+O drawer recebeu um refinamento visual para aproveitar melhor sua largura e altura. O conteúdo passou a ter padding e espaçamento efetivos, as métricas deixaram de parecer uma tabela com divisórias, os dados do estabelecimento foram alinhados em linhas de leitura rápida e o rodapé passou a ocupar o final do painel. A área de observações também ficou mais confortável para textos maiores.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `frontend/src/app/features/kanban/lead-detalhe.scss`
+
+---
+
+## 36. Feedback explícito da busca de leads — 04/09/2026
+
+A tela de Busca passou a comunicar claramente o ciclo da operação sem alterar o endpoint ou os parâmetros enviados. Durante o carregamento, o botão fica bloqueado, muda para “Buscando leads...” e exibe um indicador discreto. Ao concluir, a interface informa a quantidade encontrada, diferencia o caso vazio e oferece atalhos para Kanban e Histórico; falhas continuam usando as mensagens seguras já existentes.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `frontend/src/app/features/busca/busca-form.html`
+- `frontend/src/app/features/busca/busca-form.scss`
+- `frontend/src/app/features/busca/busca-form.spec.ts`
+- `frontend/src/app/features/busca/busca-page.html`
+- `frontend/src/app/features/busca/busca-page.scss`
+- `frontend/src/app/features/busca/busca-page.spec.ts`
+- `frontend/src/app/features/busca/busca-page.ts`
