@@ -13,7 +13,7 @@
 
 .lead-detalhe-panel {
   display: flex;
-  width: min(100%, 30rem);
+  width: min(100%, 34rem);
   height: 100%;
   flex-direction: column;
   background: var(--surface);
@@ -26,8 +26,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-6) var(--space-6) var(--space-4);
-  border-bottom: 1px solid var(--border);
+  padding: var(--space-6) var(--space-8) var(--space-4);
 }
 
 .lead-detalhe-panel__heading {
@@ -46,7 +45,7 @@
 .lead-detalhe-panel__heading h2 {
   margin: 0;
   color: var(--ink);
-  font-size: var(--font-size-lg);
+  font-size: 1.25rem;
   line-height: 1.25;
   letter-spacing: -0.02em;
 }
@@ -54,14 +53,14 @@
 .lead-detalhe-panel__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
   padding: 0;
   list-style: none;
 }
 
 .lead-detalhe-panel__chips li {
-  padding: var(--space-1) var(--space-2);
+  padding: 0.2rem 0.45rem;
   border-radius: var(--radius-sm);
   background: var(--surface-subtle);
   color: var(--ink);
@@ -86,9 +85,9 @@
 
 .lead-detalhe-panel__fechar {
   flex: 0 0 auto;
-  min-height: 2.25rem;
-  padding: 0.4rem 0.7rem;
-  border: 1px solid var(--border);
+  min-height: 2rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--accent-strong);
@@ -106,12 +105,12 @@
 .lead-detalhe-panel__corpo {
   display: grid;
   gap: var(--space-6);
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-6) var(--space-8) var(--space-4);
 }
 
 .lead-detalhe-panel__whatsapp {
   display: inline-flex;
-  width: fit-content;
+  width: 100%;
   min-height: 2.75rem;
   align-items: center;
   justify-content: center;
@@ -140,44 +139,88 @@
   line-height: var(--line-height-body);
 }
 
-.lead-detalhe-panel__dados {
+.lead-detalhe-panel__secao {
   display: grid;
-  gap: 0;
+  gap: var(--space-3);
+}
+
+.lead-detalhe-panel__secao > h3,
+.lead-detalhe-panel__comercial-head h3 {
   margin: 0;
+  color: var(--ink);
+  font-size: var(--font-size-md);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
-.lead-detalhe-panel__dados > div {
+.lead-detalhe-panel__metricas {
   display: grid;
-  grid-template-columns: minmax(7rem, 10rem) 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--border);
+  margin: 0;
+  padding-top: var(--space-1);
 }
 
-.lead-detalhe-panel__dados dt {
+.lead-detalhe-panel__metricas > div {
+  min-width: 0;
+}
+
+.lead-detalhe-panel__metricas dt,
+.lead-detalhe-panel__dados-estabelecimento dt,
+.lead-detalhe-panel__dados-comerciais dt {
   color: var(--muted);
   font-size: var(--font-size-xs);
   font-weight: 800;
 }
 
-.lead-detalhe-panel__dados dd {
+.lead-detalhe-panel__metricas dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.lead-detalhe-panel__score dd {
+  font-size: 1.4rem;
+  color: var(--accent-strong);
+}
+
+.lead-detalhe-panel__dados-estabelecimento {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.lead-detalhe-panel__dados-estabelecimento > div {
+  display: grid;
+  grid-template-columns: minmax(6rem, 7.5rem) minmax(0, 1fr);
+  column-gap: var(--space-4);
+  min-width: 0;
+  align-items: start;
+}
+
+.lead-detalhe-panel__dados-estabelecimento dd {
   margin: 0;
   color: var(--ink);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
+  overflow-wrap: anywhere;
 }
 
-.lead-detalhe-panel__score dd {
-  font-size: 1.5rem;
-  font-weight: 800;
+.lead-detalhe-panel__contato-principal dd {
+  font-weight: 700;
+}
+
+.lead-detalhe-panel__coordenadas dd {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
   font-variant-numeric: tabular-nums;
 }
 
 .lead-detalhe-panel__comercial {
-  display: grid;
-  gap: var(--space-3);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border);
+  padding-top: var(--space-1);
 }
 
 .lead-detalhe-panel__comercial-head {
@@ -185,12 +228,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-}
-
-.lead-detalhe-panel__comercial-head h3 {
-  margin: 0;
-  color: var(--ink);
-  font-size: var(--font-size-sm);
 }
 
 .lead-detalhe-panel__editar {
@@ -213,22 +250,13 @@
 
 .lead-detalhe-panel__dados-comerciais {
   display: grid;
-  gap: 0;
+  gap: var(--space-4);
   margin: 0;
 }
 
 .lead-detalhe-panel__dados-comerciais > div {
   display: grid;
-  grid-template-columns: minmax(7rem, 10rem) 1fr;
-  gap: var(--space-4);
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--border);
-}
-
-.lead-detalhe-panel__dados-comerciais dt {
-  color: var(--muted);
-  font-size: var(--font-size-xs);
-  font-weight: 800;
+  gap: var(--space-2);
 }
 
 .lead-detalhe-panel__dados-comerciais dd {
@@ -237,6 +265,14 @@
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.lead-detalhe-panel__dados-comerciais > div:last-child dd {
+  min-height: 5rem;
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
 }
 
 .lead-detalhe-panel__sem-valor {
@@ -245,13 +281,13 @@
 
 .lead-detalhe-panel__formulario {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-6);
   padding-top: var(--space-2);
 }
 
 .lead-detalhe-panel__campo {
   display: grid;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .lead-detalhe-panel__campo label {
@@ -363,10 +399,33 @@
 
 .lead-detalhe-panel__rodape {
   display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-6);
   margin-top: auto;
-  padding: var(--space-4) var(--space-6) var(--space-6);
+  padding: var(--space-6) var(--space-8) var(--space-8);
   color: var(--muted);
   font-size: 0.7rem;
+  line-height: var(--line-height-body);
+}
+
+@media (max-width: 35rem) {
+  .lead-detalhe-panel__header,
+  .lead-detalhe-panel__corpo {
+    padding-inline: var(--space-4);
+  }
+
+  .lead-detalhe-panel__rodape {
+    padding-inline: var(--space-4);
+  }
+
+  .lead-detalhe-panel__dados-estabelecimento {
+    gap: var(--space-3);
+  }
+
+  .lead-detalhe-panel__dados-estabelecimento > div {
+    grid-template-columns: minmax(5rem, 6.5rem) minmax(0, 1fr);
+    column-gap: var(--space-3);
+  }
 }

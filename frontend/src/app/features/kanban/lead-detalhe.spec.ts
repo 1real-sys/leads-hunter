@@ -68,9 +68,7 @@ describe('LeadDetalhe', () => {
 
   it('apresenta um diálogo rotulado com os dados completos do lead', async () => {
     const fixture = await renderizar(LEAD_COMPLETO);
-    const painel = fixture.nativeElement.querySelector(
-      '.lead-detalhe-panel',
-    ) as HTMLElement;
+    const painel = fixture.nativeElement.querySelector('.lead-detalhe-panel') as HTMLElement;
     const conteudo = fixture.nativeElement.textContent as string;
 
     expect(painel.getAttribute('role')).toBe('dialog');
@@ -90,6 +88,27 @@ describe('LeadDetalhe', () => {
     expect(conteudo).toContain('120');
     expect(conteudo).toContain('Pediu retorno na próxima semana.');
     expect(conteudo).toContain('31/08/2026');
+  });
+
+  it('agrupa resumo, estabelecimento e dados comerciais em seções identificáveis', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const resumo = fixture.nativeElement.querySelector(
+      '[aria-labelledby="resumo-comercial-title"]',
+    ) as HTMLElement;
+    const estabelecimento = fixture.nativeElement.querySelector(
+      '[aria-labelledby="estabelecimento-title"]',
+    ) as HTMLElement;
+    const comercial = fixture.nativeElement.querySelector(
+      '[aria-labelledby="comercial-title"]',
+    ) as HTMLElement;
+
+    expect(resumo.querySelectorAll('.lead-detalhe-panel__metricas > div')).toHaveLength(3);
+    expect(resumo.textContent).toContain('Score');
+    expect(resumo.textContent).toContain('Nota Google');
+    expect(estabelecimento.textContent).toContain('Telefone');
+    expect(estabelecimento.textContent).toContain('Endereço');
+    expect(comercial.textContent).toContain('Último contato');
+    expect(comercial.textContent).toContain('Observações');
   });
 
   it('abre o WhatsApp em nova aba com proteção somente quando há URL do backend', async () => {
@@ -137,7 +156,8 @@ describe('LeadDetalhe', () => {
     expect(conteudo).not.toContain('Rua Central');
     expect(conteudo).not.toContain('Nota Google');
     expect(conteudo).toContain('Nenhuma observação registrada.');
-    expect(fixture.nativeElement.querySelector('.lead-detalhe-panel__dados')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lead-detalhe-panel__resumo')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lead-detalhe-panel__estabelecimento')).toBeNull();
   });
 
   it('informa que nunca houve contato quando ainda não existe data', async () => {
@@ -165,9 +185,7 @@ describe('LeadDetalhe', () => {
     let fechou = false;
     fixture.componentInstance.fechado.subscribe(() => (fechou = true));
 
-    const painel = fixture.nativeElement.querySelector(
-      '.lead-detalhe-panel',
-    ) as HTMLElement;
+    const painel = fixture.nativeElement.querySelector('.lead-detalhe-panel') as HTMLElement;
     painel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
     expect(fechou).toBe(true);
@@ -372,9 +390,7 @@ describe('LeadDetalhe', () => {
     ) as HTMLTextAreaElement;
     expect(fixture.componentInstance['editando']()).toBe(true);
     expect(textarea.value).toBe('Texto que não pode se perder.');
-    expect(fixture.nativeElement.textContent).toContain(
-      'Não foi possível atualizar o lead.',
-    );
+    expect(fixture.nativeElement.textContent).toContain('Não foi possível atualizar o lead.');
   });
 
   it('avisa sobre alterações não salvas ao tentar fechar e só fecha após descartar', async () => {

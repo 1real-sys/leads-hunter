@@ -19,7 +19,10 @@
             }
             <li>{{ rotuloStatus() }}</li>
             @if (item.temperatura; as temperatura) {
-              <li class="lead-detalhe-panel__chip-temperatura" [attr.data-temperature]="temperatura">
+              <li
+                class="lead-detalhe-panel__chip-temperatura"
+                [attr.data-temperature]="temperatura"
+              >
                 {{ rotulosTemperatura[temperatura] }}
               </li>
             }
@@ -56,58 +59,72 @@
           </p>
         }
 
-        @if (
-          item.score !== null ||
-          item.telefone ||
-          item.enderecoFormatado ||
-          item.latitude !== null ||
-          item.longitude !== null ||
-          item.ratingGoogle !== null ||
-          item.totalReviews !== null
-        ) {
-          <dl class="lead-detalhe-panel__dados" aria-label="Dados do lead">
-            @if (item.score !== null) {
-              <div class="lead-detalhe-panel__score">
-                <dt>Score</dt>
-                <dd>{{ item.score }}</dd>
-              </div>
-            }
-            @if (item.telefone; as telefone) {
-              <div>
-                <dt>Telefone</dt>
-                <dd>{{ telefone }}</dd>
-              </div>
-            }
-            @if (item.enderecoFormatado; as endereco) {
-              <div>
-                <dt>Endereço</dt>
-                <dd>{{ endereco }}</dd>
-              </div>
-            }
-            @if (item.latitude !== null && item.longitude !== null) {
-              <div>
-                <dt>Coordenadas</dt>
-                <dd>
-                  {{ item.latitude }}, {{ item.longitude }}
-                </dd>
-              </div>
-            }
-            @if (item.ratingGoogle !== null) {
-              <div>
-                <dt>Nota Google</dt>
-                <dd>{{ item.ratingGoogle }}</dd>
-              </div>
-            }
-            @if (item.totalReviews !== null) {
-              <div>
-                <dt>Avaliações</dt>
-                <dd>{{ item.totalReviews }}</dd>
-              </div>
-            }
-          </dl>
+        @if (item.score !== null || item.ratingGoogle !== null || item.totalReviews !== null) {
+          <section
+            class="lead-detalhe-panel__secao lead-detalhe-panel__resumo"
+            aria-labelledby="resumo-comercial-title"
+          >
+            <h3 id="resumo-comercial-title">Resumo comercial</h3>
+            <dl class="lead-detalhe-panel__metricas">
+              @if (item.score !== null) {
+                <div class="lead-detalhe-panel__score">
+                  <dt>Score</dt>
+                  <dd>{{ item.score }}</dd>
+                </div>
+              }
+              @if (item.ratingGoogle !== null) {
+                <div>
+                  <dt>Nota Google</dt>
+                  <dd>{{ item.ratingGoogle }}</dd>
+                </div>
+              }
+              @if (item.totalReviews !== null) {
+                <div>
+                  <dt>Avaliações</dt>
+                  <dd>{{ item.totalReviews }}</dd>
+                </div>
+              }
+            </dl>
+          </section>
         }
 
-        <section class="lead-detalhe-panel__comercial" aria-labelledby="comercial-title">
+        @if (
+          item.telefone ||
+          item.enderecoFormatado ||
+          (item.latitude !== null && item.longitude !== null)
+        ) {
+          <section
+            class="lead-detalhe-panel__secao lead-detalhe-panel__estabelecimento"
+            aria-labelledby="estabelecimento-title"
+          >
+            <h3 id="estabelecimento-title">Estabelecimento</h3>
+            <dl class="lead-detalhe-panel__dados-estabelecimento">
+              @if (item.telefone; as telefone) {
+                <div class="lead-detalhe-panel__contato-principal">
+                  <dt>Telefone</dt>
+                  <dd>{{ telefone }}</dd>
+                </div>
+              }
+              @if (item.enderecoFormatado; as endereco) {
+                <div class="lead-detalhe-panel__endereco">
+                  <dt>Endereço</dt>
+                  <dd>{{ endereco }}</dd>
+                </div>
+              }
+              @if (item.latitude !== null && item.longitude !== null) {
+                <div class="lead-detalhe-panel__coordenadas">
+                  <dt>Coordenadas</dt>
+                  <dd>{{ item.latitude }}, {{ item.longitude }}</dd>
+                </div>
+              }
+            </dl>
+          </section>
+        }
+
+        <section
+          class="lead-detalhe-panel__secao lead-detalhe-panel__comercial"
+          aria-labelledby="comercial-title"
+        >
           <header class="lead-detalhe-panel__comercial-head">
             <h3 id="comercial-title">Dados comerciais</h3>
             @if (!editando()) {
@@ -118,7 +135,10 @@
           </header>
 
           @if (salvouRecente()) {
-            <p class="lead-detalhe-panel__feedback lead-detalhe-panel__feedback--sucesso" role="status">
+            <p
+              class="lead-detalhe-panel__feedback lead-detalhe-panel__feedback--sucesso"
+              role="status"
+            >
               Alterações salvas.
             </p>
           }
@@ -143,7 +163,9 @@
                   @if (item.observacoes) {
                     <span>{{ item.observacoes }}</span>
                   } @else {
-                    <span class="lead-detalhe-panel__sem-valor">Nenhuma observação registrada.</span>
+                    <span class="lead-detalhe-panel__sem-valor"
+                      >Nenhuma observação registrada.</span
+                    >
                   }
                 </dd>
               </div>
@@ -177,13 +199,19 @@
               </div>
 
               @if (avisoAlteracoes()) {
-                <p class="lead-detalhe-panel__feedback lead-detalhe-panel__feedback--aviso" role="status">
+                <p
+                  class="lead-detalhe-panel__feedback lead-detalhe-panel__feedback--aviso"
+                  role="status"
+                >
                   Há alterações ainda não salvas. Salve ou cancele a edição antes de fechar.
                 </p>
               }
 
               @if (mensagemErro(); as erro) {
-                <p class="lead-detalhe-panel__feedback lead-detalhe-panel__feedback--erro" role="alert">
+                <p
+                  class="lead-detalhe-panel__feedback lead-detalhe-panel__feedback--erro"
+                  role="alert"
+                >
                   {{ erro }}
                 </p>
               }
