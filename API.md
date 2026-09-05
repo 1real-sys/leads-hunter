@@ -9,7 +9,7 @@ Esta documentação descreve somente a API REST existente no backend atual.
 - **Content-Type predominante:** `application/json`. As exceções são as exportações CSV e Excel.
 - **Formato das respostas JSON:** objetos ou listas diretas, sem envelope comum. Campos sem valor podem aparecer como `null`. Datas e horas usam o formato ISO-8601 local, por exemplo `2026-08-22T10:30:00`, sem fuso horário.
 - **Autenticação:** ainda não foi implementada. O projeto não possui Spring Security nem configuração de autenticação/autorização; portanto, todos os endpoints documentados estão públicos e não exigem header `Authorization`.
-- **Paginação:** não existe atualmente. As listagens e exportações processam todos os registros que correspondem aos filtros.
+- **Paginação:** `GET /api/leads/pagina` possui paginação por status para o Kanban. As demais listagens e exportações continuam processando todos os registros que correspondem aos filtros.
 - **Rate limiting:** existe apenas sobre chamadas externas reais à Google Places feitas durante `POST /api/buscas`. Por padrão, o bucket em memória permite 10 chamadas e repõe essa capacidade gradualmente em 60 segundos. Um resultado atendido pelo cache não consome o limite. Os demais endpoints não possuem rate limiting próprio.
 - **Cache de buscas:** o resultado externo da Google é mantido em memória por 30 minutos, com até 100 entradas por padrão. A chave considera latitude e longitude arredondadas para quatro casas decimais, raio e categorias distintas ordenadas; `enderecoBase` não participa da chave. Mesmo em cache hit, uma nova busca e seus vínculos com leads são persistidos.
 
@@ -347,7 +347,7 @@ Não possui.
 
 ### Resultado esperado
 
-Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores nulos no final; em empate, por nome crescente, com nomes nulos no final.
+Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores nulos no final; em empate, por nome crescente, com nomes nulos no final; persistindo o empate, por ID crescente.
 
 ```json
 [
@@ -397,6 +397,88 @@ Controller
 → consulta e ordena os leads
 → calcula `whatsappUrl` a partir do telefone normalizado
 → retorna a lista de `LeadResponse`.
+
+## GET /api/leads/pagina
+
+### Objetivo
+
+Retorna uma página de leads de um único status para permitir paginação independente por coluna no Kanban. O endpoint legado `GET /api/leads` permanece inalterado para os fluxos que precisam da lista completa.
+
+### Autenticação
+
+Público atualmente. Autenticação ainda não foi implementada.
+
+### Parâmetros
+
+| Local | Nome | Tipo | Obrigatório | Finalidade e validações |
+|---|---|---|---:|---|
+| Query | `status` | `StatusFunil` | Sim | Seleciona uma das cinco etapas reais do funil. |
+| Query | `categoria` | `CategoriaNegocio` | Não | Aplica o filtro exato de categoria à coluna consultada. |
+| Query | `temperatura` | `Temperatura` | Não | Aplica o filtro exato de temperatura à coluna consultada. |
+| Query | `page` | inteiro | Não | Índice da página iniciado em zero. O padrão é `0`; aceita valores de `0` a `10000`. |
+| Query | `size` | inteiro | Não | Quantidade por página. O padrão é `25`; aceita valores de `1` a `25`. |
+
+- **Path params:** nenhum.
+- **Headers relevantes:** nenhum.
+- Os filtros podem ser combinados e são aplicados no banco antes da paginação.
+
+### Request body
+
+Não possui.
+
+### Resultado esperado
+
+Retorna somente os leads da página solicitada, ordenados por score decrescente, nome crescente e ID crescente como desempate estável. `totalElementos` informa o total real do status após os filtros, não apenas a quantidade da página atual.
+
+```json
+{
+  "leads": [
+    {
+      "id": 35,
+      "googlePlaceId": "place-35",
+      "nome": "Padaria Central",
+      "categoria": "PADARIA",
+      "enderecoFormatado": "Rua Central, 100",
+      "telefone": "(27) 99999-0000",
+      "telefoneNormalizado": "5527999990000",
+      "whatsappUrl": "https://wa.me/5527999990000",
+      "latitude": -20.3155,
+      "longitude": -40.3128,
+      "ratingGoogle": 4.8,
+      "totalReviews": 120,
+      "score": 95,
+      "temperatura": "QUENTE",
+      "status": "QUALIFICADO",
+      "observacoes": null,
+      "ultimoContatoEm": null,
+      "criadoEm": "2026-08-20T09:00:00",
+      "atualizadoEm": "2026-08-22T10:30:00"
+    }
+  ],
+  "pagina": 0,
+  "tamanho": 25,
+  "totalElementos": 63,
+  "totalPaginas": 3
+}
+```
+
+Sem correspondências, retorna `200 OK` com `leads` vazio, `totalElementos` igual a `0` e `totalPaginas` igual a `0`.
+
+### Status HTTP
+
+- `200 OK` — página retornada, inclusive quando vazia.
+- `400 Bad Request` — status ausente ou inválido, página fora do intervalo de 0 a 10000 ou tamanho fora do intervalo de 1 a 25.
+- `500 Internal Server Error` — falha inesperada na consulta ou no mapeamento.
+
+### Fluxo interno resumido
+
+Controller
+→ valida status, página e tamanho
+→ delega ao `LeadService`
+→ monta a consulta por exemplo com status e filtros opcionais
+→ pagina e ordena no banco
+→ calcula `whatsappUrl` para os registros retornados
+→ devolve conteúdo e metadados da página.
 
 ## GET /api/leads/{id}
 

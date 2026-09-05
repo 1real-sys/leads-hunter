@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { StatusFunil } from '../../shared/models/enums.model';
 import { LeadResponse } from '../../shared/models/lead.model';
 import { KanbanBoard } from './kanban-board';
+import { ColunaKanban, criarColunasKanban } from './kanban.model';
 
 function criarLead(id: number, status: StatusFunil): LeadResponse {
   return {
@@ -31,9 +32,30 @@ function criarLead(id: number, status: StatusFunil): LeadResponse {
 describe('KanbanBoard', () => {
   beforeEach(() => TestBed.configureTestingModule({ imports: [KanbanBoard] }));
 
-  async function renderizar(leads: readonly LeadResponse[], idsEmMovimento = new Set<number>()) {
+  function criarColunas(
+    leads: readonly LeadResponse[],
+    totais: Partial<Record<StatusFunil, number>> = {},
+  ): readonly ColunaKanban[] {
+    return criarColunasKanban().map((coluna) => {
+      const leadsDaColuna = leads.filter((lead) => lead.status === coluna.status);
+      const totalLeads = totais[coluna.status] ?? leadsDaColuna.length;
+      return {
+        ...coluna,
+        leads: leadsDaColuna,
+        totalLeads,
+        totalPaginas: Math.ceil(totalLeads / 25),
+        estado: leadsDaColuna.length === 0 ? 'empty' : 'success',
+      };
+    });
+  }
+
+  async function renderizar(
+    leads: readonly LeadResponse[],
+    idsEmMovimento = new Set<number>(),
+    totais: Partial<Record<StatusFunil, number>> = {},
+  ) {
     const fixture = TestBed.createComponent(KanbanBoard);
-    fixture.componentRef.setInput('leads', leads);
+    fixture.componentRef.setInput('colunas', criarColunas(leads, totais));
     fixture.componentRef.setInput('idsEmMovimento', idsEmMovimento);
     await fixture.whenStable();
     return fixture;
@@ -64,6 +86,15 @@ describe('KanbanBoard', () => {
     expect(fixture.nativeElement.querySelector('[data-status="PERDIDO"]')?.textContent).toContain(
       '0',
     );
+  });
+
+  it('exibe o total real e paginação apenas na coluna com mais de uma página', async () => {
+    const fixture = await renderizar([criarLead(1, 'NOVO')], new Set(), { NOVO: 63 });
+    const novo = fixture.nativeElement.querySelector('[data-status="NOVO"]') as HTMLElement;
+
+    expect(novo.querySelector('.kanban-column__header span')?.textContent).toContain('63');
+    expect(novo.querySelector('.kanban-column__pagination')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-status="GANHO"] nav')).toBeNull();
   });
 
   it('diferencia coluna vazia do estado vazio da lista completa', async () => {

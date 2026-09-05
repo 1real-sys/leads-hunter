@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { LeadResponse } from '../../shared/models/lead.model';
+import { LeadResponse, PaginaLeadsResponse } from '../../shared/models/lead.model';
 import { API_ROUTES } from './api-routes';
 import { LeadApi } from './lead-api';
 
@@ -71,6 +71,34 @@ describe('LeadApi', () => {
     request.flush(LEADS);
 
     expect(received).toEqual(LEADS);
+  });
+
+  it('consulta uma página real por status com tamanho e filtros explícitos', () => {
+    const pagina: PaginaLeadsResponse = {
+      leads: LEADS,
+      pagina: 1,
+      tamanho: 25,
+      totalElementos: 31,
+      totalPaginas: 2,
+    };
+    let received: PaginaLeadsResponse | undefined;
+
+    api
+      .listarPagina({
+        status: 'QUALIFICADO',
+        categoria: 'PADARIA',
+        page: 1,
+        size: 25,
+      })
+      .subscribe((response) => (received = response));
+
+    const request = httpTesting.expectOne(
+      `${API_ROUTES.leadsPagina}?status=QUALIFICADO&page=1&size=25&categoria=PADARIA`,
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush(pagina);
+
+    expect(received).toEqual(pagina);
   });
 
   it('atualiza o lead pela rota real com somente os campos permitidos no payload', () => {

@@ -40,7 +40,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - `Temperatura`: `QUENTE`, `MORNO`, `FRIO`.
 - Busca: latitude entre -90 e 90, longitude entre -180 e 180, raio inteiro de 1 a 20 km e ao menos uma categoria.
 - Datas do backend são strings ISO-8601 locais, sem offset/fuso.
-- Listagens retornam arrays diretos e não possuem paginação atualmente.
+- As listagens legadas retornam arrays diretos; o Kanban usa `GET /api/leads/pagina` para paginação real por status.
 - Campos opcionais podem vir como `null`.
 - Erros tratados seguem `ApiErrorResponse`: `timestamp`, `status`, `codigo`, `mensagem` e `path`.
 - A resposta inicial da busca possui leads resumidos; `GET /api/leads` possui o contrato completo do lead.
@@ -117,6 +117,7 @@ Esta verificação é responsabilidade do agente que implementa e também do age
 | FE-14                    | Downloads CSV e XLSX | FE-07          | CONCLUÍDO    |
 | FE-15A | Shell operacional e workspace da Busca | FE-00 a FE-14 | CONCLUÍDO |
 | FE-15B | Adaptação das áreas ao workspace operacional | FE-15A | CONCLUÍDO |
+| FE-100 | Scroll e paginação independentes no Kanban | FE-15B | CONCLUÍDO |
 | FE-16 | Polimento integrado, responsividade e acessibilidade | FE-15B | PENDENTE |
 | FE-17 | Testes de fluxo e fechamento do MVP | FE-16 | PENDENTE |
 
@@ -945,8 +946,279 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** a **FE-15B** estão concluídos e validados. O próximo sprint é o **FE-16 — Polimento integrado, responsividade e acessibilidade**.
+Os sprints **FE-00** a **FE-15B** e a melhoria prioritária **FE-100** estão concluídos e validados. O próximo sprint é o **FE-16 — Polimento integrado, responsividade e acessibilidade**.
 
 
 
-FE-100 PRIORIDADE
+## FE-100 — Scroll e paginação independentes no Kanban
+
+**Status:** CONCLUÍDO
+
+Leia `AGENTS.md`, `fluxo.md`, `API.md`  e as skills aplicáveis.
+
+A FE-15A e a FE-15B já foram concluídas.
+Preserve o shell/workspace operacional atual.
+
+Implemente uma melhoria específica no Kanban com dois objetivos:
+
+1. cada coluna/status deve possuir seu próprio scroll vertical;
+2. cada coluna/status deve possuir sua própria paginação, limitada a 25 leads por página.
+
+Antes de implementar, inspecione frontend, backend e contrato atual da API.
+Não assuma como os leads são carregados hoje.
+
+## 1. Scroll independente por coluna
+
+Hoje, quando uma coluna possui muitos leads, ela aumenta a altura da página inteira.
+Para visualizar os cards inferiores é necessário rolar o documento inteiro.
+
+Isso não é desejado.
+
+O comportamento esperado é:
+
+- o cabeçalho, filtros, exportação e demais controles superiores permanecem fora do scroll das colunas;
+- o board utiliza a altura restante disponível no workspace;
+- cada coluna (`NOVO`, `QUALIFICADO`, `CONTATADO`, `GANHO`, `PERDIDO`) possui seu próprio scroll vertical;
+- rolar `NOVO` não deve rolar `QUALIFICADO`, `CONTATADO`, `GANHO` ou `PERDIDO`;
+- rolar uma coluna não deve fazer a página inteira crescer/rolar para acompanhar seus cards;
+- o cabeçalho de cada coluna deve continuar facilmente visível;
+- preservar o comportamento horizontal atual do Kanban;
+- não criar scroll horizontal individual dentro das colunas.
+
+Evite alturas fixas arbitrárias.
+Calcule/estruture o layout com base na altura disponível da viewport/workspace.
+
+## 2. Paginação individual por coluna/status
+
+Cada coluna deve possuir paginação baseada EXCLUSIVAMENTE nos leads daquele status.
+
+O limite é:
+
+- máximo de 25 leads visíveis por página em cada coluna.
+
+Exemplos:
+
+### NOVO com 20 leads
+
+Mostrar os 20 leads.
+
+Não é necessário exibir controles de paginação se existir apenas uma página.
+
+### NOVO com 40 leads
+
+- página 1 → 25 leads;
+- página 2 → 15 leads.
+
+A paginação aparece no final da coluna `NOVO`.
+
+### QUALIFICADO com 63 leads
+
+- página 1 → 25 leads;
+- página 2 → 25 leads;
+- página 3 → 13 leads.
+
+A paginação aparece no final da coluna `QUALIFICADO`.
+
+Portanto, cada coluna possui seu próprio estado de paginação.
+
+É perfeitamente válido ter simultaneamente:
+
+- `NOVO` na página 2;
+- `QUALIFICADO` na página 3;
+- `CONTATADO` na página 1;
+- `GANHO` na página 1;
+- `PERDIDO` na página 4.
+
+Trocar a página de `QUALIFICADO` NÃO deve alterar a página de nenhuma outra coluna.
+
+Não existe paginação global do Kanban.
+
+## 3. Local da paginação
+
+Os controles de paginação devem pertencer visualmente à própria coluna.
+
+Exemplo conceitual:
+
+QUALIFICADO                    63
+--------------------------------
+Lead
+Lead
+Lead
+...
+até 25 leads
+--------------------------------
+‹  1  [2]  3  ›
+
+Não colocar uma única paginação no final do board inteiro.
+
+A paginação deve ser compacta e adequada à largura reduzida das colunas.
+
+Quando houver apenas uma página, não ocupar espaço desnecessário com controles inúteis.
+
+## 4. Relação entre scroll e paginação
+
+Cada página contém no máximo 25 cards.
+
+Esses cards são navegados verticalmente através do scroll da própria coluna.
+
+Ao chegar ao final da lista daquela coluna, o usuário deve conseguir acessar sua paginação e trocar para os próximos 25 leads daquele status.
+
+A paginação deve fazer parte da região da coluna e permanecer fácil de acessar.
+
+Escolha a solução de layout mais simples que preserve esse comportamento sem fazer o documento inteiro crescer conforme a quantidade de cards.
+
+## 5. Paginação real no backend
+
+Inspecione primeiro como o Kanban carrega os leads atualmente.
+
+Se atualmente o backend envia todos os leads e o frontend apenas os distribui pelas colunas, NÃO implemente uma falsa paginação usando:
+
+- `slice()`;
+- carregamento de todos os registros seguido de paginação local;
+- qualquer solução equivalente.
+
+Quero paginação real.
+
+O backend deve retornar apenas os leads necessários para a página/status solicitado.
+
+Implemente a menor alteração necessária para permitir consulta por:
+
+- status;
+- página;
+- tamanho;
+- filtros existentes aplicáveis ao Kanban.
+
+O frontend deve utilizar:
+
+`size = 25`
+
+Se o contrato da API precisar mudar, atualize `API.md` para refletir o contrato real implementado.
+
+Não quebre endpoints existentes desnecessariamente.
+
+## 6. Totais
+
+Cada coluna deve continuar informando corretamente a quantidade TOTAL de leads daquele status, e não apenas a quantidade da página atual.
+
+Exemplo:
+
+Se existem 63 leads `QUALIFICADO` e a página atual contém 25:
+
+- contador da coluna → 63;
+- cards renderizados → no máximo 25;
+- paginação → 3 páginas.
+
+Não mostrar `25` como total simplesmente porque a página possui 25 registros.
+
+## 7. Filtros
+
+Preserve os filtros atuais do Kanban.
+
+Ao aplicar novos filtros:
+
+- consultar novamente os dados necessários;
+- atualizar os totais;
+- atualizar as páginas;
+- evitar estados de página inválidos.
+
+Se um filtro reduzir uma coluna de 4 páginas para apenas 1, a coluna deve voltar para uma página válida.
+
+A paginação continua independente entre os status.
+
+## 8. Drag and drop / mudança de status
+
+Preserve o comportamento atual de movimentação de leads entre colunas.
+
+Ao mover um lead:
+
+- persistir a mudança de status normalmente;
+- preservar atualização otimista existente;
+- preservar rollback em caso de erro;
+- atualizar corretamente os totais de origem e destino;
+- manter as páginas de origem e destino consistentes.
+
+Considere casos como:
+
+- mover o último lead da página atual;
+- a remoção fazer desaparecer a última página;
+- mover um lead para uma coluna que já possui 25 cards na página;
+- origem e destino estarem em páginas diferentes;
+- mudança de status através da alternativa acessível por teclado.
+
+Após a operação, nenhuma coluna pode ficar apresentando estado incompatível com os dados persistidos.
+
+Evite recarregar o Kanban inteiro quando for possível atualizar/reconsultar apenas as colunas afetadas de forma simples e confiável.
+
+Prefira consistência e simplicidade a otimizações complexas.
+
+## 9. Loading, erro e empty state
+
+Como cada coluna passa a possuir carregamento/paginação independente, preserve feedback adequado ao usuário.
+
+Uma troca de página em `QUALIFICADO` não deve desnecessariamente apagar ou recarregar visualmente todas as outras colunas.
+
+Erros devem continuar utilizando o tratamento já existente no projeto.
+
+Uma coluna sem resultados deve continuar apresentando seu empty state corretamente.
+
+## Restrições
+
+- Não redesenhar o Kanban.
+- Não alterar o shell/workspace criado na FE-15.
+- Não refazer os cards sem necessidade.
+- Não adicionar infinite scroll.
+- Não adicionar virtual scrolling.
+- Não criar estado global complexo.
+- Não introduzir abstrações desnecessárias.
+- Não alterar regras de negócio sem necessidade.
+- Não adicionar funcionalidades não solicitadas.
+- Preservar filtros.
+- Preservar exportação.
+- Preservar drawer/detalhes do lead.
+- Preservar acessibilidade.
+- Preservar drag-and-drop e alternativa por teclado.
+- Preservar comportamento otimista e rollback.
+
+## Critérios de aceite
+
+A implementação somente está concluída quando:
+
+- cada coluna possui scroll vertical próprio;
+- a página inteira não cresce indefinidamente devido aos cards;
+- cada status possui paginação própria;
+- cada página possui no máximo 25 leads;
+- `NOVO`, `QUALIFICADO`, `CONTATADO`, `GANHO` e `PERDIDO` podem estar em páginas diferentes simultaneamente;
+- trocar a página de uma coluna não altera as outras;
+- paginação aparece na respectiva coluna;
+- colunas com apenas uma página não exibem controles desnecessários;
+- contador da coluna representa o total real daquele status;
+- backend realiza paginação real;
+- frontend não baixa todos os leads para depois aplicar `slice()`;
+- filtros continuam funcionando;
+- mudança de status continua funcionando;
+- drag-and-drop continua funcionando;
+- alternativa por teclado continua funcionando;
+- rollback continua funcionando;
+- origem/destino permanecem consistentes após movimentações;
+- loading/error/empty states continuam funcionando;
+- shell da FE-15 permanece intacto;
+- testes relevantes passam;
+- `npm run build` passa;
+- testes Maven relevantes passam.
+
+Antes de alterar o código, informe brevemente:
+
+1. como o Kanban carrega os leads atualmente;
+2. se o backend já suporta paginação adequada;
+3. quais contratos/componentes precisarão ser alterados.
+
+Depois prossiga com a implementação sem pedir nova confirmação, desde que a solução permaneça dentro deste escopo.
+
+### Resultado da validação
+
+- Suíte frontend: 149 testes passaram.
+- Build de produção Angular: passou.
+- Suíte Maven: 103 testes passaram com o agente Byte Buddy compatível com Java 25.
+- Smoke headless em 1440 × 900: documento permaneceu limitado à viewport, cada coluna manteve scroll vertical próprio, 25 cards por página e páginas independentes.
+- Smoke headless em 390 × 844: rolagem horizontal do board permaneceu localizada, sem ampliar a altura do documento.
+- Auditoria AXE nas regras WCAG 2 A/AA e 2.1 A/AA: nenhuma violação encontrada.

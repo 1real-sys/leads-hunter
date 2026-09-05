@@ -23,6 +23,14 @@ export interface LeadResponse {
   atualizadoEm: LocalDateTimeString | null;
 }
 
+export interface PaginaLeadsResponse {
+  leads: readonly LeadResponse[];
+  pagina: number;
+  tamanho: number;
+  totalElementos: number;
+  totalPaginas: number;
+}
+
 interface CamposAtualizaveisLead {
   status?: StatusFunil | null;
   observacoes?: string | null;

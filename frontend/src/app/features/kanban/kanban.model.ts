@@ -31,15 +31,19 @@ export const ROTULOS_TEMPERATURA: Readonly<Record<Temperatura, string>> = {
   FRIO: 'Frio',
 };
 
+export const TAMANHO_PAGINA_KANBAN = 25;
+
+export type EstadoColunaKanban = 'loading' | 'success' | 'empty' | 'error';
+
 export interface ColunaKanban {
-  status: StatusFunil | null;
+  status: StatusFunil;
   rotulo: string;
   leads: readonly LeadResponse[];
-}
-
-export interface AgrupamentoKanban {
-  colunas: readonly ColunaKanban[];
-  semEtapa: ColunaKanban | null;
+  pagina: number;
+  totalPaginas: number;
+  totalLeads: number;
+  estado: EstadoColunaKanban;
+  mensagemErro: string | null;
 }
 
 export interface MudancaStatusLead {
@@ -50,6 +54,11 @@ export interface MudancaStatusLead {
 export interface EtapasAdjacentes {
   anterior: StatusFunil | null;
   proxima: StatusFunil | null;
+}
+
+export interface PaginaColunaSolicitada {
+  status: StatusFunil;
+  pagina: number;
 }
 
 export function obterRotuloStatus(status: StatusFunil | null): string {
@@ -71,41 +80,15 @@ export function obterEtapasAdjacentes(status: StatusFunil | null): EtapasAdjacen
   };
 }
 
-function possuiStatusConhecido(lead: LeadResponse): lead is LeadResponse & { status: StatusFunil } {
-  return lead.status !== null && STATUS_FUNIL.some((status) => status === lead.status);
-}
-
-export function agruparLeadsPorStatus(leads: readonly LeadResponse[]): AgrupamentoKanban {
-  const grupos: Record<StatusFunil, LeadResponse[]> = {
-    NOVO: [],
-    QUALIFICADO: [],
-    CONTATADO: [],
-    GANHO: [],
-    PERDIDO: [],
-  };
-  const semEtapa: LeadResponse[] = [];
-
-  for (const lead of leads) {
-    if (possuiStatusConhecido(lead)) {
-      grupos[lead.status].push(lead);
-    } else {
-      semEtapa.push(lead);
-    }
-  }
-
-  return {
-    colunas: STATUS_FUNIL.map((status) => ({
-      status,
-      rotulo: ROTULOS_STATUS[status],
-      leads: grupos[status],
-    })),
-    semEtapa:
-      semEtapa.length > 0
-        ? {
-            status: null,
-            rotulo: 'Sem etapa',
-            leads: semEtapa,
-          }
-        : null,
-  };
+export function criarColunasKanban(): readonly ColunaKanban[] {
+  return STATUS_FUNIL.map((status) => ({
+    status,
+    rotulo: ROTULOS_STATUS[status],
+    leads: [],
+    pagina: 0,
+    totalPaginas: 0,
+    totalLeads: 0,
+    estado: 'empty',
+    mensagemErro: null,
+  }));
 }

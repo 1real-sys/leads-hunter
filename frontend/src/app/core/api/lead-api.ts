@@ -2,13 +2,23 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CategoriaNegocio, StatusFunil, Temperatura } from '../../shared/models/enums.model';
-import { AtualizarLeadRequest, LeadResponse } from '../../shared/models/lead.model';
+import {
+  AtualizarLeadRequest,
+  LeadResponse,
+  PaginaLeadsResponse,
+} from '../../shared/models/lead.model';
 import { API_ROUTES } from './api-routes';
 
 export interface FiltrosLead {
   status?: StatusFunil;
   categoria?: CategoriaNegocio;
   temperatura?: Temperatura;
+}
+
+export interface ConsultaPaginaLeads extends FiltrosLead {
+  status: StatusFunil;
+  page: number;
+  size: number;
 }
 
 @Service()
@@ -29,6 +39,22 @@ export class LeadApi {
     }
 
     return this.http.get<LeadResponse[]>(API_ROUTES.leads, { params });
+  }
+
+  listarPagina(consulta: ConsultaPaginaLeads): Observable<PaginaLeadsResponse> {
+    let params = new HttpParams()
+      .set('status', consulta.status)
+      .set('page', consulta.page)
+      .set('size', consulta.size);
+
+    if (consulta.categoria !== undefined) {
+      params = params.set('categoria', consulta.categoria);
+    }
+    if (consulta.temperatura !== undefined) {
+      params = params.set('temperatura', consulta.temperatura);
+    }
+
+    return this.http.get<PaginaLeadsResponse>(API_ROUTES.leadsPagina, { params });
   }
 
   atualizar(id: number, request: AtualizarLeadRequest): Observable<LeadResponse> {

@@ -3,7 +3,7 @@ import { Component, computed, input, output } from '@angular/core';
 import { StatusFunil } from '../../shared/models/enums.model';
 import { LeadResponse } from '../../shared/models/lead.model';
 import { LeadCard } from './lead-card';
-import { ColunaKanban, MudancaStatusLead } from './kanban.model';
+import { ColunaKanban, MudancaStatusLead, PaginaColunaSolicitada } from './kanban.model';
 
 @Component({
   imports: [CdkDrag, CdkDropList, LeadCard],
@@ -17,23 +17,25 @@ export class KanbanColumn {
   readonly bloqueado = input(false);
   readonly mudancaStatusSolicitada = output<MudancaStatusLead>();
   readonly detalheSolicitado = output<LeadResponse>();
+  readonly paginaSolicitada = output<PaginaColunaSolicitada>();
+  readonly novaTentativaSolicitada = output<PaginaColunaSolicitada>();
 
   protected readonly tituloId = computed(() => {
-    const status = this.coluna().status?.toLowerCase() ?? 'sem-etapa';
+    const status = this.coluna().status.toLowerCase();
     return `kanban-${status}-title`;
   });
 
   protected readonly aceitaDestino = (
     _drag: CdkDrag<LeadResponse>,
     drop: CdkDropList<ColunaKanban>,
-  ): boolean => drop.data.status !== null;
+  ): boolean => drop.data.estado !== 'loading';
 
   protected emMovimento(id: number): boolean {
     return this.idsEmMovimento().has(id);
   }
 
   protected interacaoDesabilitada(id: number): boolean {
-    return this.bloqueado() || this.emMovimento(id);
+    return this.bloqueado() || this.coluna().estado === 'loading' || this.emMovimento(id);
   }
 
   protected solicitarMudanca(lead: LeadResponse, status: StatusFunil): void {
@@ -47,12 +49,28 @@ export class KanbanColumn {
 
     if (
       event.container === event.previousContainer ||
-      status === null ||
       this.interacaoDesabilitada(event.item.data.id)
     ) {
       return;
     }
 
     this.solicitarMudanca(event.item.data, status);
+  }
+
+  protected solicitarPagina(pagina: number): void {
+    const coluna = this.coluna();
+    if (
+      coluna.estado !== 'loading' &&
+      pagina >= 0 &&
+      pagina < coluna.totalPaginas &&
+      pagina !== coluna.pagina
+    ) {
+      this.paginaSolicitada.emit({ status: coluna.status, pagina });
+    }
+  }
+
+  protected tentarNovamente(): void {
+    const coluna = this.coluna();
+    this.novaTentativaSolicitada.emit({ status: coluna.status, pagina: coluna.pagina });
   }
 }

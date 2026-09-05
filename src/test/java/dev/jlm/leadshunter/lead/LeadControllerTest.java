@@ -61,6 +61,68 @@ class LeadControllerTest {
     }
 
     @Test
+    void deveListarPaginaComFiltrosETotaisViaHttp() throws Exception {
+        when(leadService.listarPagina(
+            StatusFunil.QUALIFICADO,
+            CategoriaNegocio.PADARIA,
+            Temperatura.QUENTE,
+            1,
+            25
+        )).thenReturn(new PaginaLeadsResponse(
+            List.of(criarResposta()),
+            1,
+            25,
+            63,
+            3
+        ));
+
+        mockMvc.perform(get("/api/leads/pagina")
+                .param("status", "QUALIFICADO")
+                .param("categoria", "PADARIA")
+                .param("temperatura", "QUENTE")
+                .param("page", "1")
+                .param("size", "25"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.leads[0].id").value(35))
+            .andExpect(jsonPath("$.pagina").value(1))
+            .andExpect(jsonPath("$.tamanho").value(25))
+            .andExpect(jsonPath("$.totalElementos").value(63))
+            .andExpect(jsonPath("$.totalPaginas").value(3));
+    }
+
+    @Test
+    void deveRejeitarPaginaOuTamanhoForaDosLimites() throws Exception {
+        mockMvc.perform(get("/api/leads/pagina")
+                .param("status", "NOVO")
+                .param("page", "-1")
+                .param("size", "26"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.codigo").value("VALIDACAO_INVALIDA"));
+
+        verifyNoInteractions(leadService);
+    }
+
+    @Test
+    void deveRejeitarPaginaExcessiva() throws Exception {
+        mockMvc.perform(get("/api/leads/pagina")
+                .param("status", "NOVO")
+                .param("page", "10001"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.codigo").value("VALIDACAO_INVALIDA"));
+
+        verifyNoInteractions(leadService);
+    }
+
+    @Test
+    void deveExigirStatusNaConsultaPaginada() throws Exception {
+        mockMvc.perform(get("/api/leads/pagina"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.codigo").value("REQUISICAO_INVALIDA"));
+
+        verifyNoInteractions(leadService);
+    }
+
+    @Test
     void deveBuscarLeadPorIdViaHttp() throws Exception {
         when(leadService.buscarPorId(35L)).thenReturn(criarResposta());
 

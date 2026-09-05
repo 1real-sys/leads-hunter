@@ -4,6 +4,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,7 +15,8 @@ public class LeadService {
 
     private static final Sort ORDENACAO_PADRAO = Sort.by(
         Sort.Order.desc("score").nullsLast(),
-        Sort.Order.asc("nome").nullsLast()
+        Sort.Order.asc("nome").nullsLast(),
+        Sort.Order.asc("id")
     );
 
     private final LeadRepository leadRepository;
@@ -26,15 +28,26 @@ public class LeadService {
         CategoriaNegocio categoria,
         Temperatura temperatura
     ) {
-        Lead filtros = new Lead();
-        filtros.setStatus(status);
-        filtros.setCategoria(categoria);
-        filtros.setTemperatura(temperatura);
-
-        ExampleMatcher matcher = ExampleMatcher.matchingAll().withIgnoreNullValues();
-        return leadRepository.findAll(Example.of(filtros, matcher), ORDENACAO_PADRAO).stream()
+        return leadRepository.findAll(criarExemplo(status, categoria, temperatura), ORDENACAO_PADRAO)
+            .stream()
             .map(this::toResponse)
             .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PaginaLeadsResponse listarPagina(
+        StatusFunil status,
+        CategoriaNegocio categoria,
+        Temperatura temperatura,
+        int page,
+        int size
+    ) {
+        var pagina = leadRepository.findAll(
+            criarExemplo(status, categoria, temperatura),
+            PageRequest.of(page, size, ORDENACAO_PADRAO)
+        ).map(this::toResponse);
+
+        return PaginaLeadsResponse.from(pagina);
     }
 
     @Transactional(readOnly = true)
@@ -64,5 +77,19 @@ public class LeadService {
 
     private LeadResponse toResponse(Lead lead) {
         return LeadResponse.from(lead, whatsAppLinkGenerator);
+    }
+
+    private Example<Lead> criarExemplo(
+        StatusFunil status,
+        CategoriaNegocio categoria,
+        Temperatura temperatura
+    ) {
+        Lead filtros = new Lead();
+        filtros.setStatus(status);
+        filtros.setCategoria(categoria);
+        filtros.setTemperatura(temperatura);
+
+        ExampleMatcher matcher = ExampleMatcher.matchingAll().withIgnoreNullValues();
+        return Example.of(filtros, matcher);
     }
 }

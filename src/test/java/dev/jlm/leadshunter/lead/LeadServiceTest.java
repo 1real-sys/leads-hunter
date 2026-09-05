@@ -17,6 +17,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Example;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 @ExtendWith(MockitoExtension.class)
@@ -61,6 +63,46 @@ class LeadServiceTest {
             assertThat(item.status()).isEqualTo(StatusFunil.QUALIFICADO);
             assertThat(item.observacoes()).isEqualTo("Retornar na sexta");
         });
+    }
+
+    @Test
+    void deveListarPaginaComTotalRealEFiltros() {
+        Lead lead = criarLeadCompleto();
+        when(leadRepository.findAll(any(Example.class), any(Pageable.class)))
+            .thenAnswer(invocation -> new PageImpl<>(
+                List.of(lead),
+                invocation.getArgument(1),
+                63
+            ));
+        LeadService service = criarService();
+
+        PaginaLeadsResponse resposta = service.listarPagina(
+            StatusFunil.QUALIFICADO,
+            CategoriaNegocio.PADARIA,
+            Temperatura.QUENTE,
+            1,
+            25
+        );
+
+        ArgumentCaptor<Example<Lead>> exampleCaptor = ArgumentCaptor.forClass(Example.class);
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(leadRepository).findAll(exampleCaptor.capture(), pageableCaptor.capture());
+
+        assertThat(exampleCaptor.getValue().getProbe().getStatus())
+            .isEqualTo(StatusFunil.QUALIFICADO);
+        assertThat(exampleCaptor.getValue().getProbe().getCategoria())
+            .isEqualTo(CategoriaNegocio.PADARIA);
+        assertThat(exampleCaptor.getValue().getProbe().getTemperatura())
+            .isEqualTo(Temperatura.QUENTE);
+        assertThat(pageableCaptor.getValue().getPageNumber()).isEqualTo(1);
+        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(25);
+        assertThat(pageableCaptor.getValue().getSort().getOrderFor("score").getDirection())
+            .isEqualTo(Sort.Direction.DESC);
+        assertThat(resposta.leads()).singleElement().extracting(LeadResponse::id).isEqualTo(15L);
+        assertThat(resposta.pagina()).isEqualTo(1);
+        assertThat(resposta.tamanho()).isEqualTo(25);
+        assertThat(resposta.totalElementos()).isEqualTo(63);
+        assertThat(resposta.totalPaginas()).isEqualTo(3);
     }
 
     @Test

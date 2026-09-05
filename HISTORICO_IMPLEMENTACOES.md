@@ -889,3 +889,47 @@ A lista e o detalhe do Histórico passaram a seguir a mesma estrutura operaciona
 - `frontend/src/app/features/kanban/kanban-page.scss`
 - `frontend/src/app/features/kanban/kanban-page.spec.ts`
 - `frontend/src/app/features/kanban/lead-filters.scss`
+
+---
+
+## 33. Scroll e paginação independentes no Kanban — 04/09/2026
+
+O Kanban passou a consultar cada etapa do funil separadamente no backend, com páginas reais de até 25 leads. Cada coluna mantém página, total, carregamento, erro e estado vazio próprios, de modo que trocar uma página não apaga nem reposiciona as demais.
+
+O board agora ocupa a altura restante do workspace e cada coluna possui rolagem vertical própria, preservando a rolagem horizontal em telas estreitas. Movimentos continuam otimistas e com rollback; após a confirmação, somente as colunas de origem e destino são reconsultadas para manter páginas e totais consistentes. Filtros, exportações, detalhe do lead e controles acessíveis por teclado foram preservados.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/lead/PaginaLeadsResponse.java`
+
+**Modificados:**
+
+- `API.md`
+- `FRONTEND_SPRINTS.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `frontend/src/app/app.scss`
+- `frontend/src/app/core/api/api-routes.ts`
+- `frontend/src/app/core/api/lead-api.spec.ts`
+- `frontend/src/app/core/api/lead-api.ts`
+- `frontend/src/app/features/kanban/kanban-board.html`
+- `frontend/src/app/features/kanban/kanban-board.scss`
+- `frontend/src/app/features/kanban/kanban-board.spec.ts`
+- `frontend/src/app/features/kanban/kanban-board.ts`
+- `frontend/src/app/features/kanban/kanban-column.html`
+- `frontend/src/app/features/kanban/kanban-column.scss`
+- `frontend/src/app/features/kanban/kanban-column.ts`
+- `frontend/src/app/features/kanban/kanban-page.html`
+- `frontend/src/app/features/kanban/kanban-page.scss`
+- `frontend/src/app/features/kanban/kanban-page.spec.ts`
+- `frontend/src/app/features/kanban/kanban-page.ts`
+- `frontend/src/app/features/kanban/kanban.model.spec.ts`
+- `frontend/src/app/features/kanban/kanban.model.ts`
+- `frontend/src/app/shared/models/lead.model.ts`
+- `src/main/java/dev/jlm/leadshunter/config/ApiExceptionHandler.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadController.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadService.java`
+- `src/test/java/dev/jlm/leadshunter/lead/LeadControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/lead/LeadServiceTest.java`

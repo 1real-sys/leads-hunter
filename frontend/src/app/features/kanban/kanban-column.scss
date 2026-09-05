@@ -1,13 +1,20 @@
 :host {
   display: block;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .kanban-column {
-  min-height: 18rem;
+  display: grid;
+  height: 100%;
+  min-height: 0;
   padding: var(--space-3);
   border-top: 1px solid var(--border);
   background: var(--surface-subtle);
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .kanban-column__header {
@@ -16,6 +23,16 @@
   justify-content: space-between;
   gap: var(--space-3);
   margin-bottom: var(--space-3);
+}
+
+.kanban-column__body {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--muted) transparent;
+  scrollbar-width: thin;
 }
 
 .kanban-column__header h2 {
@@ -77,6 +94,76 @@
   font-size: var(--font-size-xs);
   line-height: var(--line-height-body);
   text-align: center;
+}
+
+.kanban-column__feedback {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-3) var(--space-2);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-body);
+  text-align: center;
+}
+
+.kanban-column__feedback--error {
+  border-color: #e8b4ae;
+  background: #fff5f3;
+  color: #7a271a;
+}
+
+.kanban-column__feedback p {
+  margin: 0;
+}
+
+.kanban-column__feedback button,
+.kanban-column__pagination button {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.kanban-column__feedback button {
+  margin-top: var(--space-2);
+}
+
+.kanban-column__feedback button:hover,
+.kanban-column__pagination button:hover:not(:disabled) {
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
+}
+
+.kanban-column__pagination {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  align-items: center;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+  background: var(--surface-subtle);
+}
+
+.kanban-column__pagination span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.kanban-column__pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 @media (prefers-reduced-motion: reduce) {

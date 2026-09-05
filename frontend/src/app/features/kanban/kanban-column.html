@@ -2,42 +2,83 @@
   <section
     class="kanban-column"
     [attr.aria-labelledby]="tituloId()"
-    [attr.data-status]="colunaAtual.status ?? 'SEM_ETAPA'"
+    [attr.data-status]="colunaAtual.status"
+    [attr.aria-busy]="colunaAtual.estado === 'loading'"
   >
     <header class="kanban-column__header">
       <h2 [id]="tituloId()">{{ colunaAtual.rotulo }}</h2>
-      <span [attr.aria-label]="colunaAtual.leads.length + ' leads nesta etapa'">
-        {{ colunaAtual.leads.length }}
+      <span [attr.aria-label]="colunaAtual.totalLeads + ' leads nesta etapa'">
+        {{ colunaAtual.totalLeads }}
       </span>
     </header>
 
-    <ul
-      cdkDropList
-      class="kanban-column__leads"
-      [cdkDropListData]="colunaAtual"
-      [cdkDropListDisabled]="bloqueado()"
-      [cdkDropListEnterPredicate]="aceitaDestino"
-      [cdkDropListSortingDisabled]="true"
-      (cdkDropListDropped)="soltar($event)"
-    >
-      @for (lead of colunaAtual.leads; track lead.id) {
-        <li
-          cdkDrag
-          class="kanban-column__lead"
-          [cdkDragData]="lead"
-          [cdkDragDisabled]="interacaoDesabilitada(lead.id)"
-        >
-          <app-lead-card
-            [lead]="lead"
-            [movendo]="emMovimento(lead.id)"
-            [interacaoDesabilitada]="interacaoDesabilitada(lead.id)"
-            (mudancaStatusSolicitada)="solicitarMudanca(lead, $event)"
-            (detalheSolicitado)="detalheSolicitado.emit($event)"
-          />
-        </li>
-      } @empty {
-        <li class="kanban-column__empty">Nenhum lead nesta etapa.</li>
+    <div class="kanban-column__body">
+      @if (colunaAtual.estado === 'loading') {
+        <p class="kanban-column__feedback" role="status">Carregando {{ colunaAtual.rotulo }}…</p>
       }
-    </ul>
+
+      @if (colunaAtual.estado === 'error') {
+        <div class="kanban-column__feedback kanban-column__feedback--error" role="alert">
+          <p>{{ colunaAtual.mensagemErro }}</p>
+          <button type="button" (click)="tentarNovamente()">Tentar novamente</button>
+        </div>
+      }
+
+      <ul
+        cdkDropList
+        class="kanban-column__leads"
+        [cdkDropListData]="colunaAtual"
+        [cdkDropListDisabled]="bloqueado() || colunaAtual.estado === 'loading'"
+        [cdkDropListEnterPredicate]="aceitaDestino"
+        [cdkDropListSortingDisabled]="true"
+        (cdkDropListDropped)="soltar($event)"
+      >
+        @for (lead of colunaAtual.leads; track lead.id) {
+          <li
+            cdkDrag
+            class="kanban-column__lead"
+            [cdkDragData]="lead"
+            [cdkDragDisabled]="interacaoDesabilitada(lead.id)"
+          >
+            <app-lead-card
+              [lead]="lead"
+              [movendo]="emMovimento(lead.id)"
+              [interacaoDesabilitada]="interacaoDesabilitada(lead.id)"
+              (mudancaStatusSolicitada)="solicitarMudanca(lead, $event)"
+              (detalheSolicitado)="detalheSolicitado.emit($event)"
+            />
+          </li>
+        } @empty {
+          @if (colunaAtual.estado === 'empty') {
+            <li class="kanban-column__empty">Nenhum lead nesta etapa.</li>
+          }
+        }
+      </ul>
+
+      @if (colunaAtual.totalPaginas > 1) {
+        <nav
+          class="kanban-column__pagination"
+          [attr.aria-label]="'Paginação de ' + colunaAtual.rotulo"
+        >
+          <button
+            type="button"
+            [disabled]="colunaAtual.pagina === 0 || colunaAtual.estado === 'loading'"
+            (click)="solicitarPagina(colunaAtual.pagina - 1)"
+          >
+            Anterior
+          </button>
+          <span> {{ colunaAtual.pagina + 1 }} de {{ colunaAtual.totalPaginas }} </span>
+          <button
+            type="button"
+            [disabled]="
+              colunaAtual.pagina + 1 >= colunaAtual.totalPaginas || colunaAtual.estado === 'loading'
+            "
+            (click)="solicitarPagina(colunaAtual.pagina + 1)"
+          >
+            Próxima
+          </button>
+        </nav>
+      }
+    </div>
   </section>
 }
