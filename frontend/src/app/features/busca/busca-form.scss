@@ -162,7 +162,11 @@
 }
 
 .busca-form__actions button {
+  display: inline-flex;
   min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   padding: 0.65rem 1rem;
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
@@ -183,6 +187,28 @@
   background: var(--surface-subtle);
   color: var(--muted);
   cursor: not-allowed;
+}
+
+.busca-form__loading-indicator {
+  display: inline-block;
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: busca-form-spin 800ms linear infinite;
+}
+
+@keyframes busca-form-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .busca-form__loading-indicator {
+    animation: none;
+  }
 }
 
 @media (min-width: 57rem) and (max-width: 72rem) {

@@ -201,6 +201,7 @@ describe('BuscaForm', () => {
     expect(button.disabled).toBe(true);
     expect(button.getAttribute('aria-busy')).toBe('true');
     expect(button.textContent).toContain('Buscando leads');
+    expect(fixture.nativeElement.querySelector('.busca-form__loading-indicator')).not.toBeNull();
 
     fixture.componentRef.setInput('executando', false);
     await fixture.whenStable();

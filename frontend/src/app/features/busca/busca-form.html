@@ -181,6 +181,7 @@
       [disabled]="buscaForm().invalid() || buscaForm().submitting() || executando()"
     >
       @if (executando()) {
+        <span class="busca-form__loading-indicator" aria-hidden="true"></span>
         Buscando leads...
       } @else {
         Buscar leads

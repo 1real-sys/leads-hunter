@@ -188,6 +188,17 @@ describe('BuscaPage', () => {
     expect(fixture.componentInstance['estadoOperacao']()).toBe('success');
     expect(fixture.componentInstance['resultadoBusca']()).toEqual(RESPONSE);
     expect(button.disabled).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Busca concluída com sucesso.');
+    expect(fixture.nativeElement.textContent).toContain('1 lead encontrado.');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Verifique o Kanban para trabalhar os leads ou o Histórico para consultar a busca.',
+    );
+    expect(
+      fixture.nativeElement.querySelector('a[routerLink="/kanban"]')?.textContent,
+    ).toContain('Ver Kanban');
+    expect(
+      fixture.nativeElement.querySelector('a[routerLink="/historico"]')?.textContent,
+    ).toContain('Ver Histórico');
     expect(fixture.nativeElement.textContent).toContain('Busca #42 concluída');
     expect(fixture.nativeElement.textContent).toContain('1 lead encontrado');
     expect(fixture.nativeElement.textContent).toContain('Mercado Central');
@@ -226,6 +237,7 @@ describe('BuscaPage', () => {
       expect(button.disabled).toBe(false);
       expect(fixture.nativeElement.textContent).toContain(errorBody.mensagem);
       expect(fixture.nativeElement.textContent).toContain('tentar novamente');
+      expect(fixture.nativeElement.textContent).not.toContain('Busca concluída com sucesso');
     },
   );
 
@@ -275,6 +287,10 @@ describe('BuscaPage', () => {
     expect(fixture.componentInstance['estadoOperacao']()).toBe('empty');
     expect(fixture.componentInstance['resultadoBusca']()).toEqual(emptyResponse);
     expect(fixture.componentInstance['mensagemErro']()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Busca concluída. Nenhum lead foi encontrado com os parâmetros informados.',
+    );
+    expect(fixture.nativeElement.textContent).not.toContain('Busca concluída com sucesso');
     expect(fixture.nativeElement.textContent).toContain('Nenhum lead encontrado');
     expect(fixture.nativeElement.textContent).not.toContain('encontrou um problema');
   });

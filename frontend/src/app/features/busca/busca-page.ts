@@ -1,4 +1,5 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BuscaApi } from '../../core/api/busca-api';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
@@ -12,7 +13,7 @@ import { PontoMapa } from './mapa.model';
 type EstadoOperacaoBusca = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 @Component({
-  imports: [BuscaForm, BuscaResultados, MapaBusca],
+  imports: [BuscaForm, BuscaResultados, MapaBusca, RouterLink],
   selector: 'app-busca-page',
   styleUrl: './busca-page.scss',
   templateUrl: './busca-page.html',

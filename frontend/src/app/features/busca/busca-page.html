@@ -10,6 +10,67 @@
       [executando]="carregando()"
       (buscaConfirmada)="executarBusca($event)"
     />
+
+    @switch (estadoOperacao()) {
+      @case ('loading') {
+        <section
+          class="busca-page__feedback busca-page__feedback--loading"
+          role="status"
+          aria-live="polite"
+        >
+          <span class="busca-page__feedback-indicator" aria-hidden="true"></span>
+          <div>
+            <p class="busca-page__feedback-label">Busca em andamento</p>
+            <h2>Consultando estabelecimentos próximos</h2>
+            <p>Aguarde a confirmação do backend antes de iniciar outra busca.</p>
+          </div>
+        </section>
+      }
+      @case ('error') {
+        <section class="busca-page__feedback busca-page__feedback--error" role="alert">
+          <div>
+            <p class="busca-page__feedback-label">Não foi possível concluir</p>
+            <h2>A busca encontrou um problema</h2>
+            <p>{{ mensagemErro() }}</p>
+            <p>Revise os parâmetros, se necessário, e use “Buscar leads” para tentar novamente.</p>
+          </div>
+        </section>
+      }
+      @case ('success') {
+        @if (resultadoBusca(); as resultado) {
+          <section
+            class="busca-page__feedback busca-page__feedback--success"
+            role="status"
+            aria-live="polite"
+          >
+            <div>
+              <p class="busca-page__feedback-label">Busca concluída</p>
+              <h2>
+                Busca concluída com sucesso. {{ resultado.totalEncontrados }}
+                {{ resultado.totalEncontrados === 1 ? 'lead encontrado.' : 'leads encontrados.' }}
+              </h2>
+              <p>Verifique o Kanban para trabalhar os leads ou o Histórico para consultar a busca.</p>
+              <nav class="busca-page__feedback-actions" aria-label="Acessos rápidos após a busca">
+                <a routerLink="/kanban">Ver Kanban</a>
+                <a routerLink="/historico">Ver Histórico</a>
+              </nav>
+            </div>
+          </section>
+        }
+      }
+      @case ('empty') {
+        <section
+          class="busca-page__feedback busca-page__feedback--empty"
+          role="status"
+          aria-live="polite"
+        >
+          <div>
+            <p class="busca-page__feedback-label">Busca concluída</p>
+            <h2>Busca concluída. Nenhum lead foi encontrado com os parâmetros informados.</h2>
+          </div>
+        </section>
+      }
+    }
   </aside>
 
   <div class="busca-page__workspace">
@@ -33,35 +94,9 @@
       />
     </section>
 
-    @switch (estadoOperacao()) {
-      @case ('loading') {
-        <section class="busca-page__feedback busca-page__feedback--loading" role="status">
-          <p class="busca-page__feedback-label">Busca em andamento</p>
-          <div>
-            <h2>Consultando estabelecimentos próximos</h2>
-            <p>Aguarde a confirmação do backend antes de iniciar outra busca.</p>
-          </div>
-        </section>
-      }
-      @case ('error') {
-        <section class="busca-page__feedback busca-page__feedback--error" role="alert">
-          <p class="busca-page__feedback-label">Não foi possível concluir</p>
-          <div>
-            <h2>A busca encontrou um problema</h2>
-            <p>{{ mensagemErro() }}</p>
-            <p>Revise os parâmetros, se necessário, e use “Buscar leads” para tentar novamente.</p>
-          </div>
-        </section>
-      }
-      @case ('empty') {
-        @if (resultadoBusca(); as resultado) {
-          <app-busca-resultados [resultado]="resultado" />
-        }
-      }
-      @case ('success') {
-        @if (resultadoBusca(); as resultado) {
-          <app-busca-resultados [resultado]="resultado" />
-        }
+    @if (resultadoBusca(); as resultado) {
+      @if (estadoOperacao() === 'success' || estadoOperacao() === 'empty') {
+        <app-busca-resultados [resultado]="resultado" />
       }
     }
   </div>
