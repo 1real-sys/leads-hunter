@@ -27,7 +27,12 @@
         </section>
       }
       @case ('error') {
-        <section class="busca-page__feedback busca-page__feedback--error" role="alert">
+        <section
+          #feedbackErro
+          class="busca-page__feedback busca-page__feedback--error"
+          role="alert"
+          tabindex="-1"
+        >
           <div>
             <p class="busca-page__feedback-label">Não foi possível concluir</p>
             <h2>A busca encontrou um problema</h2>

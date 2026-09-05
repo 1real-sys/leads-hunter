@@ -69,18 +69,21 @@
 }
 
 .lead-detalhe-panel__chip-temperatura[data-temperature='QUENTE'] {
-  background: #fff1ee;
-  color: #8b2318;
+  border: 1px solid var(--hot-border);
+  background: var(--hot-surface);
+  color: var(--hot-ink);
 }
 
 .lead-detalhe-panel__chip-temperatura[data-temperature='MORNO'] {
-  background: #fff9e8;
-  color: #6f4d00;
+  border: 1px solid var(--warm-border);
+  background: var(--warm-surface);
+  color: var(--warm-ink);
 }
 
 .lead-detalhe-panel__chip-temperatura[data-temperature='FRIO'] {
-  background: #eff7fb;
-  color: #20536f;
+  border: 1px solid var(--cold-border);
+  background: var(--cold-surface);
+  color: var(--cold-ink);
 }
 
 .lead-detalhe-panel__fechar {
@@ -323,7 +326,6 @@
   margin: 0;
   color: var(--muted);
   font-size: 0.72rem;
-  line-height: var(--line-height-body);
 }
 
 .lead-detalhe-panel__feedback {
@@ -343,15 +345,15 @@
 }
 
 .lead-detalhe-panel__feedback--aviso {
-  border-left-color: #c9a227;
-  background: #fff9e8;
-  color: #6f4d00;
+  border-left-color: var(--warning-border);
+  background: var(--warning-surface);
+  color: var(--warning-ink);
 }
 
 .lead-detalhe-panel__feedback--erro {
-  border-left-color: #a43a2e;
-  background: #fff5f3;
-  color: #7a271a;
+  border-left-color: var(--danger-ink);
+  background: var(--danger-surface);
+  color: var(--danger-ink);
 }
 
 .lead-detalhe-panel__acoes {
@@ -407,7 +409,6 @@
   padding: var(--space-6) var(--space-8) var(--space-8);
   color: var(--muted);
   font-size: 0.7rem;
-  line-height: var(--line-height-body);
 }
 
 @media (max-width: 35rem) {

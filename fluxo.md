@@ -1,6 +1,6 @@
 # Fluxo do Leads Hunter
 
-Este documento descreve o fluxo real do projeto no estado atual. O backend está concluído e os sprints FE-00 a FE-15B, além da melhoria prioritária FE-100, foram entregues no frontend; o próximo passo é o polimento integrado, a responsividade e a acessibilidade da FE-16.
+Este documento descreve o fluxo real do projeto no estado atual. O backend está concluído e os sprints FE-00 a FE-17, além da melhoria prioritária FE-100, foram entregues e validados no frontend; o MVP está encerrado para o escopo atual.
 
 ## Visão geral
 
@@ -402,8 +402,8 @@ O planejamento detalhado e os critérios de aceite estão em [FRONTEND_SPRINTS.m
 | FE-15A | Shell operacional e workspace da Busca | CONCLUÍDO |
 | FE-15B | Adaptação das áreas ao workspace operacional | CONCLUÍDO |
 | FE-100 | Scroll e paginação independentes no Kanban | CONCLUÍDO |
-| FE-16 | Polimento integrado, responsividade e acessibilidade | PENDENTE |
-| FE-17 | Testes de fluxo e fechamento do MVP | PENDENTE |
+| FE-16 | Polimento integrado, responsividade e acessibilidade | CONCLUÍDO |
+| FE-17 | Testes de fluxo e fechamento do MVP | CONCLUÍDO |
 
 Decisões preservadas para o ciclo:
 
@@ -424,9 +424,13 @@ O refinamento visual posterior do drawer corrigiu o espaçamento interno efetivo
 
 A tela Busca agora mostra o andamento junto aos parâmetros: o botão fica desabilitado com spinner e texto de carregamento, enquanto os estados de sucesso, vazio e erro recebem mensagens distintas. Sucessos exibem a quantidade retornada e atalhos para Kanban e Histórico; os parâmetros continuam preservados e o `POST /api/buscas` permanece inalterado.
 
+O FE-16 uniformizou tokens semânticos, controles, badges, loaders e mensagens de estado entre as telas. A troca de rota move o foco para o conteúdo principal; erros de Busca, Histórico e salvamento comercial recebem foco após a renderização. O drawer mantém foco preso, abertura por teclado, Escape e retorno ao gatilho. Em telas menores, o Kanban deixa filtros e exportação seguirem o fluxo vertical da página e conserva o workspace do quadro com rolagem horizontal localizada e rolagem vertical independente por coluna. O mapa mantém a instância Leaflet existente e o marcador possui navegação por teclado explícita. A suíte frontend passou com 150 testes, o build concluiu sem warnings e a auditoria Axe em 1440 px e 390 px não encontrou violações nas rotas principais.
+
+O FE-17 fechou a validação do MVP com `MvpFlowIntegrationTest`, que percorre busca, consulta, atualização comercial, nova leitura, histórico e exportação CSV/XLSX pelo backend Spring real, Flyway e MySQL local. O teste usa um cliente Places substituto controlado, confirmando o fluxo sem exigir chave real nem consumir cota. O smoke E2E `frontend/scripts/mvp-flow-smoke.mjs` percorre no navegador Busca, resultados, Kanban, edição, reload, Histórico, detalhe, WhatsApp manual e exportação CSV; `npm run e2e:smoke` passou no modo mock com 23 requisições. O modo local contra o backend está documentado no README, mas a chamada real à Google não foi executada. Os estados de indisponibilidade, rate limit, quota e resposta inválida permanecem cobertos por simulações controladas existentes. A suíte frontend passou com 150 testes, a suíte backend com 104 testes, o build de produção passou sem warnings e o MVP ficou sem funcionalidades fora do escopo.
+
 ### Próximo passo
 
-Os sprints **FE-00** a **FE-15B** e a melhoria prioritária **FE-100** estão concluídos e validados. O próximo passo é executar o **FE-16 — Polimento integrado, responsividade e acessibilidade**, sem adicionar funcionalidades; o FE-17 permanece pendente.
+Os sprints **FE-00** a **FE-17** e a melhoria prioritária **FE-100** estão concluídos e validados. O MVP está encerrado para o escopo atual; o próximo passo é somente manutenção ou uma nova tarefa explicitamente priorizada.
 
 ## Padrão de boilerplate com Lombok
 

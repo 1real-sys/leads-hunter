@@ -44,7 +44,7 @@
 .resultados__kanban,
 .lead-resumo__whatsapp {
   display: inline-flex;
-  min-height: 2.75rem;
+  min-height: var(--control-height);
   align-items: center;
   justify-content: center;
   padding: 0.65rem 1rem;
@@ -156,18 +156,21 @@
 }
 
 .lead-resumo__temperatura--quente {
-  background: #fde7e3;
-  color: #922b1f;
+  border: 1px solid var(--hot-border);
+  background: var(--hot-surface);
+  color: var(--hot-ink);
 }
 
 .lead-resumo__temperatura--morno {
-  background: #fff1c2;
-  color: #714b00;
+  border: 1px solid var(--warm-border);
+  background: var(--warm-surface);
+  color: var(--warm-ink);
 }
 
 .lead-resumo__temperatura--frio {
-  background: #e4f0f7;
-  color: #23566f;
+  border: 1px solid var(--cold-border);
+  background: var(--cold-surface);
+  color: var(--cold-ink);
 }
 
 .lead-resumo__endereco {

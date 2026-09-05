@@ -25,11 +25,18 @@
 
   <div class="kanban-page__workspace">
     @if (mensagemMovimento()) {
-      <p class="kanban-page__movement-feedback" role="status">{{ mensagemMovimento() }}</p>
+      <p #feedbackMovimento class="kanban-page__movement-feedback" role="status" tabindex="-1">
+        {{ mensagemMovimento() }}
+      </p>
     }
 
     @if (erroMovimento()) {
-      <p class="kanban-page__movement-feedback kanban-page__movement-feedback--error" role="alert">
+      <p
+        #feedbackMovimento
+        class="kanban-page__movement-feedback kanban-page__movement-feedback--error"
+        role="alert"
+        tabindex="-1"
+      >
         {{ erroMovimento() }}
       </p>
     }

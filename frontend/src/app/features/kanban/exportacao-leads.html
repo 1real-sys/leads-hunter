@@ -11,7 +11,12 @@
       [attr.aria-busy]="exportandoCsv()"
       (click)="exportarCsv()"
     >
-      {{ exportandoCsv() ? 'Gerando CSV...' : 'Baixar CSV' }}
+      @if (exportandoCsv()) {
+        <span class="ui-spinner ui-spinner--small" aria-hidden="true"></span>
+        Gerando CSV...
+      } @else {
+        Baixar CSV
+      }
     </button>
     <button
       type="button"
@@ -19,7 +24,12 @@
       [attr.aria-busy]="exportandoXlsx()"
       (click)="exportarXlsx()"
     >
-      {{ exportandoXlsx() ? 'Gerando Excel...' : 'Baixar Excel' }}
+      @if (exportandoXlsx()) {
+        <span class="ui-spinner ui-spinner--small" aria-hidden="true"></span>
+        Gerando Excel...
+      } @else {
+        Baixar Excel
+      }
     </button>
   </div>
 

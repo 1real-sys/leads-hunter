@@ -2,6 +2,7 @@ import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { DatePipe } from '@angular/common';
 import {
   afterNextRender,
+  afterRenderEffect,
   Component,
   computed,
   DestroyRef,
@@ -36,6 +37,7 @@ export class LeadDetalhe {
   private readonly leadApi = inject(LeadApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly botaoFechar = viewChild<ElementRef<HTMLButtonElement>>('botaoFechar');
+  private readonly feedbackSalvamento = viewChild<ElementRef<HTMLElement>>('feedbackSalvamento');
 
   protected readonly tituloId = computed(() => `detalhe-lead-${this.lead().id}-titulo`);
   protected readonly rotuloStatus = computed(() => obterRotuloStatus(this.lead().status));
@@ -71,6 +73,12 @@ export class LeadDetalhe {
 
   constructor() {
     afterNextRender(() => this.botaoFechar()?.nativeElement.focus());
+    afterRenderEffect(() => {
+      const feedback = this.feedbackSalvamento();
+      if ((this.salvouRecente() || this.mensagemErro() || this.salvando()) && feedback) {
+        feedback.nativeElement.focus();
+      }
+    });
   }
 
   protected iniciarEdicao(): void {

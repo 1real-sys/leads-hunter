@@ -104,6 +104,7 @@ export class MapaBusca {
       autoPan: true,
       draggable: true,
       icon: MARKER_ICON,
+      keyboard: true,
       title: 'Arraste para alterar o centro da busca',
     }).addTo(this.mapInstance);
 

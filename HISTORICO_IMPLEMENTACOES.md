@@ -985,3 +985,70 @@ A tela de Busca passou a comunicar claramente o ciclo da operação sem alterar 
 - `frontend/src/app/features/busca/busca-page.scss`
 - `frontend/src/app/features/busca/busca-page.spec.ts`
 - `frontend/src/app/features/busca/busca-page.ts`
+
+---
+
+## 37. Polimento integrado, responsividade e acessibilidade — 05/09/2026
+
+O frontend recebeu o polimento integrado do FE-16. As telas passaram a compartilhar tokens semânticos de estado, controles e loaders, o shell move o foco para o conteúdo após navegação e as mensagens de erro e salvamento recebem foco programático. O Kanban ganhou fluxo vertical natural em telas menores sem perder o workspace com scroll horizontal localizado e scroll vertical independente por coluna. O drawer continua acessível por teclado, com foco preso, Escape e retorno ao gatilho; o mapa mantém sua instância Leaflet e o marcador possui navegação por teclado explícita.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+Nenhum.
+
+**Modificados:**
+
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`
+- `frontend/src/styles.scss`
+- `frontend/src/app/app.html`
+- `frontend/src/app/app.ts`
+- `frontend/src/app/features/busca/busca-form.html`
+- `frontend/src/app/features/busca/busca-form.scss`
+- `frontend/src/app/features/busca/busca-page.html`
+- `frontend/src/app/features/busca/busca-page.scss`
+- `frontend/src/app/features/busca/busca-page.ts`
+- `frontend/src/app/features/busca/busca-resultados.scss`
+- `frontend/src/app/features/busca/mapa-busca.html`
+- `frontend/src/app/features/busca/mapa-busca.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.html`
+- `frontend/src/app/features/historico/historico-detalhe-page.scss`
+- `frontend/src/app/features/historico/historico-detalhe-page.ts`
+- `frontend/src/app/features/historico/historico-page.html`
+- `frontend/src/app/features/historico/historico-page.scss`
+- `frontend/src/app/features/historico/historico-page.ts`
+- `frontend/src/app/features/kanban/exportacao-leads.html`
+- `frontend/src/app/features/kanban/exportacao-leads.scss`
+- `frontend/src/app/features/kanban/kanban-column.html`
+- `frontend/src/app/features/kanban/kanban-column.scss`
+- `frontend/src/app/features/kanban/kanban-page.html`
+- `frontend/src/app/features/kanban/kanban-page.scss`
+- `frontend/src/app/features/kanban/kanban-page.ts`
+- `frontend/src/app/features/kanban/lead-card.scss`
+- `frontend/src/app/features/kanban/lead-detalhe.html`
+- `frontend/src/app/features/kanban/lead-detalhe.scss`
+- `frontend/src/app/features/kanban/lead-detalhe.ts`
+- `frontend/src/app/features/kanban/lead-filters.html`
+- `frontend/src/app/features/kanban/lead-filters.scss`
+
+---
+
+## 38. Testes de fluxo e fechamento do MVP — 05/09/2026
+
+Foram adicionados testes de integração e um smoke E2E controlado para validar o caminho principal do MVP: busca, resultados, Kanban, atualização comercial, reload, histórico e exportação. A integração usa o backend real com Flyway e MySQL local e substitui apenas a chamada à Places por um cliente controlado, evitando chave real e consumo de cota. O smoke de navegador usa Playwright, verifica o link manual de WhatsApp e oferece um modo local documentado para execução contra o backend.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/test/java/dev/jlm/leadshunter/MvpFlowIntegrationTest.java`
+- `frontend/scripts/mvp-flow-smoke.mjs`
+
+**Modificados:**
+
+- `frontend/package.json`
+- `frontend/README.md`
+- `FRONTEND_SPRINTS.md`
+- `fluxo.md`

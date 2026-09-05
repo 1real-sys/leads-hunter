@@ -1,4 +1,13 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import {
+  afterRenderEffect,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
@@ -57,10 +66,19 @@ export class KanbanPage {
   protected readonly mensagemMovimento = signal<string | null>(null);
   protected readonly erroMovimento = signal<string | null>(null);
   protected readonly leadSelecionado = signal<LeadResponse | null>(null);
+  private readonly feedbackMovimento = viewChild<ElementRef<HTMLElement>>('feedbackMovimento');
 
   private gatilhoDoDetalhe: HTMLElement | null = null;
 
   constructor() {
+    afterRenderEffect(() => {
+      const mensagem = this.mensagemMovimento();
+      const erro = this.erroMovimento();
+      const feedback = this.feedbackMovimento();
+      if ((mensagem || erro) && feedback) {
+        feedback.nativeElement.focus();
+      }
+    });
     this.consultar({});
   }
 

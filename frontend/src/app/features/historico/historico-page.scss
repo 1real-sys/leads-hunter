@@ -76,13 +76,13 @@
 }
 
 .historico-page__feedback--error {
-  border-color: #e8b4ae;
-  background: #fff5f3;
-  color: #7a271a;
+  border-color: var(--danger-border);
+  background: var(--danger-surface);
+  color: var(--danger-ink);
 }
 
 .historico-page__feedback--error strong {
-  color: #7a271a;
+  color: var(--danger-ink);
 }
 
 .historico-page__feedback button,

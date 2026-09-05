@@ -31,7 +31,7 @@
     </nav>
   </aside>
 
-  <main id="main-content" class="app-content" tabindex="-1">
-    <router-outlet />
+  <main #mainContent id="main-content" class="app-content" tabindex="-1">
+    <router-outlet (activate)="focarConteudo()" />
   </main>
 </div>

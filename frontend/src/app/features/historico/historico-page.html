@@ -16,13 +16,19 @@
   <div class="historico-page__workspace">
     @if (estado() === 'loading') {
       <div class="historico-page__feedback" role="status">
+        <span class="ui-spinner ui-spinner--small" aria-hidden="true"></span>
         <strong>Carregando histórico</strong>
         <span>Aguarde enquanto as buscas registradas são consultadas.</span>
       </div>
     }
 
     @if (estado() === 'error') {
-      <div class="historico-page__feedback historico-page__feedback--error" role="alert">
+      <div
+        #feedbackErro
+        class="historico-page__feedback historico-page__feedback--error"
+        role="alert"
+        tabindex="-1"
+      >
         <div>
           <strong>Não foi possível carregar o histórico</strong>
           <span>{{ mensagemErro() }}</span>
@@ -48,7 +54,8 @@
       >
         <table class="historico-page__table">
           <caption id="historico-list-title">
-            Buscas anteriores, na ordem retornada pela API
+            Buscas anteriores, na ordem retornada pela API. Deslize horizontalmente para ver todas
+            as colunas.
           </caption>
           <thead>
             <tr>

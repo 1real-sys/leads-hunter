@@ -80,9 +80,9 @@
 }
 
 .kanban-page__movement-feedback--error {
-  border-left-color: #a43a2e;
-  background: #fff5f3;
-  color: #7a271a;
+  border-left-color: var(--danger-ink);
+  background: var(--danger-surface);
+  color: var(--danger-ink);
 }
 
 app-kanban-board {
@@ -91,8 +91,17 @@ app-kanban-board {
 }
 
 @media (max-width: 42rem) {
+  :host {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
   .kanban-page {
-    grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+    height: auto;
+    min-height: 100%;
+    grid-template-rows: auto auto auto;
+    overflow: visible;
   }
 
   .kanban-page__header {
@@ -105,11 +114,12 @@ app-kanban-board {
   }
 
   .kanban-page__workspace {
+    height: clamp(30rem, 72dvh, 42rem);
+    min-height: 30rem;
     padding-inline: var(--space-3);
   }
 
   .kanban-page__operations {
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    overflow: visible;
   }
 }

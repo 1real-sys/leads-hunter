@@ -54,7 +54,12 @@
 
   <div class="lead-filters__actions">
     <button type="submit" [disabled]="desabilitado()" [attr.aria-busy]="carregando()">
-      {{ carregando() ? 'Carregando...' : 'Aplicar filtros' }}
+      @if (carregando()) {
+        <span class="ui-spinner ui-spinner--small" aria-hidden="true"></span>
+        Carregando...
+      } @else {
+        Aplicar filtros
+      }
     </button>
     <button type="button" [disabled]="desabilitado()" (click)="limparFiltros()">Limpar</button>
   </div>

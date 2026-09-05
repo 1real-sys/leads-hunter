@@ -1,4 +1,13 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import {
+  afterRenderEffect,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BuscaApi } from '../../core/api/busca-api';
@@ -32,6 +41,17 @@ export class BuscaPage {
   protected readonly carregando = computed(() => this.estadoOperacao() === 'loading');
   protected readonly resultadoBusca = signal<BuscaResponse | null>(null);
   protected readonly mensagemErro = signal<string | null>(null);
+  private readonly feedbackErro = viewChild<ElementRef<HTMLElement>>('feedbackErro');
+
+  constructor() {
+    afterRenderEffect(() => {
+      const mensagem = this.mensagemErro();
+      const feedback = this.feedbackErro();
+      if (this.estadoOperacao() === 'error' && mensagem && feedback) {
+        feedback.nativeElement.focus();
+      }
+    });
+  }
 
   protected atualizarPontoCentral(ponto: PontoMapa): void {
     this.buscaModel.update((modelo) => ({

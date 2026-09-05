@@ -1,5 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import {
+  afterRenderEffect,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
@@ -53,8 +61,15 @@ export class HistoricoDetalhePage {
     this.buscaIdNumerico === null ? 'invalid' : 'loading',
   );
   protected readonly mensagemErro = signal<string | null>(null);
+  private readonly feedbackErro = viewChild<ElementRef<HTMLElement>>('feedbackErro');
 
   constructor() {
+    afterRenderEffect(() => {
+      const feedback = this.feedbackErro();
+      if (['invalid', 'not-found', 'error'].includes(this.estado()) && feedback) {
+        feedback.nativeElement.focus();
+      }
+    });
     if (this.buscaIdNumerico !== null) {
       this.carregar();
     }

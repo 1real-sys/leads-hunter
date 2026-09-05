@@ -54,6 +54,24 @@ ng e2e
 
 Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
 
+For the MVP flow smoke test already configured in this project, start the frontend with `ng serve`
+and run:
+
+```bash
+npm run e2e:smoke
+```
+
+The default mode uses a controlled API mock and exercises Busca, resultados, Kanban, edição,
+Histórico and CSV download without consuming Google Places quota. To run the same browser flow
+against the local backend, MySQL and the real API configuration, start the backend and use:
+
+```bash
+E2E_API_MODE=local E2E_BASE_URL=http://localhost:4200 npm run e2e:smoke
+```
+
+In local mode, configure `GOOGLE_PLACES_API_KEY` only in the backend process environment; never
+place the key in the frontend or in the repository.
+
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

@@ -10,27 +10,43 @@
   <div class="historico-detalhe__workspace">
     @if (estado() === 'loading') {
       <div class="historico-detalhe__feedback" role="status">
+        <span class="ui-spinner ui-spinner--small" aria-hidden="true"></span>
         <strong>Carregando busca</strong>
         <span>Aguarde enquanto os dados desta execução são consultados.</span>
       </div>
     }
 
     @if (estado() === 'invalid') {
-      <div class="historico-detalhe__feedback historico-detalhe__feedback--error" role="alert">
+      <div
+        #feedbackErro
+        class="historico-detalhe__feedback historico-detalhe__feedback--error"
+        role="alert"
+        tabindex="-1"
+      >
         <strong>Identificador de busca inválido</strong>
         <span>Use o histórico para escolher uma busca registrada.</span>
       </div>
     }
 
     @if (estado() === 'not-found') {
-      <div class="historico-detalhe__feedback historico-detalhe__feedback--error" role="alert">
+      <div
+        #feedbackErro
+        class="historico-detalhe__feedback historico-detalhe__feedback--error"
+        role="alert"
+        tabindex="-1"
+      >
         <strong>Busca não encontrada</strong>
         <span>Ela pode ter sido removida ou o endereço acessado não existe.</span>
       </div>
     }
 
     @if (estado() === 'error') {
-      <div class="historico-detalhe__feedback historico-detalhe__feedback--error" role="alert">
+      <div
+        #feedbackErro
+        class="historico-detalhe__feedback historico-detalhe__feedback--error"
+        role="alert"
+        tabindex="-1"
+      >
         <div>
           <strong>Não foi possível carregar esta busca</strong>
           <span>{{ mensagemErro() }}</span>
@@ -106,7 +122,8 @@
           >
             <table class="historico-detalhe__table">
               <caption>
-                Leads na ordem retornada pela API
+                Leads na ordem retornada pela API. Deslize horizontalmente para ver todas as
+                colunas.
               </caption>
               <thead>
                 <tr>

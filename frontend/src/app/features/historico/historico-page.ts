@@ -1,4 +1,12 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import {
+  afterRenderEffect,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { BuscaApi } from '../../core/api/busca-api';
@@ -32,8 +40,15 @@ export class HistoricoPage {
   protected readonly buscas = signal<BuscaResumoResponse[]>([]);
   protected readonly estado = signal<EstadoHistorico>('loading');
   protected readonly mensagemErro = signal<string | null>(null);
+  private readonly feedbackErro = viewChild<ElementRef<HTMLElement>>('feedbackErro');
 
   constructor() {
+    afterRenderEffect(() => {
+      const feedback = this.feedbackErro();
+      if (this.estado() === 'error' && feedback) {
+        feedback.nativeElement.focus();
+      }
+    });
     this.carregar();
   }
 

@@ -11,7 +11,7 @@ Este documento organiza a implementação do frontend do MVP em sprints curtos, 
 - npm disponível: `12.0.2`.
 - Angular CLI global não instalado; o projeto usa a CLI local `22.1.6`.
 - Angular efetivamente instalado: `22.1.4`.
-- Próximo sprint: **FE-16 — Polimento integrado, responsividade e acessibilidade**.
+- FE-17 concluído: os fluxos principais foram validados com testes frontend, integração Spring/MySQL e smoke E2E controlado.
 
 ## Decisões do plano
 
@@ -118,8 +118,8 @@ Esta verificação é responsabilidade do agente que implementa e também do age
 | FE-15A | Shell operacional e workspace da Busca | FE-00 a FE-14 | CONCLUÍDO |
 | FE-15B | Adaptação das áreas ao workspace operacional | FE-15A | CONCLUÍDO |
 | FE-100 | Scroll e paginação independentes no Kanban | FE-15B | CONCLUÍDO |
-| FE-16 | Polimento integrado, responsividade e acessibilidade | FE-15B | PENDENTE |
-| FE-17 | Testes de fluxo e fechamento do MVP | FE-16 | PENDENTE |
+| FE-16 | Polimento integrado, responsividade e acessibilidade | FE-15B | CONCLUÍDO |
+| FE-17 | Testes de fluxo e fechamento do MVP | FE-16 | CONCLUÍDO |
 
 ---
 
@@ -868,7 +868,7 @@ Adaptar Kanban e Histórico ao novo workspace e concluir a refatoração estrutu
 
 ## FE-16 — Polimento integrado, responsividade e acessibilidade
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -898,11 +898,20 @@ Uniformizar as telas já funcionais sem adicionar novas funcionalidades ao MVP.
 - Teste manual de teclado, foco e layout.
 - `npm run build`.
 
+### Resultado
+
+- Os tokens semânticos de estado, controles e loaders foram uniformizados entre Busca, Kanban e Histórico, sem alterar contratos HTTP ou adicionar dependências.
+- O shell mantém o foco no conteúdo principal após a troca de rota; erros de Busca, Histórico e salvamento do drawer recebem foco programático, enquanto o drawer mantém foco preso, abertura por teclado, Escape e retorno ao gatilho.
+- O Kanban em larguras menores passa a seguir fluxo vertical natural; o workspace do quadro preserva a rolagem horizontal localizada e a rolagem vertical independente das colunas.
+- O mapa mantém uma única instância Leaflet durante alterações de ponto e raio, e o marcador continua explicitamente navegável por teclado; tabelas do Histórico informam a rolagem horizontal quando necessário.
+- A suíte frontend passou com 150 testes, o build de produção concluiu sem warnings, e a auditoria Axe em Busca, Kanban e Histórico passou sem violações em 1440 px e 390 px.
+- A validação de navegador confirmou abertura/fechamento do drawer por teclado com foco devolvido, foco nos feedbacks de erro/salvamento, ausência de overflow horizontal em 390 px e scroll vertical independente nas cinco colunas com 25 cards simulados por coluna.
+
 ---
 
 ## FE-17 — Testes de fluxo e fechamento do MVP
 
-**Status:** PENDENTE
+**Status:** CONCLUÍDO
 
 ### Objetivo
 
@@ -933,6 +942,37 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 - `npm run build`.
 - Smoke test integrado documentado com resultados reais.
 
+### Resultado
+
+#### Escopo
+
+- **PASSOU** — A cobertura existente de services HTTP, formulários, Kanban, rollback, edição, histórico e downloads foi revisada durante a validação; a suíte frontend permaneceu verde com 150 testes em 22 arquivos.
+- **PASSOU** — `MvpFlowIntegrationTest` atravessa busca, consulta de leads, atualização comercial, nova leitura, histórico e exportações CSV/XLSX usando o backend Spring real, Flyway e MySQL local.
+- **PASSOU** — `npm run e2e:smoke` executa o caminho principal Busca → resultados → Kanban → edição → reload → Histórico → detalhe → exportação no navegador com Playwright; o modo padrão usa API mock controlada e o modo `local` está documentado.
+- **PASSOU** — A indisponibilidade, rate limit, quota e respostas inválidas da Places permanecem cobertos por simulações controladas nos testes de backend e frontend; nenhuma cota real foi consumida.
+- **PASSOU** — O fluxo verifica que WhatsApp continua sendo somente um link manual `wa.me` aberto em nova aba.
+- **PASSOU** — `fluxo.md` e `HISTORICO_IMPLEMENTACOES.md` foram sincronizados com as evidências desta sprint, incluindo a limitação de não executar a API Google real.
+- **PASSOU** — Nenhuma funcionalidade fora do MVP foi adicionada; não houve alteração de contrato, dependência ou produção para viabilizar os testes.
+
+#### Critérios de aceite
+
+- **PASSOU** — Busca → resultados → Kanban → atualização comercial → histórico → exportação, comprovado pelo teste integrado backend e pelo smoke E2E controlado.
+- **PASSOU** — Reload/nova leitura confirma status, observações e último contato persistidos; o smoke E2E repete o reload no navegador e o teste integrado também confirma esses dados no detalhe do histórico.
+- **PASSOU** — Erros relevantes exibem feedback e recuperação por nova tentativa, conforme os testes existentes de Busca, Histórico, APIs e exportação.
+- **PASSOU** — A suíte frontend, a suíte backend, o smoke E2E e o build de produção foram executados com sucesso.
+- **PASSOU** — O escopo permaneceu restrito ao MVP, sem autenticação, automação de WhatsApp, mensageria ou novas integrações.
+
+#### Evidências executadas
+
+- `npm test -- --watch=false --coverage=false` — passou: 22 arquivos e 150 testes.
+- `npm run build` — passou sem warnings.
+- `E2E_BASE_URL=http://localhost:4300 npm run e2e:smoke` — passou no modo mock controlado: 23 requisições observadas.
+- `./mvnw -Dtest=MvpFlowIntegrationTest test` — passou com MySQL local e Flyway.
+- `./mvnw test` — passou: 104 testes, sem falhas ou erros.
+- `npx prettier --check scripts/mvp-flow-smoke.mjs package.json` — passou.
+
+**SPRINT APROVADO — todo o escopo e todos os critérios de aceite passaram.**
+
 ## Fora do escopo de todos os sprints atuais
 
 - Autenticação, cadastro, JWT, sessão, roles, permissions e multiusuário.
@@ -946,7 +986,7 @@ Validar o frontend integrado ao backend local e registrar o encerramento das fas
 
 ## Próximo passo operacional
 
-Os sprints **FE-00** a **FE-15B** e a melhoria prioritária **FE-100** estão concluídos e validados. O próximo sprint é o **FE-16 — Polimento integrado, responsividade e acessibilidade**.
+Os sprints **FE-00** a **FE-17** e a melhoria prioritária **FE-100** estão concluídos e validados. O MVP frontend está encerrado para o escopo atual; o próximo passo operacional é somente manutenção ou uma nova tarefa explicitamente priorizada.
 
 
 
