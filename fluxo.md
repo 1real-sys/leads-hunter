@@ -428,9 +428,13 @@ O FE-16 uniformizou tokens semânticos, controles, badges, loaders e mensagens d
 
 O FE-17 fechou a validação do MVP com `MvpFlowIntegrationTest`, que percorre busca, consulta, atualização comercial, nova leitura, histórico e exportação CSV/XLSX pelo backend Spring real, Flyway e MySQL local. O teste usa um cliente Places substituto controlado, confirmando o fluxo sem exigir chave real nem consumir cota. O smoke E2E `frontend/scripts/mvp-flow-smoke.mjs` percorre no navegador Busca, resultados, Kanban, edição, reload, Histórico, detalhe, WhatsApp manual e exportação CSV; `npm run e2e:smoke` passou no modo mock com 23 requisições. O modo local contra o backend está documentado no README, mas a chamada real à Google não foi executada. Os estados de indisponibilidade, rate limit, quota e resposta inválida permanecem cobertos por simulações controladas existentes. A suíte frontend passou com 150 testes, a suíte backend com 104 testes, o build de produção passou sem warnings e o MVP ficou sem funcionalidades fora do escopo.
 
+### Manutenção pós-MVP
+
+Após o fechamento do MVP, foi entregue a manutenção do WhatsApp no card do Kanban: o card de cada lead passou a exibir, ao lado direito do telefone, o rótulo "WhatsApp" e o link manual "Abrir WhatsApp" sempre que o backend entrega `whatsappUrl` no `LeadResponse`. Leads sem `whatsappUrl` continuam mostrando apenas o telefone, e o drawer de detalhes mantém o comportamento anterior. A mudança é restrita ao `LeadCard` (`lead-card.html`, `lead-card.scss` e `lead-card.spec.ts`), sem alterações no backend. A suíte frontend passou com 152 testes e o build de produção concluiu sem warnings. O escopo de validação de presença do WhatsApp descrito anteriormente em `refinamento.md` foi descartado por decisão de produto, e o documento passou a descrever esta feature.
+
 ### Próximo passo
 
-Os sprints **FE-00** a **FE-17** e a melhoria prioritária **FE-100** estão concluídos e validados. O MVP está encerrado para o escopo atual; o próximo passo é somente manutenção ou uma nova tarefa explicitamente priorizada.
+Os sprints **FE-00** a **FE-17**, a melhoria prioritária **FE-100** e a manutenção do WhatsApp no card do Kanban estão concluídos e validados. O MVP está encerrado para o escopo atual; o próximo passo é somente manutenção ou uma nova tarefa explicitamente priorizada.
 
 ## Padrão de boilerplate com Lombok
 

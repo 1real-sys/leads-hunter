@@ -123,8 +123,16 @@
   line-height: 1.45;
 }
 
+.lead-card__contato {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .lead-card__phone {
   display: grid;
+  min-width: 0;
   gap: 0.1rem;
   margin: 0;
 }
@@ -139,6 +147,36 @@
 .lead-card__phone strong {
   color: var(--ink);
   font-size: var(--font-size-xs);
+}
+
+.lead-card__whatsapp {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 0.1rem;
+  margin: 0;
+}
+
+.lead-card__whatsapp > span {
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.lead-card__whatsapp-link {
+  justify-self: start;
+  min-height: 2rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent-strong);
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.lead-card__whatsapp-link:hover {
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
 }
 
 .lead-card__metrics {

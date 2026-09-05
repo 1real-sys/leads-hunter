@@ -1052,3 +1052,23 @@ Foram adicionados testes de integração e um smoke E2E controlado para validar 
 - `frontend/README.md`
 - `FRONTEND_SPRINTS.md`
 - `fluxo.md`
+
+---
+
+## 39. WhatsApp visível no card do Kanban — 05/09/2026
+
+O card de cada lead no Kanban passou a exibir o canal WhatsApp junto do telefone: o rótulo "WhatsApp" e o link manual "Abrir WhatsApp" aparecem ao lado direito do telefone sempre que o backend entrega `whatsappUrl` no `LeadResponse`. Antes, esse link só era visível no drawer de detalhes aberto ao clicar no nome do lead. Leads sem `whatsappUrl` continuam mostrando apenas o telefone, sem texto de indisponibilidade no card, e o drawer mantém o comportamento atual. O escopo anterior de `refinamento.md`, sobre validação de presença do número no WhatsApp via provedor oficial, foi descartado por decisão de produto; o documento passou a descrever esta feature. A mudança é exclusivamente de frontend e a suíte passou com 152 testes.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+Nenhum.
+
+**Modificados:**
+
+- `refinamento.md`
+- `frontend/src/app/features/kanban/lead-card.html`
+- `frontend/src/app/features/kanban/lead-card.scss`
+- `frontend/src/app/features/kanban/lead-card.spec.ts`
+- `fluxo.md`

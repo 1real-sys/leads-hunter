@@ -65,6 +65,7 @@ describe('LeadCard', () => {
       categoria: null,
       enderecoFormatado: null,
       telefone: null,
+      whatsappUrl: null,
       ratingGoogle: null,
       totalReviews: null,
       score: null,
@@ -77,6 +78,7 @@ describe('LeadCard', () => {
     expect(conteudo).toContain('Sem etapa');
     expect(fixture.nativeElement.querySelector('.lead-card__address')).toBeNull();
     expect(fixture.nativeElement.querySelector('.lead-card__phone')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lead-card__whatsapp')).toBeNull();
     expect(fixture.nativeElement.querySelector('.lead-card__metrics')).toBeNull();
     expect(fixture.nativeElement.querySelector('.lead-card__temperature')).toBeNull();
   });
@@ -111,6 +113,35 @@ describe('LeadCard', () => {
     acoesEtapa[1].click();
 
     expect(destinos).toEqual(['CONTATADO']);
+  });
+
+  it('exibe o link manual de WhatsApp ao lado do telefone quando o lead possui whatsappUrl', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const contato = fixture.nativeElement.querySelector('.lead-card__contato') as HTMLElement;
+    const rotulo = fixture.nativeElement.querySelector(
+      '.lead-card__whatsapp > span',
+    ) as HTMLElement;
+    const link = fixture.nativeElement.querySelector(
+      '.lead-card__whatsapp-link',
+    ) as HTMLAnchorElement;
+
+    expect(contato.querySelector('.lead-card__phone')).not.toBeNull();
+    expect(contato.querySelector('.lead-card__whatsapp-link')).not.toBeNull();
+    expect(rotulo.textContent).toBe('WhatsApp');
+    expect(link.textContent?.trim()).toBe('Abrir WhatsApp');
+    expect(link.getAttribute('href')).toBe('https://wa.me/552733334444');
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toContain('noopener noreferrer');
+    expect(link.getAttribute('aria-label')).toBe('Abrir WhatsApp de Padaria Central em nova aba');
+  });
+
+  it('não exibe o bloco de WhatsApp quando o lead não possui whatsappUrl', async () => {
+    const fixture = await renderizar({ ...LEAD_COMPLETO, whatsappUrl: null });
+    const conteudo = fixture.nativeElement.textContent as string;
+
+    expect(fixture.nativeElement.querySelector('.lead-card__whatsapp')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lead-card__phone')).not.toBeNull();
+    expect(conteudo).toContain('(27) 3333-4444');
   });
 
   it('emite a solicitação de detalhe ao acionar o título do card', async () => {

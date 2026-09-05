@@ -37,11 +37,30 @@
       <p class="lead-card__address" [title]="endereco">{{ endereco }}</p>
     }
 
-    @if (item.telefone; as telefone) {
-      <p class="lead-card__phone">
-        <span>Telefone</span>
-        <strong>{{ telefone }}</strong>
-      </p>
+    @if (item.telefone || item.whatsappUrl) {
+      <div class="lead-card__contato">
+        @if (item.telefone; as telefone) {
+          <p class="lead-card__phone">
+            <span>Telefone</span>
+            <strong>{{ telefone }}</strong>
+          </p>
+        }
+
+        @if (item.whatsappUrl; as url) {
+          <p class="lead-card__whatsapp">
+            <span>WhatsApp</span>
+            <a
+              class="lead-card__whatsapp-link"
+              [href]="url"
+              target="_blank"
+              rel="noopener noreferrer"
+              [attr.aria-label]="'Abrir WhatsApp de ' + nomeAcessivel() + ' em nova aba'"
+            >
+              Abrir WhatsApp
+            </a>
+          </p>
+        }
+      </div>
     }
 
     @if (item.ratingGoogle !== null || item.totalReviews !== null || item.score !== null) {
