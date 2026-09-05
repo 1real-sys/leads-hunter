@@ -5,8 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.jlm.leadshunter.geo.MunicipioInfo;
+import dev.jlm.leadshunter.geo.MunicipioService;
 import dev.jlm.leadshunter.integracao.places.PlacesApiClient;
 import dev.jlm.leadshunter.integracao.places.PlacesSearchRequest;
 import dev.jlm.leadshunter.integracao.places.PlacesSearchResponse;
@@ -42,6 +45,9 @@ class BuscaServiceTest {
     private LeadRepository leadRepository;
 
     @Mock
+    private MunicipioService municipioService;
+
+    @Mock
     private PlacesApiClient placesApiClient;
 
     @Test
@@ -71,6 +77,16 @@ class BuscaServiceTest {
         when(placesApiClient.buscarProximos(any(PlacesSearchRequest.class)))
             .thenReturn(placesResponse);
         when(leadRepository.findByGooglePlaceId("place-1")).thenReturn(Optional.empty());
+        when(municipioService.localizar(
+            new BigDecimal("-25.4300"),
+            new BigDecimal("-49.2700")
+        )).thenReturn(Optional.of(new MunicipioInfo(
+            "4106902",
+            "Curitiba",
+            "PR",
+            new BigDecimal("0.823"),
+            (short) 2010
+        )));
         when(leadRepository.save(any(Lead.class))).thenAnswer(invocation -> {
             Lead lead = invocation.getArgument(0);
             lead.setId(20L);
@@ -109,6 +125,11 @@ class BuscaServiceTest {
         assertThat(leadCaptor.getValue().getRatingGoogle()).isEqualByComparingTo("4.5");
         assertThat(leadCaptor.getValue().getTelefone()).isEqualTo("(41) 3333-4444");
         assertThat(leadCaptor.getValue().getTelefoneNormalizado()).isEqualTo("554133334444");
+        assertThat(leadCaptor.getValue().getMunicipioCodigoIbge()).isEqualTo("4106902");
+        assertThat(leadCaptor.getValue().getMunicipioNome()).isEqualTo("Curitiba");
+        assertThat(leadCaptor.getValue().getUf()).isEqualTo("PR");
+        assertThat(leadCaptor.getValue().getIdhm()).isEqualByComparingTo("0.823");
+        assertThat(leadCaptor.getValue().getIdhmReferencia()).isEqualTo((short) 2010);
         assertThat(leadCaptor.getValue().getScore()).isEqualTo(95);
         assertThat(leadCaptor.getValue().getTemperatura()).isEqualTo(Temperatura.QUENTE);
 
@@ -149,6 +170,11 @@ class BuscaServiceTest {
         leadExistente.setTelefoneNormalizado("5527999990000");
         leadExistente.setScore(72);
         leadExistente.setTemperatura(Temperatura.QUENTE);
+        leadExistente.setMunicipioCodigoIbge("3205309");
+        leadExistente.setMunicipioNome("Vitória");
+        leadExistente.setUf("ES");
+        leadExistente.setIdhm(new BigDecimal("0.845"));
+        leadExistente.setIdhmReferencia((short) 2010);
 
         when(placesApiClient.buscarProximos(any(PlacesSearchRequest.class)))
             .thenReturn(responseGoogle);
@@ -177,6 +203,11 @@ class BuscaServiceTest {
         assertThat(leadExistente.getTelefoneNormalizado()).isEqualTo("5527999990000");
         assertThat(leadExistente.getScore()).isEqualTo(95);
         assertThat(leadExistente.getTemperatura()).isEqualTo(Temperatura.QUENTE);
+        assertThat(leadExistente.getMunicipioCodigoIbge()).isNull();
+        assertThat(leadExistente.getMunicipioNome()).isNull();
+        assertThat(leadExistente.getUf()).isNull();
+        assertThat(leadExistente.getIdhm()).isNull();
+        assertThat(leadExistente.getIdhmReferencia()).isNull();
         assertThat(response.totalEncontrados()).isEqualTo(2);
         assertThat(response.leads()).hasSize(1);
         assertThat(response.leads().getFirst().score()).isEqualTo(95);
@@ -226,6 +257,43 @@ class BuscaServiceTest {
         verify(placesApiClient, times(2)).buscarProximos(any(PlacesSearchRequest.class));
         verify(buscaRepository, times(3)).saveAndFlush(any(Busca.class));
         assertThat(primeiraResposta.id()).isNotEqualTo(respostaEquivalente.id());
+    }
+
+    @Test
+    void devePersistirLeadSemGeografiaQuandoPlacesNaoRetornarCoordenadas() {
+        PlacesSearchResponse.PlaceResult placeSemCoordenadas =
+            new PlacesSearchResponse.PlaceResult(
+                "place-sem-coordenadas",
+                "Lead sem coordenadas",
+                CategoriaNegocio.PADARIA,
+                "Endereço sem posição",
+                null,
+                null,
+                null,
+                null,
+                null,
+                "OPERATIONAL",
+                List.of("bakery")
+            );
+        when(placesApiClient.buscarProximos(any(PlacesSearchRequest.class)))
+            .thenReturn(new PlacesSearchResponse(List.of(placeSemCoordenadas)));
+        when(buscaRepository.saveAndFlush(any(Busca.class))).thenAnswer(invocation -> {
+            Busca busca = invocation.getArgument(0);
+            busca.setId(12L);
+            busca.setCriadoEm(LocalDateTime.of(2026, 9, 5, 19, 0));
+            return busca;
+        });
+        when(leadRepository.findByGooglePlaceId("place-sem-coordenadas"))
+            .thenReturn(Optional.empty());
+        when(leadRepository.save(any(Lead.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        criarService().criar(criarRequestPadaria());
+
+        ArgumentCaptor<Lead> captor = ArgumentCaptor.forClass(Lead.class);
+        verify(leadRepository).save(captor.capture());
+        assertThat(captor.getValue().getMunicipioCodigoIbge()).isNull();
+        assertThat(captor.getValue().getIdhm()).isNull();
+        verifyNoInteractions(municipioService);
     }
 
     @Test
@@ -314,6 +382,7 @@ class BuscaServiceTest {
             buscaRepository,
             buscaLeadRepository,
             leadRepository,
+            municipioService,
             placesApiClient,
             new TelefoneNormalizer(),
             new ScoringService(),

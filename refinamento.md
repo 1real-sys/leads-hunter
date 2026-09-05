@@ -1,6 +1,6 @@
 # Refinamento — IDHM no Lead e mapa coroplético do Brasil
 
-Planejamento detalhado em sprints para a feature de **IDHM**. A **IDHM-00 está concluída e validada**; as sprints IDHM-01 a IDHM-05 continuam pendentes. Este documento é o plano de referência e será atualizado conforme o estado real da execução.
+Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-00 e IDHM-01 estão concluídas e validadas**; as sprints IDHM-02 a IDHM-05 continuam pendentes. Este documento é o plano de referência e será atualizado conforme o estado real da execução.
 
 ## Objetivo
 
@@ -8,13 +8,13 @@ Planejamento detalhado em sprints para a feature de **IDHM**. A **IDHM-00 está 
 2. Exibir o IDHM do lead no **drawer de detalhe**, em um **badge discreto no card do Kanban** e nas **exportações CSV/XLSX**.
 3. Adicionar ao mapa da página de busca uma **camada coroplética do Brasil por IDHM** (cada município pintado por faixa, com legenda e clique mostrando nome/UF/IDHM), carregada **sob demanda pelos limites visíveis**.
 
-## Situação atual (ponto de partida)
+## Situação atual
 
-- Backend: única migration `V1__criar_tabelas.sql`; `ddl-auto: validate` (Flyway). Não há coluna de município/UF/IDHM nem nada geográfico além de `latitude`/`longitude` em `Lead`.
-- Criação/atualização automática de lead acontece em `BuscaService.persistirLead` (transação única, hoje já engloba o HTTP do Google Places). Cada estabelecimento (`PlaceResult`) traz lat/lng.
-- `LeadResponse` é um record posicional (19 campos) consumido também por `ExportService` (colunas + mapeamento posicional) e por testes que usam `new LeadResponse(...)`.
-- Frontend: único mapa Leaflet é `MapaBusca` (tiles OSM, marcador + círculo), sem camada vetorial. Não há infraestrutura de arquivos grandes nem endpoint de dados geográficos; o frontend fala apenas via `/api`.
-- Não existe nenhuma referência a município/UF/IDHM/IBGE/GeoJSON no repositório.
+- Backend: migrations `V1__criar_tabelas.sql` e `V2__adicionar_geografia_lead.sql`, com `ddl-auto: validate` (Flyway). `Lead` já persiste código IBGE, município, UF, IDHM e referência.
+- A criação/atualização automática em `BuscaService.persistirLead` resolve o município pelas coordenadas do estabelecimento usando o dataset offline. Dados comerciais e snapshots históricos continuam preservados.
+- O backfill de leads anteriores existe em lotes de 100 e permanece opt-in por `leadhunter.backfill-municipio=true`; por padrão nenhum dado anterior é alterado no startup.
+- `LeadResponse` ainda não expõe os campos geográficos, e as exportações ainda não os incluem; isso pertence à IDHM-02.
+- Frontend: o mapa Leaflet continua sem camada vetorial e os cards/drawer ainda não exibem IDHM; isso pertence às IDHM-03 e IDHM-04.
 
 ## Base de dados: IDHM 2010 (decisão confirmada)
 
@@ -68,6 +68,8 @@ Planejamento detalhado em sprints para a feature de **IDHM**. A **IDHM-00 está 
 
 ### IDHM-01 — Backend: modelo e enriquecimento do Lead
 
+**Status:** CONCLUÍDO em 05/09/2026.
+
 **Objetivo:** persistir município/UF/IDHM no lead e atribuí-los no fluxo de captura.
 
 **Entregáveis:**
@@ -88,6 +90,8 @@ Planejamento detalhado em sprints para a feature de **IDHM**. A **IDHM-00 está 
 - Deduplicação por `googlePlaceId`, preservação de `status/observacoes/ultimoContatoEm` e snapshot de score/temperatura em `BuscaLead` permanecem intactos.
 - `./mvnw test` passa (contexto Spring + MySQL + Flyway), incluindo nova migration e point-in-polygon.
 - Leads sem coordenadas não quebram o fluxo e permanecem com geografia nula.
+
+**Resultado:** a migration V2 adicionou os cinco campos geográficos e os índices de UF e IDHM. O dataset congelado é carregado do classpath com limite de tamanho, checksum e validação estrutural; `MunicipioService` aplica pré-filtro por bbox e point-in-polygon com suporte a Polygon, MultiPolygon e buracos. `BuscaService` preenche ou limpa a geografia de acordo com as coordenadas sem alterar score nem dados comerciais. O backfill opt-in consulta apenas leads pendentes em lotes de 100 ordenados por ID. A suíte backend passou com 111 testes, incluindo Flyway/Hibernate no MySQL, Curitiba, Vitória, ausência de coordenadas, integridade do dataset e comportamento do backfill desligado por padrão.
 
 ### IDHM-02 — Backend: exposição na API e exportação
 

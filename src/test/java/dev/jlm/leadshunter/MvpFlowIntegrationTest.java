@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.jlm.leadshunter.lead.CategoriaNegocio;
+import dev.jlm.leadshunter.lead.LeadRepository;
 import dev.jlm.leadshunter.integracao.places.PlacesApiClient;
 import dev.jlm.leadshunter.integracao.places.PlacesSearchResponse;
 import tools.jackson.databind.JsonNode;
@@ -49,6 +50,9 @@ class MvpFlowIntegrationTest {
     @Autowired
     private StubPlacesApiClient placesApiClient;
 
+    @Autowired
+    private LeadRepository leadRepository;
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -78,6 +82,14 @@ class MvpFlowIntegrationTest {
         JsonNode buscaJson = objectMapper.readTree(busca.getResponse().getContentAsString());
         long buscaId = buscaJson.get("id").asLong();
         long leadId = buscaJson.get("leads").get(0).get("id").asLong();
+
+        assertThat(leadRepository.findById(leadId)).hasValueSatisfying(lead -> {
+            assertThat(lead.getMunicipioCodigoIbge()).isEqualTo("3205309");
+            assertThat(lead.getMunicipioNome()).isEqualTo("Vitória");
+            assertThat(lead.getUf()).isEqualTo("ES");
+            assertThat(lead.getIdhm()).isEqualByComparingTo("0.845");
+            assertThat(lead.getIdhmReferencia()).isEqualTo((short) 2010);
+        });
 
         mockMvc.perform(get("/api/leads").param("status", "NOVO"))
             .andExpect(status().isOk())

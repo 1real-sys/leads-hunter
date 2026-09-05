@@ -1,5 +1,7 @@
 package dev.jlm.leadshunter.busca;
 
+import dev.jlm.leadshunter.geo.MunicipioInfo;
+import dev.jlm.leadshunter.geo.MunicipioService;
 import dev.jlm.leadshunter.integracao.places.PlacesApiClient;
 import dev.jlm.leadshunter.integracao.places.PlacesSearchRequest;
 import dev.jlm.leadshunter.integracao.places.PlacesSearchResponse;
@@ -14,6 +16,7 @@ import dev.jlm.leadshunter.scoring.ScoringService;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,7 @@ public class BuscaService {
     private final BuscaRepository buscaRepository;
     private final BuscaLeadRepository buscaLeadRepository;
     private final LeadRepository leadRepository;
+    private final MunicipioService municipioService;
     private final PlacesApiClient placesApiClient;
     private final TelefoneNormalizer telefoneNormalizer;
     private final ScoringService scoringService;
@@ -119,6 +123,7 @@ public class BuscaService {
             .orElseGet(() -> novoLead(place.googlePlaceId()));
 
         atualizarDadosExternos(lead, place);
+        atualizarGeografia(lead);
         ScoringService.Resultado scoring = scoringService.calcular(
             lead.getCategoria(),
             lead.getTelefoneNormalizado(),
@@ -164,6 +169,37 @@ public class BuscaService {
             lead.setTelefone(telefone);
             lead.setTelefoneNormalizado(telefoneNormalizado);
         }
+    }
+
+    private void atualizarGeografia(Lead lead) {
+        if (lead.getLatitude() == null || lead.getLongitude() == null) {
+            limparGeografia(lead);
+            return;
+        }
+
+        Optional<MunicipioInfo> municipio = municipioService.localizar(
+            lead.getLatitude(),
+            lead.getLongitude()
+        );
+        if (municipio.isEmpty()) {
+            limparGeografia(lead);
+            return;
+        }
+
+        MunicipioInfo encontrado = municipio.get();
+        lead.setMunicipioCodigoIbge(encontrado.codigoIbge());
+        lead.setMunicipioNome(encontrado.nome());
+        lead.setUf(encontrado.uf());
+        lead.setIdhm(encontrado.idhm());
+        lead.setIdhmReferencia(encontrado.idhmReferencia());
+    }
+
+    private void limparGeografia(Lead lead) {
+        lead.setMunicipioCodigoIbge(null);
+        lead.setMunicipioNome(null);
+        lead.setUf(null);
+        lead.setIdhm(null);
+        lead.setIdhmReferencia(null);
     }
 
     private <T> void atualizarSePresente(T valor, Consumer<T> atualizador) {

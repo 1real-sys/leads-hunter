@@ -43,6 +43,21 @@ public class Lead {
     @Column(precision = 10, scale = 7)
     private BigDecimal longitude;
 
+    @Column(name = "municipio_codigo_ibge", length = 7)
+    private String municipioCodigoIbge;
+
+    @Column(name = "municipio_nome", length = 120)
+    private String municipioNome;
+
+    @Column(length = 2)
+    private String uf;
+
+    @Column(precision = 4, scale = 3)
+    private BigDecimal idhm;
+
+    @Column(name = "idhm_referencia")
+    private Short idhmReferencia;
+
     @Column(name = "rating_google", precision = 3, scale = 2)
     private BigDecimal ratingGoogle;
 

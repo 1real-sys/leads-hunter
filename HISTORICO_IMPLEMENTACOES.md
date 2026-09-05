@@ -1095,3 +1095,37 @@ O processo registra procedência, licenças e checksums, não exige chave de API
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
 - `refinamento.md`
+
+---
+
+## 41. Enriquecimento municipal e IDHM dos leads — 05/09/2026
+
+O backend passou a localizar offline o município de cada estabelecimento pelas coordenadas retornadas na busca e a persistir código IBGE, município, UF, IDHM e referência 2010 no lead. A localização usa o dataset municipal congelado, pré-filtro por limites geográficos e point-in-polygon, sem API key ou chamada externa adicional.
+
+Foi criada a migration V2 com as novas colunas e índices. Também foi disponibilizado um backfill opcional, desligado por padrão, que processa em lotes os leads anteriores com coordenadas e sem município. O fluxo mantém a deduplicação, o score, os snapshots históricos e os dados comerciais existentes.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/geo/MunicipioBackfillRunner.java`
+- `src/main/java/dev/jlm/leadshunter/geo/MunicipioBackfillService.java`
+- `src/main/java/dev/jlm/leadshunter/geo/MunicipioDataset.java`
+- `src/main/java/dev/jlm/leadshunter/geo/MunicipioInfo.java`
+- `src/main/java/dev/jlm/leadshunter/geo/MunicipioService.java`
+- `src/main/resources/db/migration/V2__adicionar_geografia_lead.sql`
+- `src/test/java/dev/jlm/leadshunter/geo/MunicipioBackfillServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/geo/MunicipioServiceTest.java`
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento.md`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
+- `src/main/java/dev/jlm/leadshunter/lead/Lead.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadRepository.java`
+- `src/test/java/dev/jlm/leadshunter/LeadsHunterApplicationTests.java`
+- `src/test/java/dev/jlm/leadshunter/MvpFlowIntegrationTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceJpaIntegrationTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceTest.java`

@@ -84,6 +84,11 @@ class BuscaServiceJpaIntegrationTest {
         assertThat(leadPersistido.getObservacoes()).isEqualTo("Retornar na sexta");
         assertThat(leadPersistido.getUltimoContatoEm())
             .isEqualTo(LocalDateTime.of(2026, 8, 20, 14, 30));
+        assertThat(leadPersistido.getMunicipioCodigoIbge()).isEqualTo("4106902");
+        assertThat(leadPersistido.getMunicipioNome()).isEqualTo("Curitiba");
+        assertThat(leadPersistido.getUf()).isEqualTo("PR");
+        assertThat(leadPersistido.getIdhm()).isEqualByComparingTo("0.823");
+        assertThat(leadPersistido.getIdhmReferencia()).isEqualTo((short) 2010);
         assertThat(historico.leads()).hasSize(2);
         assertThat(historico.leads().getFirst().scoreNaBusca())
             .isGreaterThanOrEqualTo(historico.leads().get(1).scoreNaBusca());

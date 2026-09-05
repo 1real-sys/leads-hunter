@@ -1,6 +1,6 @@
 # Fluxo do Leads Hunter
 
-Este documento descreve o fluxo real do projeto no estado atual. O backend está concluído e os sprints FE-00 a FE-17, além da melhoria prioritária FE-100, foram entregues e validados no frontend; o MVP está encerrado para o escopo atual.
+Este documento descreve o fluxo real do projeto no estado atual. O MVP e os sprints FE-00 a FE-17, além da melhoria prioritária FE-100, estão concluídos; no refinamento posterior de IDHM, as sprints IDHM-00 e IDHM-01 também foram entregues e validadas.
 
 ## Visão geral
 
@@ -43,6 +43,10 @@ BuscaService.java
     |    PlacesSearchResponse.java
     |
     +--> TelefoneNormalizer.java
+    |
+    +--> MunicipioService.java
+    |        |
+    |        +--> dataset IDHM offline + bbox + point-in-polygon
     |
     +--> ScoringService.java
     |        |
@@ -150,7 +154,7 @@ Coordena o caso de uso. Gera uma `BuscaCacheKey` e consulta `BuscaPlacesCache`. 
 
 O cache guarda somente a resposta externa. Cada requisição continua criando uma nova `Busca`, processando os leads e registrando os vínculos `BuscaLead`, inclusive quando ocorre cache hit.
 
-Para cada estabelecimento, consolida resultados repetidos pelo `googlePlaceId` e consulta `LeadRepository`. Se o lead não existir, cria um registro com status `NOVO`. Se já existir, atualiza apenas nome, categoria, endereço, coordenadas, rating e total de reviews quando houver valores novos. Quando a Google fornece um telefone brasileiro válido, salva o valor original e a versão normalizada. Depois chama `ScoringService`, atualiza score e temperatura e preserva `status`, `observacoes` e `ultimoContatoEm`.
+Para cada estabelecimento, consolida resultados repetidos pelo `googlePlaceId` e consulta `LeadRepository`. Se o lead não existir, cria um registro com status `NOVO`. Se já existir, atualiza apenas nome, categoria, endereço, coordenadas, rating e total de reviews quando houver valores novos. Quando a Google fornece um telefone brasileiro válido, salva o valor original e a versão normalizada. Com latitude e longitude disponíveis, consulta `MunicipioService` e atualiza código IBGE, município, UF, IDHM e referência; quando as coordenadas não correspondem ao dataset, limpa somente esses campos geográficos. Depois chama `ScoringService`, atualiza score e temperatura e preserva `status`, `observacoes` e `ultimoContatoEm`.
 
 Por fim, cria um `BuscaLead` para relacionar a nova busca ao lead e registra nele o score e a temperatura daquela execução. Em seguida, converte os leads persistidos em `BuscaResponse`. Todo o processo ocorre na mesma transação; um resultado sem `googlePlaceId` interrompe e reverte a operação.
 
@@ -215,7 +219,15 @@ A temperatura é calculada pelo resultado: `FRIO` de 0 a 39, `MORNO` de 40 a 69 
 
 ### 13. `Lead.java` e `LeadRepository.java`
 
-`Lead` representa um estabelecimento único. `LeadRepository.findByGooglePlaceId` é usado como chave de deduplicação. Um lead novo começa em `NOVO`; um lead existente mantém os dados comerciais definidos pelo usuário quando reaparece em outra busca.
+`Lead` representa um estabelecimento único. `LeadRepository.findByGooglePlaceId` é usado como chave de deduplicação. Um lead novo começa em `NOVO`; um lead existente mantém os dados comerciais definidos pelo usuário quando reaparece em outra busca. A migration V2 adicionou código IBGE, nome do município, UF, IDHM e ano de referência, além dos índices de UF e IDHM. A consulta parametrizada de pendências geográficas usa paginação por ID e lotes limitados.
+
+### 13A. `MunicipioDataset.java`, `MunicipioService.java` e backfill
+
+`MunicipioDataset` lê exclusivamente `classpath:geo/municipios-idhm.json` durante a inicialização, limita o artefato a 6 MiB, verifica o SHA-256 congelado e valida metadados, quantidade, códigos únicos, coordenadas e geometrias antes de mantê-las em memória. Não existe download em runtime.
+
+`MunicipioService` recebe latitude e longitude, descarta valores ausentes ou fora dos limites geográficos, reduz a busca pelos envelopes municipais e aplica point-in-polygon em Polygon e MultiPolygon, considerando também buracos. O resultado interno contém código IBGE, município, UF, IDHM e referência 2010.
+
+O `MunicipioBackfillRunner` só existe quando `leadhunter.backfill-municipio=true`. Ao ser ativado explicitamente, processa em lotes de 100 apenas leads com coordenadas e sem código municipal, avançando por ID para que municípios não encontrados não causem repetição infinita. Por padrão o runner fica ausente e nenhum lead anterior é alterado no startup.
 
 ### 14. `LeadController.java`, `LeadService.java` e `LeadResponse.java`
 
@@ -436,11 +448,13 @@ Após o fechamento do MVP, foi entregue a manutenção do WhatsApp no card do Ka
 
 A sprint **IDHM-00** está concluída. O gerador offline em `tools/idhm/` combina os dados municipais de IDHM 2010 do Atlas Cidade com a malha municipal mínima da API oficial do IBGE, faz o vínculo pelo código IBGE, calcula o bbox e simplifica os polígonos. As URLs são restritas a hosts conhecidos, os downloads usam HTTPS, tamanho máximo e checksums congelados, e nenhuma chamada externa foi adicionada ao runtime da aplicação.
 
-O artefato `src/main/resources/geo/municipios-idhm.json` contém 5.570 municípios, ocupa 3.709.696 bytes e tem SHA-256 `8c9ce54dff5eec54e7401ba2392e4305145edc4acb02c21388425393c6b56286`. A fonte tabular possui também Boa Esperança do Norte/MT (`5101837`), mas esse município não está na malha consumida e não possui IDHM 2010; a diferença é validada explicitamente. As verificações de estrutura e point-in-polygon confirmaram Vitória/ES com IDHM 0,845 e Curitiba/PR com IDHM 0,823. O dataset ainda não é carregado pelo backend nem exposto por endpoint.
+O artefato `src/main/resources/geo/municipios-idhm.json` contém 5.570 municípios, ocupa 3.709.696 bytes e tem SHA-256 `8c9ce54dff5eec54e7401ba2392e4305145edc4acb02c21388425393c6b56286`. A fonte tabular possui também Boa Esperança do Norte/MT (`5101837`), mas esse município não está na malha consumida e não possui IDHM 2010; a diferença é validada explicitamente.
+
+A sprint **IDHM-01** também está concluída. A migration V2 e o modelo JPA persistem os cinco atributos geográficos, e toda captura com coordenadas passa pelo localizador offline antes do scoring. Vitória/ES foi confirmada com IDHM 0,845 e Curitiba/PR com IDHM 0,823. Leads sem correspondência ficam com geografia nula; score, deduplicação, dados comerciais e snapshots históricos permanecem inalterados. O backfill está disponível somente por ativação explícita. O contrato HTTP, as exportações e o frontend ainda não expõem esses dados.
 
 ### Próximo passo
 
-Os sprints **FE-00** a **FE-17**, a melhoria prioritária **FE-100**, a manutenção do WhatsApp no card do Kanban e a **IDHM-00** estão concluídos e validados. O próximo passo planejado em `refinamento.md` é a **IDHM-01**, responsável por carregar o dataset offline, localizar o município por coordenadas e persistir município, UF e IDHM no lead; essa etapa ainda não foi implementada.
+Os sprints **FE-00** a **FE-17**, a melhoria prioritária **FE-100**, a manutenção do WhatsApp no card do Kanban e as sprints **IDHM-00** e **IDHM-01** estão concluídos e validados. O próximo passo planejado em `refinamento.md` é a **IDHM-02**, responsável por expor os dados geográficos nos contratos e exportações e servir os municípios por bbox; essa etapa ainda não foi implementada.
 
 ## Padrão de boilerplate com Lombok
 
