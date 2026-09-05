@@ -432,9 +432,15 @@ O FE-17 fechou a validação do MVP com `MvpFlowIntegrationTest`, que percorre b
 
 Após o fechamento do MVP, foi entregue a manutenção do WhatsApp no card do Kanban: o card de cada lead passou a exibir, ao lado direito do telefone, o rótulo "WhatsApp" e o link manual "Abrir WhatsApp" sempre que o backend entrega `whatsappUrl` no `LeadResponse`. Leads sem `whatsappUrl` continuam mostrando apenas o telefone, e o drawer de detalhes mantém o comportamento anterior. A mudança é restrita ao `LeadCard` (`lead-card.html`, `lead-card.scss` e `lead-card.spec.ts`), sem alterações no backend. A suíte frontend passou com 152 testes e o build de produção concluiu sem warnings. O escopo de validação de presença do WhatsApp descrito anteriormente em `refinamento.md` foi descartado por decisão de produto, e o documento passou a descrever esta feature.
 
+### Refinamento IDHM
+
+A sprint **IDHM-00** está concluída. O gerador offline em `tools/idhm/` combina os dados municipais de IDHM 2010 do Atlas Cidade com a malha municipal mínima da API oficial do IBGE, faz o vínculo pelo código IBGE, calcula o bbox e simplifica os polígonos. As URLs são restritas a hosts conhecidos, os downloads usam HTTPS, tamanho máximo e checksums congelados, e nenhuma chamada externa foi adicionada ao runtime da aplicação.
+
+O artefato `src/main/resources/geo/municipios-idhm.json` contém 5.570 municípios, ocupa 3.709.696 bytes e tem SHA-256 `8c9ce54dff5eec54e7401ba2392e4305145edc4acb02c21388425393c6b56286`. A fonte tabular possui também Boa Esperança do Norte/MT (`5101837`), mas esse município não está na malha consumida e não possui IDHM 2010; a diferença é validada explicitamente. As verificações de estrutura e point-in-polygon confirmaram Vitória/ES com IDHM 0,845 e Curitiba/PR com IDHM 0,823. O dataset ainda não é carregado pelo backend nem exposto por endpoint.
+
 ### Próximo passo
 
-Os sprints **FE-00** a **FE-17**, a melhoria prioritária **FE-100** e a manutenção do WhatsApp no card do Kanban estão concluídos e validados. O MVP está encerrado para o escopo atual; o próximo passo é somente manutenção ou uma nova tarefa explicitamente priorizada.
+Os sprints **FE-00** a **FE-17**, a melhoria prioritária **FE-100**, a manutenção do WhatsApp no card do Kanban e a **IDHM-00** estão concluídos e validados. O próximo passo planejado em `refinamento.md` é a **IDHM-01**, responsável por carregar o dataset offline, localizar o município por coordenadas e persistir município, UF e IDHM no lead; essa etapa ainda não foi implementada.
 
 ## Padrão de boilerplate com Lombok
 

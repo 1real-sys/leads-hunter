@@ -1072,3 +1072,26 @@ Nenhum.
 - `frontend/src/app/features/kanban/lead-card.scss`
 - `frontend/src/app/features/kanban/lead-card.spec.ts`
 - `fluxo.md`
+
+---
+
+## 40. Dataset municipal de IDHM 2010 — 05/09/2026
+
+Foi produzido e congelado o dataset geográfico que servirá de base para o enriquecimento futuro dos leads com município, UF e IDHM. Um gerador offline combina os dados de IDHM 2010 com a malha municipal oficial do IBGE pelo código do município, simplifica as geometrias, calcula seus limites e valida a cobertura nacional.
+
+O processo registra procedência, licenças e checksums, não exige chave de API e não introduz downloads durante a execução da aplicação. Testes próprios validam os 5.570 municípios e confirmam a localização e os valores de IDHM de Vitória e Curitiba.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/resources/geo/municipios-idhm.json`
+- `tools/idhm/README.md`
+- `tools/idhm/gerar_dataset.py`
+- `tools/idhm/test_gerar_dataset.py`
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento.md`
