@@ -56,6 +56,33 @@ class MunicipioServiceTest {
     }
 
     @Test
+    void deveListarSomenteEnvelopesQueIntersectamOBbox() {
+        MunicipiosGeoJsonResponse resposta = municipioService.listarPorBbox(
+            "-40.4,-20.4,-40.2,-20.2"
+        );
+
+        assertThat(resposta.type()).isEqualTo("FeatureCollection");
+        assertThat(resposta.features())
+            .isNotEmpty()
+            .allSatisfy(feature -> {
+                assertThat(feature.type()).isEqualTo("Feature");
+                assertThat(feature.geometry().type()).isIn("Polygon", "MultiPolygon");
+                if (feature.geometry() instanceof MunicipiosGeoJsonResponse.PolygonGeometry polygon) {
+                    assertThat(polygon.coordinates()).isNotEmpty();
+                } else {
+                    assertThat(feature.geometry())
+                        .isInstanceOf(MunicipiosGeoJsonResponse.MultiPolygonGeometry.class);
+                    var multiPolygon = (MunicipiosGeoJsonResponse.MultiPolygonGeometry)
+                        feature.geometry();
+                    assertThat(multiPolygon.coordinates()).isNotEmpty();
+                }
+            })
+            .extracting(feature -> feature.properties().codigoIbge())
+            .contains("3205309")
+            .doesNotContain("4106902");
+    }
+
+    @Test
     void deveRecusarDatasetComChecksumDiferente() throws Exception {
         byte[] adulterado = new ClassPathResource("geo/municipios-idhm.json")
             .getContentAsByteArray();

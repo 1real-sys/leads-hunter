@@ -1,6 +1,6 @@
 # Fluxo do Leads Hunter
 
-Este documento descreve o fluxo real do projeto no estado atual. O MVP e os sprints FE-00 a FE-17, além da melhoria prioritária FE-100, estão concluídos; no refinamento posterior de IDHM, as sprints IDHM-00 e IDHM-01 também foram entregues e validadas.
+Este documento descreve o fluxo real do projeto no estado atual. O MVP e os sprints FE-00 a FE-17, além da melhoria prioritária FE-100, estão concluídos; no refinamento posterior de IDHM, as sprints IDHM-00 a IDHM-02 também foram entregues e validadas.
 
 ## Visão geral
 
@@ -136,6 +136,19 @@ ExportController.java --> ExportService.java --> Apache POI
 Arquivo leads.xlsx --> Resposta HTTP 200 OK
 ```
 
+A camada geográfica consulta somente o dataset offline já carregado:
+
+```text
+GET /api/geografia/municipios?bbox=minLng,minLat,maxLng,maxLat
+    |
+    v
+GeografiaController.java --> MunicipioService.java
+    |
+    +--> valida bbox, limita a 1.500 municípios e filtra envelopes em memória
+    v
+GeoJSON FeatureCollection com Polygon/MultiPolygon simplificados
+```
+
 ## Fluxo atual, arquivo por arquivo
 
 ### 1. `BuscaController.java`
@@ -225,7 +238,7 @@ A temperatura é calculada pelo resultado: `FRIO` de 0 a 39, `MORNO` de 40 a 69 
 
 `MunicipioDataset` lê exclusivamente `classpath:geo/municipios-idhm.json` durante a inicialização, limita o artefato a 6 MiB, verifica o SHA-256 congelado e valida metadados, quantidade, códigos únicos, coordenadas e geometrias antes de mantê-las em memória. Não existe download em runtime.
 
-`MunicipioService` recebe latitude e longitude, descarta valores ausentes ou fora dos limites geográficos, reduz a busca pelos envelopes municipais e aplica point-in-polygon em Polygon e MultiPolygon, considerando também buracos. O resultado interno contém código IBGE, município, UF, IDHM e referência 2010.
+`MunicipioService` recebe latitude e longitude, descarta valores ausentes ou fora dos limites geográficos, reduz a busca pelos envelopes municipais e aplica point-in-polygon em Polygon e MultiPolygon, considerando também buracos. O resultado interno contém código IBGE, município, UF, IDHM e referência 2010. Para a camada do mapa, também valida o bbox recebido, seleciona todo envelope municipal que o intersecta e converte o subset para GeoJSON sem chamada externa. A consulta é interrompida antes da conversão quando excede 1.500 municípios. O filtro por envelope é deliberado, conforme o contrato da IDHM-02; a geometria exata fica a cargo do Leaflet, e não há segundo teste de interseção poligonal no backend.
 
 O `MunicipioBackfillRunner` só existe quando `leadhunter.backfill-municipio=true`. Ao ser ativado explicitamente, processa em lotes de 100 apenas leads com coordenadas e sem código municipal, avançando por ID para que municípios não encontrados não causem repetição infinita. Por padrão o runner fica ausente e nenhum lead anterior é alterado no startup.
 
@@ -235,7 +248,7 @@ Expõem a leitura e a atualização comercial dos leads já persistidos. `GET /a
 
 `PATCH /api/leads/{id}` recebe `AtualizarLeadRequest` e altera somente os campos informados entre `status`, `observacoes` e `ultimoContatoEm`. O payload vazio é rejeitado por Bean Validation. Os demais atributos do lead são preservados, e a resposta contém o estado persistido atualizado.
 
-`LeadResponse` mantém a entidade JPA fora do contrato HTTP e apresenta os dados externos, a classificação, os campos comerciais e `whatsappUrl` quando houver telefone normalizado válido. As consultas são executadas em transações somente de leitura, enquanto a atualização usa uma transação de escrita.
+`LeadResponse` mantém a entidade JPA fora do contrato HTTP e apresenta os dados externos, a classificação, os campos comerciais, código IBGE, município, UF, IDHM, referência e `whatsappUrl` quando houver telefone normalizado válido. `PaginaLeadsResponse` herda os mesmos campos por conter uma lista desse contrato. As consultas são executadas em transações somente de leitura, enquanto a atualização usa uma transação de escrita.
 
 ### 15. `BuscaLead.java` e `BuscaLeadRepository.java`
 
@@ -251,11 +264,11 @@ São os contratos públicos do histórico. O resumo contém os parâmetros, tota
 
 ### 18. `ExportController.java` e `ExportService.java`
 
-Expõem `GET /api/exportacao/leads.csv` e `GET /api/exportacao/leads.xlsx`. Ambos aceitam os filtros opcionais `status`, `categoria` e `temperatura`, reutilizam a ordenação e o mapeamento de `LeadService` e exportam as colunas externas e comerciais do `Lead`. O CSV é UTF-8 com escaping de vírgulas, aspas e quebras de linha; o Excel é gerado com Apache POI, cabeçalho em negrito, filtro automático, primeira linha congelada, autoajuste de colunas e células tipadas para números e datas. O link de WhatsApp exportado continua sendo apenas manual.
+Expõem `GET /api/exportacao/leads.csv` e `GET /api/exportacao/leads.xlsx`. Ambos aceitam os filtros opcionais `status`, `categoria` e `temperatura`, reutilizam a ordenação e o mapeamento de `LeadService` e exportam as colunas externas e comerciais do `Lead`, incluindo UF, município e IDHM. O CSV é UTF-8 com escaping de vírgulas, aspas e quebras de linha; o Excel é gerado com Apache POI, cabeçalho em negrito, filtro automático, primeira linha congelada, autoajuste de colunas e células tipadas para números e datas. O link de WhatsApp exportado continua sendo apenas manual.
 
 ### 19. `ApiExceptionHandler.java` e `ApiErrorResponse.java`
 
-`ApiExceptionHandler` centraliza a conversão das falhas de integração, validação de payload, parâmetros inválidos e exceções de recurso não encontrado em um contrato JSON único. Toda resposta contém `timestamp`, `status`, `codigo`, `mensagem` e `path`. Falhas de cota ou do rate limit local retornam `429`; chave ausente ou indisponibilidade retornam `503`; resposta inválida ou consulta rejeitada pela Google retornam `502`; validações e requisições malformadas retornam `400`; buscas e leads inexistentes retornam `404`. Exceções inesperadas são registradas apenas com método, rota e tipo da exceção e retornam `500 ERRO_INTERNO` com mensagem genérica. O contrato não expõe stack trace, corpo bruto da Google, mensagens internas ou credenciais.
+`ApiExceptionHandler` centraliza a conversão das falhas de integração, validação de payload, parâmetros inválidos e exceções de recurso não encontrado em um contrato JSON único. Toda resposta contém `timestamp`, `status`, `codigo`, `mensagem` e `path`. Falhas de cota ou do rate limit local retornam `429`; chave ausente ou indisponibilidade retornam `503`; resposta inválida ou consulta rejeitada pela Google retornam `502`; validações, requisições malformadas e bbox inválido retornam `400`; buscas e leads inexistentes retornam `404`. Exceções inesperadas são registradas apenas com método, rota e tipo da exceção e retornam `500 ERRO_INTERNO` com mensagem genérica. O contrato não expõe stack trace, corpo bruto da Google, mensagens internas ou credenciais.
 
 ## Estrutura relacionada
 
@@ -266,6 +279,7 @@ src/main/java/dev/jlm/leadshunter/
 ├── lead/                  # Gestão de leads, telefone e link manual de WhatsApp
 ├── scoring/               # Cálculo centralizado de score e temperatura
 ├── exportacao/            # Exportação CSV e Excel
+├── geo/                   # Dataset, localização e endpoint GeoJSON municipal
 └── config/                # Endpoints, configurações e tratamento HTTP de erros
 
 src/main/resources/
@@ -329,7 +343,9 @@ src/test/java/dev/jlm/leadshunter/
 - Atualização parcial de status, observações e último contato por `PATCH /api/leads/{id}`.
 - Preservação dos campos omitidos no payload de atualização.
 - Validação que rejeita uma atualização sem nenhum campo informado.
-- Contrato HTTP próprio em `LeadResponse`, sem exposição direta da entidade JPA.
+- Contrato HTTP próprio em `LeadResponse`, sem exposição direta da entidade JPA, incluindo código IBGE, município, UF, IDHM e referência.
+- Consulta municipal por bbox em `GET /api/geografia/municipios`, com validação uniforme e resposta GeoJSON.
+- Exportações CSV/XLSX com UF, município e IDHM.
 - Geração de `whatsappUrl` somente para telefone brasileiro normalizado válido.
 - Exposição do link manual tanto nas respostas de busca quanto nas respostas de lead.
 - Ausência de qualquer envio automático ou em massa pelo WhatsApp.
@@ -450,11 +466,13 @@ A sprint **IDHM-00** está concluída. O gerador offline em `tools/idhm/` combin
 
 O artefato `src/main/resources/geo/municipios-idhm.json` contém 5.570 municípios, ocupa 3.709.696 bytes e tem SHA-256 `8c9ce54dff5eec54e7401ba2392e4305145edc4acb02c21388425393c6b56286`. A fonte tabular possui também Boa Esperança do Norte/MT (`5101837`), mas esse município não está na malha consumida e não possui IDHM 2010; a diferença é validada explicitamente.
 
-A sprint **IDHM-01** também está concluída. A migration V2 e o modelo JPA persistem os cinco atributos geográficos, e toda captura com coordenadas passa pelo localizador offline antes do scoring. Vitória/ES foi confirmada com IDHM 0,845 e Curitiba/PR com IDHM 0,823. Leads sem correspondência ficam com geografia nula; score, deduplicação, dados comerciais e snapshots históricos permanecem inalterados. O backfill está disponível somente por ativação explícita. O contrato HTTP, as exportações e o frontend ainda não expõem esses dados.
+A sprint **IDHM-01** também está concluída. A migration V2 e o modelo JPA persistem os cinco atributos geográficos, e toda captura com coordenadas passa pelo localizador offline antes do scoring. Vitória/ES foi confirmada com IDHM 0,845 e Curitiba/PR com IDHM 0,823. Leads sem correspondência ficam com geografia nula; score, deduplicação, dados comerciais e snapshots históricos permanecem inalterados. O backfill está disponível somente por ativação explícita.
+
+A sprint **IDHM-02** está concluída. `LeadResponse` e a paginação expõem código IBGE, município, UF, IDHM e referência, enquanto CSV/XLSX incluem UF, município e IDHM. `GET /api/geografia/municipios` valida quatro coordenadas finitas e ordenadas, filtra por interseção de envelopes e retorna somente o subset pedido como GeoJSON. A revisão final adicionou teto de 1.500 municípios, cache HTTP público por 24 horas, DTOs distintos para Polygon/MultiPolygon e testes de parser, MultiPolygon e região vazia. A suíte backend passou com 120 testes e o pacote executável foi gerado. O frontend ainda não consome nem apresenta esses dados.
 
 ### Próximo passo
 
-Os sprints **FE-00** a **FE-17**, a melhoria prioritária **FE-100**, a manutenção do WhatsApp no card do Kanban e as sprints **IDHM-00** e **IDHM-01** estão concluídos e validados. O próximo passo planejado em `refinamento.md` é a **IDHM-02**, responsável por expor os dados geográficos nos contratos e exportações e servir os municípios por bbox; essa etapa ainda não foi implementada.
+Os sprints **FE-00** a **FE-17**, a melhoria prioritária **FE-100**, a manutenção do WhatsApp no card do Kanban e as sprints **IDHM-00** a **IDHM-02** estão concluídos e validados. O próximo passo planejado em `refinamento.md` é a **IDHM-03**, responsável por consumir e exibir os dados de IDHM no card e no drawer do frontend.
 
 ## Padrão de boilerplate com Lombok
 

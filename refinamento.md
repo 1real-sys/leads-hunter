@@ -1,6 +1,6 @@
 # Refinamento — IDHM no Lead e mapa coroplético do Brasil
 
-Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-00 e IDHM-01 estão concluídas e validadas**; as sprints IDHM-02 a IDHM-05 continuam pendentes. Este documento é o plano de referência e será atualizado conforme o estado real da execução.
+Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-00, IDHM-01 e IDHM-02 estão concluídas e validadas**; as sprints IDHM-03 a IDHM-05 continuam pendentes. Este documento é o plano de referência e será atualizado conforme o estado real da execução.
 
 ## Objetivo
 
@@ -13,7 +13,7 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 - Backend: migrations `V1__criar_tabelas.sql` e `V2__adicionar_geografia_lead.sql`, com `ddl-auto: validate` (Flyway). `Lead` já persiste código IBGE, município, UF, IDHM e referência.
 - A criação/atualização automática em `BuscaService.persistirLead` resolve o município pelas coordenadas do estabelecimento usando o dataset offline. Dados comerciais e snapshots históricos continuam preservados.
 - O backfill de leads anteriores existe em lotes de 100 e permanece opt-in por `leadhunter.backfill-municipio=true`; por padrão nenhum dado anterior é alterado no startup.
-- `LeadResponse` ainda não expõe os campos geográficos, e as exportações ainda não os incluem; isso pertence à IDHM-02.
+- `LeadResponse`, a paginação e as exportações já expõem os dados geográficos. O backend também serve os municípios visíveis por bbox em GeoJSON pelo endpoint `/api/geografia/municipios`.
 - Frontend: o mapa Leaflet continua sem camada vetorial e os cards/drawer ainda não exibem IDHM; isso pertence às IDHM-03 e IDHM-04.
 
 ## Base de dados: IDHM 2010 (decisão confirmada)
@@ -95,6 +95,8 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 
 ### IDHM-02 — Backend: exposição na API e exportação
 
+**Status:** CONCLUÍDO em 05/09/2026.
+
 **Objetivo:** expor os novos campos nos contratos e nas exportações, e servir a camada geográfica do mapa.
 
 **Entregáveis:**
@@ -112,6 +114,18 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 - `GET /api/leads`, `GET /api/leads/{id}` e exportações retornam/exportam os novos campos.
 - `GET /api/geografia/municipios` devolve polígonos apenas da região pedida; bbox inválido retorna `400` com o contrato de erro padrão.
 - Build e suíte backend passam.
+
+**Resultado:** os cinco campos geográficos passaram a compor `LeadResponse` e, por consequência, as respostas de listagem, detalhe, paginação e atualização comercial. CSV e XLSX agora incluem UF, município e IDHM em posições cobertas por testes. O novo endpoint geográfico valida tamanho, quantidade, finitude, limites e ordem do bbox, filtra os envelopes municipais em memória e devolve `FeatureCollection` com `Polygon`/`MultiPolygon` simplificados e propriedades de IDHM. Entradas inválidas ou regiões com mais de 1.500 municípios retornam `400 REQUISICAO_INVALIDA` no contrato padrão. Respostas válidas recebem cache HTTP público por 24 horas. Após a revisão, a suíte backend passou com 120 testes e o pacote executável foi gerado com sucesso.
+
+**Resolução da revisão:**
+
+- **Teto de trabalho — válido e corrigido:** cada bbox pode retornar até 1.500 municípios. O serviço lê no máximo 1.501 candidatos e rejeita a consulta com `400 REQUISICAO_INVALIDA` antes de construir as geometrias quando o teto é excedido.
+- **Interseção geométrica exata — não adotada:** o entregável define explicitamente filtro pela interseção dos envelopes. O Leaflet desenha a geometria correta e o novo teto limita o pior payload; adicionar segmento × retângulo seria uma regra distinta, mais complexa e sem ganho visual. O trade-off ficou explícito em `API.md` e `fluxo.md`.
+- **MultiPolygon — válido e corrigido:** Sítio d'Abadia/GO (`5220702`) fixa em teste o tipo `MultiPolygon`, seus dois polígonos e os quatro níveis de coordenadas GeoJSON.
+- **Teste isolado do parser — válido e corrigido:** cobre espaços, limites geográficos, formato, componentes extras/ausentes, `NaN`, infinitos, inversão, área zero e estouro do tamanho máximo.
+- **Tipagem da geometria — válido e corrigido:** `PolygonGeometry` e `MultiPolygonGeometry` possuem coordenadas tipadas separadamente; `Geometry.coordinates` deixou de ser `Object`. `idhmReferencia` passou de `short` para `Short` no DTO público.
+- **Região vazia — válido e corrigido:** bbox sobre o oceano fixa `FeatureCollection` com `features` vazia.
+- **Cache — parcialmente válido:** não foi criado cache interno por bbox, que aceitaria combinações arbitrárias de chave para uma varredura barata e fixa. Como o dataset é imutável, respostas válidas agora recebem `Cache-Control: max-age=86400, public`; throttle e cache por viewport continuam pertencendo à IDHM-04.
 
 ### IDHM-03 — Frontend: dado do lead
 

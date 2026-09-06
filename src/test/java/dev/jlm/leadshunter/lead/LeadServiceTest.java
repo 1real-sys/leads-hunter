@@ -59,6 +59,11 @@ class LeadServiceTest {
             assertThat(item.nome()).isEqualTo("Padaria Central");
             assertThat(item.telefoneNormalizado()).isEqualTo("5527999990000");
             assertThat(item.whatsappUrl()).isEqualTo("https://wa.me/5527999990000");
+            assertThat(item.municipioCodigoIbge()).isEqualTo("3205309");
+            assertThat(item.municipioNome()).isEqualTo("Vitória");
+            assertThat(item.uf()).isEqualTo("ES");
+            assertThat(item.idhm()).isEqualByComparingTo("0.845");
+            assertThat(item.idhmReferencia()).isEqualTo((short) 2010);
             assertThat(item.score()).isEqualTo(95);
             assertThat(item.status()).isEqualTo(StatusFunil.QUALIFICADO);
             assertThat(item.observacoes()).isEqualTo("Retornar na sexta");
@@ -190,6 +195,11 @@ class LeadServiceTest {
         lead.setTelefoneNormalizado("5527999990000");
         lead.setLatitude(new BigDecimal("-20.3155"));
         lead.setLongitude(new BigDecimal("-40.3128"));
+        lead.setMunicipioCodigoIbge("3205309");
+        lead.setMunicipioNome("Vitória");
+        lead.setUf("ES");
+        lead.setIdhm(new BigDecimal("0.845"));
+        lead.setIdhmReferencia((short) 2010);
         lead.setRatingGoogle(new BigDecimal("4.8"));
         lead.setTotalReviews(120);
         lead.setScore(95);

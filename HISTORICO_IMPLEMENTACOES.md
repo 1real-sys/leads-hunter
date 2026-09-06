@@ -1129,3 +1129,40 @@ Foi criada a migration V2 com as novas colunas e índices. Também foi disponibi
 - `src/test/java/dev/jlm/leadshunter/MvpFlowIntegrationTest.java`
 - `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceJpaIntegrationTest.java`
 - `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceTest.java`
+
+---
+
+## 42. Exposição de IDHM e camada geográfica municipal — 05/09/2026
+
+Os contratos HTTP dos leads passaram a expor código IBGE, município, UF, IDHM e ano de referência, inclusive na listagem paginada. As exportações CSV e Excel agora incluem UF, município e IDHM.
+
+Também foi criado um endpoint GeoJSON que recebe os limites visíveis do mapa, valida as quatro coordenadas e retorna somente os municípios cujos envelopes intersectam essa região. A resposta preserva as geometrias simplificadas do dataset e não realiza chamadas externas.
+
+Na revisão final, o endpoint recebeu um teto de 1.500 municípios por resposta e cache HTTP público por 24 horas. As estruturas de Polygon e MultiPolygon foram tipadas separadamente, e os testes passaram a cobrir o parser de bbox, uma geometria MultiPolygon, região sem municípios e rejeição de consultas excessivamente amplas.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/geo/BboxInvalidoException.java`
+- `src/main/java/dev/jlm/leadshunter/geo/GeografiaController.java`
+- `src/main/java/dev/jlm/leadshunter/geo/MunicipioBboxParser.java`
+- `src/main/java/dev/jlm/leadshunter/geo/MunicipiosGeoJsonResponse.java`
+- `src/test/java/dev/jlm/leadshunter/geo/GeografiaControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/geo/MunicipioBboxParserTest.java`
+
+**Modificados:**
+
+- `API.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento.md`
+- `src/main/java/dev/jlm/leadshunter/config/ApiExceptionHandler.java`
+- `src/main/java/dev/jlm/leadshunter/exportacao/ExportService.java`
+- `src/main/java/dev/jlm/leadshunter/geo/MunicipioDataset.java`
+- `src/main/java/dev/jlm/leadshunter/geo/MunicipioService.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadResponse.java`
+- `src/test/java/dev/jlm/leadshunter/exportacao/ExportServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/geo/MunicipioServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/lead/LeadControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/lead/LeadServiceTest.java`

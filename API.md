@@ -6,7 +6,7 @@ Esta documentação descreve somente a API REST existente no backend atual.
 
 - **URL base local atual:** `http://localhost:8080`
 - **Prefixo da API:** `/api`
-- **Content-Type predominante:** `application/json`. As exceções são as exportações CSV e Excel.
+- **Content-Type predominante:** `application/json`. As exceções são a camada municipal em `application/geo+json` e as exportações CSV e Excel.
 - **Formato das respostas JSON:** objetos ou listas diretas, sem envelope comum. Campos sem valor podem aparecer como `null`. Datas e horas usam o formato ISO-8601 local, por exemplo `2026-08-22T10:30:00`, sem fuso horário.
 - **Autenticação:** ainda não foi implementada. O projeto não possui Spring Security nem configuração de autenticação/autorização; portanto, todos os endpoints documentados estão públicos e não exigem header `Authorization`.
 - **Paginação:** `GET /api/leads/pagina` possui paginação por status para o Kanban. As demais listagens e exportações continuam processando todos os registros que correspondem aos filtros.
@@ -362,6 +362,11 @@ Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores 
     "whatsappUrl": "https://wa.me/5527999990000",
     "latitude": -20.3155,
     "longitude": -40.3128,
+    "municipioCodigoIbge": "3205309",
+    "municipioNome": "Vitória",
+    "uf": "ES",
+    "idhm": 0.845,
+    "idhmReferencia": 2010,
     "ratingGoogle": 4.8,
     "totalReviews": 120,
     "score": 95,
@@ -375,7 +380,7 @@ Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores 
 ]
 ```
 
-Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um link manual e fica `null` quando o telefone normalizado é ausente ou inválido.
+Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um link manual e fica `null` quando o telefone normalizado é ausente ou inválido. Os cinco campos geográficos ficam `null` para leads ainda não enriquecidos ou sem correspondência no dataset municipal.
 
 ### Status HTTP
 
@@ -444,6 +449,11 @@ Retorna somente os leads da página solicitada, ordenados por score decrescente,
       "whatsappUrl": "https://wa.me/5527999990000",
       "latitude": -20.3155,
       "longitude": -40.3128,
+      "municipioCodigoIbge": "3205309",
+      "municipioNome": "Vitória",
+      "uf": "ES",
+      "idhm": 0.845,
+      "idhmReferencia": 2010,
       "ratingGoogle": 4.8,
       "totalReviews": 120,
       "score": 95,
@@ -519,6 +529,11 @@ Retorna um `LeadResponse` com a mesma estrutura apresentada em `GET /api/leads`.
   "whatsappUrl": "https://wa.me/5527999990000",
   "latitude": -20.3155,
   "longitude": -40.3128,
+  "municipioCodigoIbge": "3205309",
+  "municipioNome": "Vitória",
+  "uf": "ES",
+  "idhm": 0.845,
+  "idhmReferencia": 2010,
   "ratingGoogle": 4.8,
   "totalReviews": 120,
   "score": 95,
@@ -656,7 +671,7 @@ As duas exportações usam a mesma consulta e a mesma ordenação de `GET /api/l
 
 As colunas, nesta ordem, são:
 
-`id`, `googlePlaceId`, `nome`, `categoria`, `enderecoFormatado`, `telefone`, `telefoneNormalizado`, `whatsappUrl`, `latitude`, `longitude`, `ratingGoogle`, `totalReviews`, `score`, `temperatura`, `status`, `observacoes`, `ultimoContatoEm`, `criadoEm`, `atualizadoEm`.
+`id`, `googlePlaceId`, `nome`, `categoria`, `enderecoFormatado`, `telefone`, `telefoneNormalizado`, `whatsappUrl`, `latitude`, `longitude`, `uf`, `municipioNome`, `idhm`, `ratingGoogle`, `totalReviews`, `score`, `temperatura`, `status`, `observacoes`, `ultimoContatoEm`, `criadoEm`, `atualizadoEm`.
 
 ## GET /api/exportacao/leads.csv
 
@@ -692,8 +707,8 @@ Retorna bytes do arquivo, inclusive quando não há leads. Nesse caso, o CSV con
 Exemplo simplificado do conteúdo:
 
 ```csv
-id,googlePlaceId,nome,categoria,enderecoFormatado,telefone,telefoneNormalizado,whatsappUrl,latitude,longitude,ratingGoogle,totalReviews,score,temperatura,status,observacoes,ultimoContatoEm,criadoEm,atualizadoEm
-15,place-15,Padaria Central,PADARIA,"Rua Central, 100",(27) 99999-0000,5527999990000,https://wa.me/5527999990000,-20.3155,-40.3128,4.8,120,95,QUENTE,CONTATADO,Retornar amanhã,2026-08-20T10:30,2026-08-19T09:00,2026-08-20T10:30
+id,googlePlaceId,nome,categoria,enderecoFormatado,telefone,telefoneNormalizado,whatsappUrl,latitude,longitude,uf,municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,status,observacoes,ultimoContatoEm,criadoEm,atualizadoEm
+15,place-15,Padaria Central,PADARIA,"Rua Central, 100",(27) 99999-0000,5527999990000,https://wa.me/5527999990000,-20.3155,-40.3128,ES,Vitória,0.845,4.8,120,95,QUENTE,CONTATADO,Retornar amanhã,2026-08-20T10:30,2026-08-19T09:00,2026-08-20T10:30
 ```
 
 Headers de resposta:
@@ -784,6 +799,90 @@ Controller
 → serializa o XLSX em memória
 → retorna o arquivo como attachment.
 
+# Geografia
+
+## GET /api/geografia/municipios
+
+### Objetivo
+
+Retorna as geometrias municipais simplificadas que podem aparecer na região visível do mapa. O endpoint usa somente o dataset offline carregado no backend e não chama IBGE, Atlas Brasil, Google Places ou banco de dados.
+
+### Autenticação
+
+Público atualmente. Autenticação ainda não foi implementada.
+
+### Parâmetros
+
+| Local | Nome | Tipo | Obrigatório | Finalidade e validações |
+|---|---|---|---:|---|
+| Query | `bbox` | quatro números separados por vírgula | Sim | Limites na ordem `minLng,minLat,maxLng,maxLat`. Exige longitudes entre -180 e 180, latitudes entre -90 e 90, valores finitos e mínimos estritamente menores que os máximos. |
+
+- **Path params:** nenhum.
+- **Headers de request relevantes:** nenhum.
+- Exemplo: `bbox=-40.4,-20.4,-40.2,-20.2`.
+
+### Request body
+
+Não possui.
+
+### Resultado esperado
+
+Retorna `application/geo+json` com uma `FeatureCollection`. Entram no resultado os municípios cujo envelope geográfico intersecta o bbox solicitado; por isso, a geometria pode ultrapassar os limites exatos do viewport. Esse pré-filtro por envelope é deliberado e não calcula a interseção geométrica exata do polígono com o viewport. O tipo original simplificado de cada geometria é preservado como `Polygon` ou `MultiPolygon`.
+
+```json
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "codigoIbge": "3205309",
+        "nome": "Vitória",
+        "uf": "ES",
+        "idhm": 0.845,
+        "idhmReferencia": 2010
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-40.34, -20.32], [-40.31, -20.29], [-40.34, -20.32]]]
+      }
+    }
+  ]
+}
+```
+
+Um bbox válido sem envelopes municipais correspondentes retorna `200 OK` com `features: []`. Cada consulta pode retornar no máximo 1.500 municípios; uma região mais ampla é rejeitada para limitar serialização e volume de resposta. O exemplo de coordenadas acima é apenas estrutural e abreviado; a resposta real contém os anéis completos do dataset simplificado.
+
+Header de cache:
+
+- `Cache-Control: max-age=86400, public` — permite reutilizar por 24 horas uma resposta do mesmo bbox, pois o dataset é estático nesta versão da aplicação.
+
+### Status HTTP
+
+- `200 OK` — coleção retornada, inclusive quando vazia.
+- `400 Bad Request` — `bbox` ausente, malformado, não finito, fora dos limites geográficos, em ordem inválida ou abrangendo mais de 1.500 municípios.
+- `500 Internal Server Error` — falha inesperada durante o processamento.
+
+### Possíveis erros
+
+- Quantidade diferente de quatro componentes.
+- Componente vazio, textual, `NaN` ou infinito.
+- Longitude ou latitude fora dos limites geográficos.
+- Longitude mínima maior ou igual à máxima, ou latitude mínima maior ou igual à máxima.
+- Região ampla demais, com mais de 1.500 envelopes municipais correspondentes.
+
+Um valor inválido retorna o contrato padrão com `codigo: REQUISICAO_INVALIDA`; o conteúdo recebido não é repetido na mensagem.
+
+### Fluxo interno resumido
+
+Controller
+→ exige o parâmetro `bbox`
+→ valida quantidade, tamanho, finitude, limites e ordem
+→ filtra em memória os envelopes municipais que intersectam a região
+→ rejeita a consulta antes de serializar quando houver mais de 1.500 municípios
+→ converte propriedades e geometria simplificada para GeoJSON
+→ retorna a `FeatureCollection`.
+
 # Outros endpoints
 
 ## GET /api/health
@@ -842,4 +941,5 @@ Controller
 | PATCH | `/api/leads/{id}` | Atualiza parcialmente status, observações e último contato. |
 | GET | `/api/exportacao/leads.csv` | Exporta os leads filtrados em CSV. |
 | GET | `/api/exportacao/leads.xlsx` | Exporta os leads filtrados em XLSX. |
+| GET | `/api/geografia/municipios` | Retorna os municípios do bbox como GeoJSON. |
 | GET | `/api/health` | Retorna um health check estático. |

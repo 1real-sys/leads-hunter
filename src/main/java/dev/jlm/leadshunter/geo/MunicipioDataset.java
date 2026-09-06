@@ -178,7 +178,7 @@ final class MunicipioDataset {
         if (poligonos.isEmpty()) {
             throw new IllegalArgumentException("Geometria municipal vazia.");
         }
-        return new Geometria(List.copyOf(poligonos));
+        return new Geometria(tipo, List.copyOf(poligonos));
     }
 
     private Poligono lerPoligono(JsonNode coordenadas) {
@@ -285,9 +285,16 @@ final class MunicipioDataset {
                 && latitude >= minLatitude
                 && latitude <= maxLatitude;
         }
+
+        boolean intersecta(Envelope outro) {
+            return maxLongitude >= outro.minLongitude
+                && minLongitude <= outro.maxLongitude
+                && maxLatitude >= outro.minLatitude
+                && minLatitude <= outro.maxLatitude;
+        }
     }
 
-    record Geometria(List<Poligono> poligonos) {
+    record Geometria(String tipo, List<Poligono> poligonos) {
     }
 
     record Poligono(List<Anel> aneis) {

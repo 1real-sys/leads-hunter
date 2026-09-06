@@ -1,6 +1,7 @@
 package dev.jlm.leadshunter.geo;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 public class MunicipioService {
 
     private static final double EPSILON = 1e-10;
+    static final int MAX_MUNICIPIOS_POR_BBOX = 1_500;
 
     private final MunicipioDataset dataset;
 
@@ -35,6 +37,20 @@ public class MunicipioService {
             .filter(municipio -> contem(municipio.geometria(), longitudeDouble, latitudeDouble))
             .map(MunicipioDataset.Municipio::info)
             .findFirst();
+    }
+
+    public MunicipiosGeoJsonResponse listarPorBbox(String bbox) {
+        MunicipioDataset.Envelope envelope = MunicipioBboxParser.parse(bbox);
+        List<MunicipioDataset.Municipio> municipios = dataset.municipios().stream()
+            .filter(municipio -> municipio.bbox().intersecta(envelope))
+            .limit(MAX_MUNICIPIOS_POR_BBOX + 1L)
+            .toList();
+        if (municipios.size() > MAX_MUNICIPIOS_POR_BBOX) {
+            throw new BboxInvalidoException(
+                "O bbox informado abrange municípios demais. Aproxime o mapa e tente novamente."
+            );
+        }
+        return MunicipiosGeoJsonResponse.from(municipios);
     }
 
     private boolean contem(

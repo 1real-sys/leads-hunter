@@ -1,6 +1,7 @@
 package dev.jlm.leadshunter.config;
 
 import dev.jlm.leadshunter.busca.BuscaNaoEncontradaException;
+import dev.jlm.leadshunter.geo.BboxInvalidoException;
 import dev.jlm.leadshunter.integracao.places.PlacesApiConfigurationException;
 import dev.jlm.leadshunter.integracao.places.PlacesApiInvalidResponseException;
 import dev.jlm.leadshunter.integracao.places.PlacesApiQuotaExceededException;
@@ -87,6 +88,14 @@ public class ApiExceptionHandler {
         HttpServletRequest request
     ) {
         return resposta(HttpStatus.NOT_FOUND, "LEAD_NAO_ENCONTRADO", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(BboxInvalidoException.class)
+    public ResponseEntity<ApiErrorResponse> handleBboxInvalido(
+        BboxInvalidoException exception,
+        HttpServletRequest request
+    ) {
+        return resposta(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", exception.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

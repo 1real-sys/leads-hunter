@@ -54,6 +54,11 @@ class LeadControllerTest {
             .andExpect(jsonPath("$[0].id").value(35))
             .andExpect(jsonPath("$[0].nome").value("Padaria Central"))
             .andExpect(jsonPath("$[0].status").value("CONTATADO"))
+            .andExpect(jsonPath("$[0].municipioCodigoIbge").value("3205309"))
+            .andExpect(jsonPath("$[0].municipioNome").value("Vitória"))
+            .andExpect(jsonPath("$[0].uf").value("ES"))
+            .andExpect(jsonPath("$[0].idhm").value(0.845))
+            .andExpect(jsonPath("$[0].idhmReferencia").value(2010))
             .andExpect(jsonPath("$[0].whatsappUrl")
                 .value("https://wa.me/5527999990000"));
 
@@ -84,6 +89,7 @@ class LeadControllerTest {
                 .param("size", "25"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.leads[0].id").value(35))
+            .andExpect(jsonPath("$.leads[0].municipioNome").value("Vitória"))
             .andExpect(jsonPath("$.pagina").value(1))
             .andExpect(jsonPath("$.tamanho").value(25))
             .andExpect(jsonPath("$.totalElementos").value(63))
@@ -131,6 +137,8 @@ class LeadControllerTest {
             .andExpect(jsonPath("$.id").value(35))
             .andExpect(jsonPath("$.googlePlaceId").value("place-35"))
             .andExpect(jsonPath("$.score").value(95))
+            .andExpect(jsonPath("$.municipioCodigoIbge").value("3205309"))
+            .andExpect(jsonPath("$.idhm").value(0.845))
             .andExpect(jsonPath("$.temperatura").value("QUENTE"));
     }
 
@@ -206,6 +214,11 @@ class LeadControllerTest {
             "https://wa.me/5527999990000",
             new BigDecimal("-20.3155"),
             new BigDecimal("-40.3128"),
+            "3205309",
+            "Vitória",
+            "ES",
+            new BigDecimal("0.845"),
+            (short) 2010,
             new BigDecimal("4.8"),
             120,
             95,

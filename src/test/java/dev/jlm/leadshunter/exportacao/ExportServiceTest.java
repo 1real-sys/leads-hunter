@@ -42,6 +42,11 @@ class ExportServiceTest {
             "https://wa.me/5527999990000",
             new BigDecimal("-20.3155"),
             new BigDecimal("-40.3128"),
+            "3205309",
+            "Vitória",
+            "ES",
+            new BigDecimal("0.845"),
+            (short) 2010,
             new BigDecimal("4.8"),
             120,
             95,
@@ -67,12 +72,13 @@ class ExportServiceTest {
         String csv = new String(arquivo, StandardCharsets.UTF_8);
         assertThat(csv).isEqualTo(
             "id,googlePlaceId,nome,categoria,enderecoFormatado,telefone,"
-                + "telefoneNormalizado,whatsappUrl,latitude,longitude,ratingGoogle,"
-                + "totalReviews,score,temperatura,status,observacoes,ultimoContatoEm,"
+                + "telefoneNormalizado,whatsappUrl,latitude,longitude,uf,"
+                + "municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,"
+                + "status,observacoes,ultimoContatoEm,"
                 + "criadoEm,atualizadoEm\r\n"
                 + "15,place-15,\"Padaria, \"\"Central\"\"\",PADARIA,"
                 + "\"Rua Um\n100\",(27) 99999-0000,5527999990000,"
-                + "https://wa.me/5527999990000,-20.3155,-40.3128,4.8,120,95,"
+                + "https://wa.me/5527999990000,-20.3155,-40.3128,ES,Vitória,0.845,4.8,120,95,"
                 + "QUENTE,CONTATADO,\"Retornar, amanhã\",2026-08-20T10:30,"
                 + "2026-08-19T09:00,2026-08-20T10:30\r\n"
         );
@@ -91,8 +97,9 @@ class ExportServiceTest {
 
         assertThat(csv).isEqualTo(
             "id,googlePlaceId,nome,categoria,enderecoFormatado,telefone,"
-                + "telefoneNormalizado,whatsappUrl,latitude,longitude,ratingGoogle,"
-                + "totalReviews,score,temperatura,status,observacoes,ultimoContatoEm,"
+                + "telefoneNormalizado,whatsappUrl,latitude,longitude,uf,"
+                + "municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,"
+                + "status,observacoes,ultimoContatoEm,"
                 + "criadoEm,atualizadoEm\r\n"
         );
     }
@@ -110,6 +117,11 @@ class ExportServiceTest {
             "https://wa.me/5527999990000",
             new BigDecimal("-20.3155"),
             new BigDecimal("-40.3128"),
+            "3205309",
+            "Vitória",
+            "ES",
+            new BigDecimal("0.845"),
+            (short) 2010,
             new BigDecimal("4.8"),
             120,
             95,
@@ -139,10 +151,17 @@ class ExportServiceTest {
             assertThat(sheet.getRow(1).getCell(2).getStringCellValue())
                 .isEqualTo("Padaria Central");
             assertThat(sheet.getRow(1).getCell(3).getStringCellValue()).isEqualTo("PADARIA");
-            assertThat(sheet.getRow(1).getCell(12).getNumericCellValue()).isEqualTo(95D);
-            assertThat(sheet.getRow(1).getCell(14).getStringCellValue())
+            assertThat(sheet.getRow(0).getCell(10).getStringCellValue()).isEqualTo("uf");
+            assertThat(sheet.getRow(0).getCell(11).getStringCellValue())
+                .isEqualTo("municipioNome");
+            assertThat(sheet.getRow(0).getCell(12).getStringCellValue()).isEqualTo("idhm");
+            assertThat(sheet.getRow(1).getCell(10).getStringCellValue()).isEqualTo("ES");
+            assertThat(sheet.getRow(1).getCell(11).getStringCellValue()).isEqualTo("Vitória");
+            assertThat(sheet.getRow(1).getCell(12).getNumericCellValue()).isEqualTo(0.845D);
+            assertThat(sheet.getRow(1).getCell(15).getNumericCellValue()).isEqualTo(95D);
+            assertThat(sheet.getRow(1).getCell(17).getStringCellValue())
                 .isEqualTo("CONTATADO");
-            assertThat(DateUtil.isCellDateFormatted(sheet.getRow(1).getCell(16))).isTrue();
+            assertThat(DateUtil.isCellDateFormatted(sheet.getRow(1).getCell(19))).isTrue();
         }
         verify(leadService).listar(null, CategoriaNegocio.PADARIA, null);
     }
