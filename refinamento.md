@@ -1,6 +1,6 @@
 # Refinamento — IDHM no Lead e mapa coroplético do Brasil
 
-Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-00 a IDHM-03 estão concluídas e validadas**; as sprints IDHM-04 e IDHM-05 continuam pendentes. Este documento é o plano de referência e será atualizado conforme o estado real da execução.
+Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-00 a IDHM-04 estão concluídas e validadas**; a sprint IDHM-05 continua pendente. Este documento é o plano de referência e será atualizado conforme o estado real da execução.
 
 ## Objetivo
 
@@ -14,7 +14,7 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 - A criação/atualização automática em `BuscaService.persistirLead` resolve o município pelas coordenadas do estabelecimento usando o dataset offline. Dados comerciais e snapshots históricos continuam preservados.
 - O backfill de leads anteriores existe em lotes de 100 e permanece opt-in por `leadhunter.backfill-municipio=true`; por padrão nenhum dado anterior é alterado no startup.
 - `LeadResponse`, a paginação e as exportações já expõem os dados geográficos. O backend também serve os municípios visíveis por bbox em GeoJSON pelo endpoint `/api/geografia/municipios`.
-- Frontend: o card do Kanban e o drawer já exibem localidade e IDHM quando disponíveis. O mapa Leaflet continua sem a camada vetorial, que pertence à IDHM-04.
+- Frontend: o card do Kanban e o drawer exibem localidade e IDHM quando disponíveis. O mapa Leaflet possui uma camada coroplética opcional, carregada por bbox conforme o viewport visível.
 
 ## Base de dados: IDHM 2010 (decisão confirmada)
 
@@ -147,6 +147,8 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 
 ### IDHM-04 — Frontend: mapa coroplético do Brasil por IDHM
 
+**Status:** CONCLUÍDO em 07/09/2026.
+
 **Objetivo:** camada ligável no mapa da busca com municípios coloridos por IDHM.
 
 **Entregáveis:**
@@ -165,6 +167,8 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 - Clique mostra cidade/UF/IDHM; legenda correta; "sem IDHM" discriminado.
 - Marcar centro e círculo de raio continuam funcionando por cima da camada.
 - Testes e build frontend passam.
+
+**Resultado:** o mapa da Busca recebeu um switch IDHM que carrega o GeoJSON municipal somente quando ativado. O bbox é normalizado em células de viewport, chamadas de `moveend` são agrupadas por 250 ms, requisições obsoletas são canceladas e até 80 respostas são mantidas em cache na sessão. A camada usa as cinco faixas PNUD e o estado cinza sem dado, apresenta legenda com referência ao Atlas Brasil 2010 e abre popup com localidade, valor e faixa. Os polígonos possuem nome acessível, foco visível e abertura por Enter/Espaço. Uma pane dedicada mantém os polígonos abaixo do círculo e do marcador, e o desligamento/destruição remove camada, timers, requisições e listeners. A suíte frontend passou com 178 testes, o build de produção terminou sem warnings e as inspeções em 1.440 px e 390 px não encontraram overflow nem violações WCAG A/AA após a estabilização das transições.
 
 ### IDHM-05 — Validação integrada e documentação
 

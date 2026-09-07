@@ -1,15 +1,13 @@
-export type FaixaIdhm =
-  | 'MUITO_ALTO'
-  | 'ALTO'
-  | 'MEDIO'
-  | 'BAIXO'
-  | 'MUITO_BAIXO'
-  | 'SEM_DADO';
+export type FaixaIdhm = 'MUITO_ALTO' | 'ALTO' | 'MEDIO' | 'BAIXO' | 'MUITO_BAIXO' | 'SEM_DADO';
 
 export interface ClassificacaoIdhm {
   readonly faixa: FaixaIdhm;
   readonly rotulo: string;
   readonly cor: string;
+}
+
+export interface ItemLegendaIdhm extends ClassificacaoIdhm {
+  readonly intervalo: string;
 }
 
 const SEM_DADO: ClassificacaoIdhm = {
@@ -24,6 +22,15 @@ const FAIXAS: readonly (ClassificacaoIdhm & { readonly minimo: number })[] = [
   { faixa: 'MEDIO', rotulo: 'Médio', cor: '#fee08b', minimo: 0.6 },
   { faixa: 'BAIXO', rotulo: 'Baixo', cor: '#fc8d59', minimo: 0.5 },
   { faixa: 'MUITO_BAIXO', rotulo: 'Muito baixo', cor: '#d73027', minimo: 0 },
+];
+
+export const LEGENDA_IDHM: readonly ItemLegendaIdhm[] = [
+  { ...FAIXAS[0], intervalo: '\u2265 0,800' },
+  { ...FAIXAS[1], intervalo: '0,700\u20130,799' },
+  { ...FAIXAS[2], intervalo: '0,600\u20130,699' },
+  { ...FAIXAS[3], intervalo: '0,500\u20130,599' },
+  { ...FAIXAS[4], intervalo: '< 0,500' },
+  { ...SEM_DADO, intervalo: 'Não disponível' },
 ];
 
 const FORMATADOR_IDHM = new Intl.NumberFormat('pt-BR', {

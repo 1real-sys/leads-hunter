@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classificarIdhm, formatarIdhm } from './idhm';
+import { classificarIdhm, formatarIdhm, LEGENDA_IDHM } from './idhm';
 
 describe('IDHM', () => {
   it.each([
@@ -32,5 +32,16 @@ describe('IDHM', () => {
   it('formata o índice com três casas no padrão brasileiro', () => {
     expect(formatarIdhm(0.845)).toBe('0,845');
     expect(formatarIdhm(0.7)).toBe('0,700');
+  });
+
+  it('expõe as cinco faixas e o estado sem dado para a legenda do mapa', () => {
+    expect(LEGENDA_IDHM.map(({ faixa, intervalo }) => [faixa, intervalo])).toEqual([
+      ['MUITO_ALTO', '\u2265 0,800'],
+      ['ALTO', '0,700\u20130,799'],
+      ['MEDIO', '0,600\u20130,699'],
+      ['BAIXO', '0,500\u20130,599'],
+      ['MUITO_BAIXO', '< 0,500'],
+      ['SEM_DADO', 'Não disponível'],
+    ]);
   });
 });

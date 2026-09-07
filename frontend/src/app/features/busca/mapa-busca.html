@@ -1,15 +1,70 @@
 <div class="mapa-busca">
-  <div
-    #mapContainer
-    class="mapa-busca__canvas"
-    role="region"
-    aria-label="Mapa interativo para selecionar o centro e visualizar o raio da busca"
-    aria-describedby="mapa-instrucoes"
-  ></div>
+  <div class="mapa-busca__map-area">
+    <div
+      #mapContainer
+      class="mapa-busca__canvas"
+      role="region"
+      aria-label="Mapa interativo para selecionar o centro, visualizar o raio e consultar o IDHM municipal"
+      aria-describedby="mapa-instrucoes"
+    ></div>
+
+    @if (idhmAtivo()) {
+      <aside class="mapa-busca__idhm-legenda" aria-labelledby="mapa-idhm-legenda-titulo">
+        <h2 id="mapa-idhm-legenda-titulo">IDHM municipal</h2>
+        <ul>
+          @for (item of legendaIdhm; track item.faixa) {
+            <li>
+              <span
+                class="mapa-busca__idhm-amostra"
+                aria-hidden="true"
+                [style.background-color]="item.cor"
+              ></span>
+              <span>{{ item.rotulo }}</span>
+              <small>{{ item.intervalo }}</small>
+            </li>
+          }
+        </ul>
+        <p>Referência 2010 (Atlas Brasil)</p>
+      </aside>
+
+      @if (mensagemErroIdhm(); as mensagem) {
+        <p class="mapa-busca__idhm-feedback mapa-busca__idhm-feedback--erro" role="alert">
+          {{ mensagem }}
+        </p>
+      } @else if (totalMunicipiosIdhm() === 0) {
+        <p class="mapa-busca__idhm-feedback" role="status">
+          Nenhum município encontrado nesta área.
+        </p>
+      }
+    }
+  </div>
+
   <div class="mapa-busca__instructions">
     <p id="mapa-instrucoes">
       Use os controles para aplicar zoom. Clique no mapa ou arraste o marcador para mudar o centro.
     </p>
-    <button type="button" (click)="useVisibleCenter()">Usar centro visível</button>
+    <div class="mapa-busca__actions">
+      <span class="mapa-busca__idhm-status" aria-live="polite">
+        @if (carregandoIdhm()) {
+          Carregando municípios…
+        } @else if (idhmAtivo() && totalMunicipiosIdhm(); as total) {
+          {{ total }} {{ total === 1 ? 'município' : 'municípios' }}
+        }
+      </span>
+      <button
+        type="button"
+        class="mapa-busca__idhm-toggle"
+        role="switch"
+        [attr.aria-checked]="idhmAtivo()"
+        [attr.aria-label]="idhmAtivo() ? 'Desativar camada de IDHM' : 'Ativar camada de IDHM'"
+        (click)="alternarCamadaIdhm()"
+      >
+        <span class="mapa-busca__idhm-toggle-track" aria-hidden="true">
+          <span></span>
+        </span>
+        IDHM
+      </button>
+      <button type="button" (click)="useVisibleCenter()">Usar centro visível</button>
+    </div>
   </div>
 </div>

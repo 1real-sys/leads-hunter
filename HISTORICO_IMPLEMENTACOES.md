@@ -1195,3 +1195,33 @@ Também foi criado um util compartilhado com a classificação PNUD, as cores da
 - `frontend/src/app/features/kanban/lead-detalhe.spec.ts`
 - `frontend/src/app/features/kanban/lead-detalhe.ts`
 - `frontend/src/app/shared/models/lead.model.ts`
+
+---
+
+## 44. Camada coroplética de IDHM no mapa — 07/09/2026
+
+O mapa da Busca passou a oferecer uma camada opcional que pinta os municípios visíveis de acordo com as cinco faixas de IDHM. O controle inclui estados de carregamento e erro, legenda com a referência da base e popup acessível com município, UF, valor e classificação.
+
+O carregamento consulta o endpoint geográfico somente quando a camada está ativa. Movimentos consecutivos do mapa são agrupados, células já carregadas são reutilizadas por um cache limitado e requisições obsoletas são canceladas. Os polígonos permanecem abaixo do círculo e do marcador e são removidos com timers e listeners ao desligar a camada ou destruir o mapa.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/core/api/geografia-api.spec.ts`
+- `frontend/src/app/core/api/geografia-api.ts`
+- `frontend/src/app/shared/models/geografia.model.ts`
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento.md`
+- `frontend/src/app/core/api/api-routes.ts`
+- `frontend/src/app/features/busca/mapa-busca.html`
+- `frontend/src/app/features/busca/mapa-busca.scss`
+- `frontend/src/app/features/busca/mapa-busca.spec.ts`
+- `frontend/src/app/features/busca/mapa-busca.ts`
+- `frontend/src/app/shared/utils/idhm.spec.ts`
+- `frontend/src/app/shared/utils/idhm.ts`
+- `frontend/src/styles.scss`

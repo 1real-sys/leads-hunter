@@ -6,6 +6,7 @@ export const API_ROUTES = {
   leads: `${API_PREFIX}/leads`,
   leadsPagina: `${API_PREFIX}/leads/pagina`,
   lead: (id: number) => `${API_PREFIX}/leads/${id}`,
+  geografiaMunicipios: `${API_PREFIX}/geografia/municipios`,
   exportacaoLeadsCsv: `${API_PREFIX}/exportacao/leads.csv`,
   exportacaoLeadsXlsx: `${API_PREFIX}/exportacao/leads.xlsx`,
 } as const;
