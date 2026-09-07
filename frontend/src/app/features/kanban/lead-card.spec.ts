@@ -23,6 +23,11 @@ const LEAD_COMPLETO: LeadResponse = {
   ultimoContatoEm: null,
   criadoEm: '2026-08-31T10:30:00',
   atualizadoEm: '2026-08-31T10:30:00',
+  municipioCodigoIbge: '3205309',
+  municipioNome: 'Vitória',
+  uf: 'ES',
+  idhm: 0.845,
+  idhmReferencia: 2010,
 };
 
 describe('LeadCard', () => {
@@ -57,6 +62,23 @@ describe('LeadCard', () => {
     expect(card.getAttribute('aria-labelledby')).toBe('lead-7-title');
   });
 
+  it('exibe IDHM e UF em um badge informativo sem criar uma ação adicional', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const badge = fixture.nativeElement.querySelector('.lead-card__idhm') as HTMLElement;
+
+    expect([...badge.querySelectorAll('span')].map((item) => item.textContent?.trim())).toEqual([
+      '',
+      'IDHM 0,845',
+      '·',
+      'ES',
+    ]);
+    expect(badge.getAttribute('aria-label')).toBe('IDHM 0,845, faixa Muito alto, ES');
+    expect(badge.querySelector('button, a')).toBeNull();
+    expect(
+      (badge.querySelector('.lead-card__idhm-marker') as HTMLElement).style.backgroundColor,
+    ).toBe('rgb(26, 152, 80)');
+  });
+
   it('omite campos nulos sem criar dados substitutos enganosos', async () => {
     const fixture = await renderizar({
       ...LEAD_COMPLETO,
@@ -71,6 +93,11 @@ describe('LeadCard', () => {
       score: null,
       temperatura: null,
       status: null,
+      municipioCodigoIbge: null,
+      municipioNome: null,
+      uf: null,
+      idhm: null,
+      idhmReferencia: null,
     });
     const conteudo = fixture.nativeElement.textContent as string;
 
@@ -81,6 +108,7 @@ describe('LeadCard', () => {
     expect(fixture.nativeElement.querySelector('.lead-card__whatsapp')).toBeNull();
     expect(fixture.nativeElement.querySelector('.lead-card__metrics')).toBeNull();
     expect(fixture.nativeElement.querySelector('.lead-card__temperature')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lead-card__idhm')).toBeNull();
   });
 
   it('identifica como sem etapa um status desconhecido recebido em runtime', async () => {

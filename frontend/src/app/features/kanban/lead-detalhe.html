@@ -92,7 +92,9 @@
         @if (
           item.telefone ||
           item.enderecoFormatado ||
-          (item.latitude !== null && item.longitude !== null)
+          (item.latitude !== null && item.longitude !== null) ||
+          localidade() ||
+          idhmApresentacao()
         ) {
           <section
             class="lead-detalhe-panel__secao lead-detalhe-panel__estabelecimento"
@@ -110,6 +112,24 @@
                 <div class="lead-detalhe-panel__endereco">
                   <dt>Endereço</dt>
                   <dd>{{ endereco }}</dd>
+                </div>
+              }
+              @if (localidade(); as localidade) {
+                <div class="lead-detalhe-panel__localidade">
+                  <dt>Município / UF</dt>
+                  <dd>{{ localidade }}</dd>
+                </div>
+              }
+              @if (idhmApresentacao(); as idhm) {
+                <div class="lead-detalhe-panel__idhm">
+                  <dt>IDHM</dt>
+                  <dd>
+                    <strong>{{ idhm.valor }}</strong>
+                    <span> · {{ idhm.classificacao.rotulo }}</span>
+                    @if (idhm.referencia; as referencia) {
+                      <small> · Referência {{ referencia }}</small>
+                    }
+                  </dd>
                 </div>
               }
               @if (item.latitude !== null && item.longitude !== null) {

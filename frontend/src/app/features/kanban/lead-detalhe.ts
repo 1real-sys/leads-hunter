@@ -17,6 +17,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
 import { LeadApi } from '../../core/api/lead-api';
 import { AtualizarLeadRequest, LeadResponse } from '../../shared/models/lead.model';
+import { classificarIdhm, formatarIdhm } from '../../shared/utils/idhm';
 import { ROTULOS_CATEGORIA, ROTULOS_TEMPERATURA, obterRotuloStatus } from './kanban.model';
 
 function paraValorDatetimeLocal(iso: string | null): string {
@@ -41,6 +42,23 @@ export class LeadDetalhe {
 
   protected readonly tituloId = computed(() => `detalhe-lead-${this.lead().id}-titulo`);
   protected readonly rotuloStatus = computed(() => obterRotuloStatus(this.lead().status));
+  protected readonly localidade = computed(() => {
+    const municipio = this.lead().municipioNome?.trim();
+    const uf = this.lead().uf?.trim().toUpperCase();
+    return [municipio, uf].filter(Boolean).join(' / ') || null;
+  });
+  protected readonly idhmApresentacao = computed(() => {
+    const valor = formatarIdhm(this.lead().idhm);
+    if (valor === null) {
+      return null;
+    }
+
+    return {
+      valor,
+      referencia: this.lead().idhmReferencia ?? null,
+      classificacao: classificarIdhm(this.lead().idhm),
+    };
+  });
   protected readonly rotulosCategoria = ROTULOS_CATEGORIA;
   protected readonly rotulosTemperatura = ROTULOS_TEMPERATURA;
 

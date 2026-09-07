@@ -1166,3 +1166,32 @@ Na revisão final, o endpoint recebeu um teto de 1.500 municípios por resposta 
 - `src/test/java/dev/jlm/leadshunter/geo/MunicipioServiceTest.java`
 - `src/test/java/dev/jlm/leadshunter/lead/LeadControllerTest.java`
 - `src/test/java/dev/jlm/leadshunter/lead/LeadServiceTest.java`
+
+---
+
+## 43. IDHM no card e no detalhe do lead — 05/09/2026
+
+O frontend passou a consumir os dados geográficos do lead e a apresentar o IDHM no fluxo do Kanban. O card mostra um badge compacto com o índice e a UF, enquanto o drawer informa Município/UF, faixa de desenvolvimento e ano de referência na seção do estabelecimento. Leads sem o dado continuam com a interface neutra, sem valor substituto.
+
+Também foi criado um util compartilhado com a classificação PNUD, as cores das cinco faixas e a formatação do índice, preparando a mesma regra para a futura camada do mapa.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/shared/utils/idhm.ts`
+- `frontend/src/app/shared/utils/idhm.spec.ts`
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento.md`
+- `frontend/src/app/features/kanban/lead-card.html`
+- `frontend/src/app/features/kanban/lead-card.scss`
+- `frontend/src/app/features/kanban/lead-card.spec.ts`
+- `frontend/src/app/features/kanban/lead-card.ts`
+- `frontend/src/app/features/kanban/lead-detalhe.html`
+- `frontend/src/app/features/kanban/lead-detalhe.spec.ts`
+- `frontend/src/app/features/kanban/lead-detalhe.ts`
+- `frontend/src/app/shared/models/lead.model.ts`

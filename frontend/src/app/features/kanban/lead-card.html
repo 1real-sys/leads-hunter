@@ -37,6 +37,26 @@
       <p class="lead-card__address" [title]="endereco">{{ endereco }}</p>
     }
 
+    @if (idhmApresentacao(); as idhm) {
+      <p
+        class="lead-card__idhm"
+        [attr.aria-label]="
+          'IDHM ' + idhm.valor + ', faixa ' + idhm.classificacao.rotulo + (idhm.uf ? ', ' + idhm.uf : '')
+        "
+      >
+        <span
+          class="lead-card__idhm-marker"
+          aria-hidden="true"
+          [style.background-color]="idhm.classificacao.cor"
+        ></span>
+        <span>IDHM {{ idhm.valor }}</span>
+        @if (idhm.uf; as uf) {
+          <span class="lead-card__idhm-separator" aria-hidden="true">·</span>
+          <span>{{ uf }}</span>
+        }
+      </p>
+    }
+
     @if (item.telefone || item.whatsappUrl) {
       <div class="lead-card__contato">
         @if (item.telefone; as telefone) {

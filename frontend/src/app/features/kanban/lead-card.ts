@@ -2,6 +2,7 @@ import { CdkDragHandle } from '@angular/cdk/drag-drop';
 import { Component, computed, input, output } from '@angular/core';
 import { StatusFunil } from '../../shared/models/enums.model';
 import { LeadResponse } from '../../shared/models/lead.model';
+import { classificarIdhm, formatarIdhm } from '../../shared/utils/idhm';
 import {
   obterEtapasAdjacentes,
   obterRotuloStatus,
@@ -27,6 +28,18 @@ export class LeadCard {
   protected readonly rotuloStatus = computed(() => obterRotuloStatus(this.lead().status));
   protected readonly etapasAdjacentes = computed(() => obterEtapasAdjacentes(this.lead().status));
   protected readonly nomeAcessivel = computed(() => this.lead().nome ?? `Lead ${this.lead().id}`);
+  protected readonly idhmApresentacao = computed(() => {
+    const valor = formatarIdhm(this.lead().idhm);
+    if (valor === null) {
+      return null;
+    }
+
+    return {
+      valor,
+      uf: this.lead().uf?.trim().toUpperCase() || null,
+      classificacao: classificarIdhm(this.lead().idhm),
+    };
+  });
   protected readonly controlesDesabilitados = computed(
     () => this.movendo() || this.interacaoDesabilitada(),
   );

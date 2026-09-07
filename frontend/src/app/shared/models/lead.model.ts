@@ -12,6 +12,11 @@ export interface LeadResponse {
   whatsappUrl: string | null;
   latitude: number | null;
   longitude: number | null;
+  municipioCodigoIbge?: string | null;
+  municipioNome?: string | null;
+  uf?: string | null;
+  idhm?: number | null;
+  idhmReferencia?: number | null;
   ratingGoogle: number | null;
   totalReviews: number | null;
   score: number | null;

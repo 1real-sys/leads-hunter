@@ -27,6 +27,11 @@ const LEAD_COMPLETO: LeadResponse = {
   ultimoContatoEm: '2026-09-01T14:00:00',
   criadoEm: '2026-08-31T10:30:00',
   atualizadoEm: '2026-09-01T14:00:00',
+  municipioCodigoIbge: '3205309',
+  municipioNome: 'Vitória',
+  uf: 'ES',
+  idhm: 0.845,
+  idhmReferencia: 2010,
 };
 
 describe('LeadDetalhe', () => {
@@ -88,6 +93,25 @@ describe('LeadDetalhe', () => {
     expect(conteudo).toContain('120');
     expect(conteudo).toContain('Pediu retorno na próxima semana.');
     expect(conteudo).toContain('31/08/2026');
+    expect(conteudo).toContain('Vitória / ES');
+    expect(conteudo).toContain('0,845');
+    expect(conteudo).toContain('Muito alto');
+    expect(conteudo).toContain('Referência 2010');
+  });
+
+  it('apresenta a localidade e a classificação do IDHM na seção do estabelecimento', async () => {
+    const fixture = await renderizar(LEAD_COMPLETO);
+    const estabelecimento = fixture.nativeElement.querySelector(
+      '.lead-detalhe-panel__estabelecimento',
+    ) as HTMLElement;
+    const idhm = estabelecimento.querySelector('.lead-detalhe-panel__idhm') as HTMLElement;
+
+    expect(estabelecimento.textContent).toContain('Município / UF');
+    expect(estabelecimento.textContent).toContain('Vitória / ES');
+    expect(idhm.querySelector('dt')?.textContent).toBe('IDHM');
+    expect(idhm.querySelector('strong')?.textContent).toBe('0,845');
+    expect(idhm.querySelector('span')?.textContent?.trim()).toBe('· Muito alto');
+    expect(idhm.querySelector('small')?.textContent?.trim()).toBe('· Referência 2010');
   });
 
   it('agrupa resumo, estabelecimento e dados comerciais em seções identificáveis', async () => {
@@ -148,6 +172,11 @@ describe('LeadDetalhe', () => {
       status: null,
       observacoes: null,
       ultimoContatoEm: null,
+      municipioCodigoIbge: null,
+      municipioNome: null,
+      uf: null,
+      idhm: null,
+      idhmReferencia: null,
     });
     const conteudo = fixture.nativeElement.textContent as string;
 
@@ -158,6 +187,7 @@ describe('LeadDetalhe', () => {
     expect(conteudo).toContain('Nenhuma observação registrada.');
     expect(fixture.nativeElement.querySelector('.lead-detalhe-panel__resumo')).toBeNull();
     expect(fixture.nativeElement.querySelector('.lead-detalhe-panel__estabelecimento')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.lead-detalhe-panel__idhm')).toBeNull();
   });
 
   it('informa que nunca houve contato quando ainda não existe data', async () => {

@@ -1,6 +1,6 @@
 # Fluxo do Leads Hunter
 
-Este documento descreve o fluxo real do projeto no estado atual. O MVP e os sprints FE-00 a FE-17, além da melhoria prioritária FE-100, estão concluídos; no refinamento posterior de IDHM, as sprints IDHM-00 a IDHM-02 também foram entregues e validadas.
+Este documento descreve o fluxo real do projeto no estado atual. O MVP e os sprints FE-00 a FE-17, além da melhoria prioritária FE-100, estão concluídos; no refinamento posterior de IDHM, as sprints IDHM-00 a IDHM-03 também foram entregues e validadas.
 
 ## Visão geral
 
@@ -468,11 +468,13 @@ O artefato `src/main/resources/geo/municipios-idhm.json` contém 5.570 municípi
 
 A sprint **IDHM-01** também está concluída. A migration V2 e o modelo JPA persistem os cinco atributos geográficos, e toda captura com coordenadas passa pelo localizador offline antes do scoring. Vitória/ES foi confirmada com IDHM 0,845 e Curitiba/PR com IDHM 0,823. Leads sem correspondência ficam com geografia nula; score, deduplicação, dados comerciais e snapshots históricos permanecem inalterados. O backfill está disponível somente por ativação explícita.
 
-A sprint **IDHM-02** está concluída. `LeadResponse` e a paginação expõem código IBGE, município, UF, IDHM e referência, enquanto CSV/XLSX incluem UF, município e IDHM. `GET /api/geografia/municipios` valida quatro coordenadas finitas e ordenadas, filtra por interseção de envelopes e retorna somente o subset pedido como GeoJSON. A revisão final adicionou teto de 1.500 municípios, cache HTTP público por 24 horas, DTOs distintos para Polygon/MultiPolygon e testes de parser, MultiPolygon e região vazia. A suíte backend passou com 120 testes e o pacote executável foi gerado. O frontend ainda não consome nem apresenta esses dados.
+A sprint **IDHM-02** está concluída. `LeadResponse` e a paginação expõem código IBGE, município, UF, IDHM e referência, enquanto CSV/XLSX incluem UF, município e IDHM. `GET /api/geografia/municipios` valida quatro coordenadas finitas e ordenadas, filtra por interseção de envelopes e retorna somente o subset pedido como GeoJSON. A revisão final adicionou teto de 1.500 municípios, cache HTTP público por 24 horas, DTOs distintos para Polygon/MultiPolygon e testes de parser, MultiPolygon e região vazia. A suíte backend passou com 120 testes e o pacote executável foi gerado.
+
+A sprint **IDHM-03** está concluída. O contrato TypeScript de lead aceita os cinco campos geográficos opcionais e anuláveis. Card e drawer do Kanban compartilham a mesma classificação PNUD e formatação do IDHM: o card apresenta um badge compacto com valor e UF, e o drawer mostra Município/UF, valor, faixa e referência na seção de estabelecimento. Dado ausente ou inválido é omitido sem fallback enganoso. A suíte frontend passou com 171 testes, o build de produção terminou sem warnings e a inspeção visual em desktop e mobile não encontrou overflow nem regressão dos controles de drag, detalhe ou WhatsApp.
 
 ### Próximo passo
 
-Os sprints **FE-00** a **FE-17**, a melhoria prioritária **FE-100**, a manutenção do WhatsApp no card do Kanban e as sprints **IDHM-00** a **IDHM-02** estão concluídos e validados. O próximo passo planejado em `refinamento.md` é a **IDHM-03**, responsável por consumir e exibir os dados de IDHM no card e no drawer do frontend.
+Os sprints **FE-00** a **FE-17**, a melhoria prioritária **FE-100**, a manutenção do WhatsApp no card do Kanban e as sprints **IDHM-00** a **IDHM-03** estão concluídos e validados. O próximo passo planejado em `refinamento.md` é a **IDHM-04**, responsável pela camada coroplética municipal de IDHM no mapa da busca.
 
 ## Padrão de boilerplate com Lombok
 

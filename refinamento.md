@@ -1,6 +1,6 @@
 # Refinamento — IDHM no Lead e mapa coroplético do Brasil
 
-Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-00, IDHM-01 e IDHM-02 estão concluídas e validadas**; as sprints IDHM-03 a IDHM-05 continuam pendentes. Este documento é o plano de referência e será atualizado conforme o estado real da execução.
+Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-00 a IDHM-03 estão concluídas e validadas**; as sprints IDHM-04 e IDHM-05 continuam pendentes. Este documento é o plano de referência e será atualizado conforme o estado real da execução.
 
 ## Objetivo
 
@@ -14,7 +14,7 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 - A criação/atualização automática em `BuscaService.persistirLead` resolve o município pelas coordenadas do estabelecimento usando o dataset offline. Dados comerciais e snapshots históricos continuam preservados.
 - O backfill de leads anteriores existe em lotes de 100 e permanece opt-in por `leadhunter.backfill-municipio=true`; por padrão nenhum dado anterior é alterado no startup.
 - `LeadResponse`, a paginação e as exportações já expõem os dados geográficos. O backend também serve os municípios visíveis por bbox em GeoJSON pelo endpoint `/api/geografia/municipios`.
-- Frontend: o mapa Leaflet continua sem camada vetorial e os cards/drawer ainda não exibem IDHM; isso pertence às IDHM-03 e IDHM-04.
+- Frontend: o card do Kanban e o drawer já exibem localidade e IDHM quando disponíveis. O mapa Leaflet continua sem a camada vetorial, que pertence à IDHM-04.
 
 ## Base de dados: IDHM 2010 (decisão confirmada)
 
@@ -129,6 +129,8 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 
 ### IDHM-03 — Frontend: dado do lead
 
+**Status:** CONCLUÍDO em 05/09/2026.
+
 **Objetivo:** consumir e exibir município/UF/IDHM no frontend.
 
 **Entregáveis:**
@@ -140,6 +142,8 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 **Critérios de aceite:**
 - Drawer e card mostram o valor quando existe e omitem com neutralidade quando nulo.
 - Testes de frontend do card, drawer e util de classificação passam; suíte completa passa.
+
+**Resultado:** `LeadResponse` passou a aceitar os cinco campos geográficos opcionais e anuláveis. Um util compartilhado concentra as faixas PNUD, os rótulos, a escala verde→vermelho, o estado neutro sem dado e a formatação brasileira com três casas. O card mostra um badge compacto com IDHM e UF, sem controles interativos adicionais; o drawer inclui Município/UF, valor, faixa e referência na seção Estabelecimento. Campos ausentes ou inválidos são omitidos. A suíte frontend passou com 171 testes, o build de produção concluiu sem warnings e a inspeção em 1.440 px e 390 px confirmou ausência de overflow e preservação de título, drag e WhatsApp.
 
 ### IDHM-04 — Frontend: mapa coroplético do Brasil por IDHM
 
