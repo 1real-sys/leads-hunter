@@ -41,8 +41,11 @@ Os códigos atualmente previstos são:
 |---|---:|---|
 | `VALIDACAO_INVALIDA` | 400 | Bean Validation rejeitou o request body. |
 | `REQUISICAO_INVALIDA` | 400 | Corpo ausente/malformado, enum inválido no JSON ou path/query param com tipo inválido. |
+| `BLOQUEIO_INVALIDO` | 400 | O termo informado não atende às regras de tamanho após a normalização. |
+| `TERMO_BLOQUEADO_DUPLICADO` | 400 | Já existe um bloqueio equivalente após normalização. |
 | `BUSCA_NAO_ENCONTRADA` | 404 | O ID de busca não existe. |
 | `LEAD_NAO_ENCONTRADO` | 404 | O ID de lead não existe. |
+| `BLOQUEIO_NAO_ENCONTRADO` | 404 | O ID de bloqueio não existe. |
 | `GOOGLE_PLACES_RATE_LIMIT` | 429 | O limite local temporário de chamadas externas foi atingido. |
 | `GOOGLE_PLACES_QUOTA_EXCEEDED` | 429 | A Google informou que a cota externa foi excedida. |
 | `GOOGLE_PLACES_INVALID_RESPONSE` | 502 | A resposta externa não pôde ser interpretada com segurança. |
@@ -61,13 +64,49 @@ Os valores são enviados exatamente como abaixo, em maiúsculas.
 - `StatusFunil`: `NOVO`, `QUALIFICADO`, `CONTATADO`, `GANHO`, `PERDIDO`.
 - `Temperatura`: `QUENTE`, `MORNO`, `FRIO`.
 
+# Bloqueios por nome
+
+Os termos desta área são persistidos no banco e comparados com o nome de cada estabelecimento já retornado pela Google. A normalização remove acentos, converte para minúsculas e desconsidera espaços nas bordas. A correspondência é por trecho: cadastrar `Supermercados BH` bloqueia, por exemplo, `Supermercados BH Centro`.
+
+O bloqueio é aplicado somente depois da chamada externa e da deduplicação por `googlePlaceId`. Portanto, não reduz chamadas nem consumo da Google, não solicita resultados adicionais e não remove retroativamente leads de buscas anteriores.
+
+## GET /api/bloqueios
+
+Lista os termos bloqueados na ordem de criação e, em caso de empate, por ID. Uma lista sem cadastros retorna `200 OK` com `[]`.
+
+```json
+[
+  {
+    "id": 7,
+    "termo": "Supermercados BH",
+    "criadoEm": "2026-09-08T10:30:00"
+  }
+]
+```
+
+## POST /api/bloqueios
+
+Cadastra um termo e retorna o registro persistido com `201 Created`.
+
+```json
+{
+  "termo": "Supermercados BH"
+}
+```
+
+`termo` é obrigatório. Depois de remover os espaços das bordas, deve conter de 3 a 120 caracteres. A unicidade considera a versão normalizada, de modo que variações apenas de acento, caixa ou espaços retornam `400 TERMO_BLOQUEADO_DUPLICADO`. Payload inválido retorna `400 VALIDACAO_INVALIDA`; uma inconsistência detectada somente pelo serviço retorna `400 BLOQUEIO_INVALIDO`.
+
+## DELETE /api/bloqueios/{id}
+
+Remove o termo identificado pelo ID e retorna `204 No Content`. O bloqueio deixa de valer nas próximas buscas; leads que já existem permanecem inalterados. Um ID inexistente retorna `404 BLOQUEIO_NAO_ENCONTRADO`, e um valor que não pode ser convertido para `Long` retorna `400 REQUISICAO_INVALIDA`.
+
 # Buscas
 
 ## POST /api/buscas
 
 ### Objetivo
 
-Executa uma busca de estabelecimentos próximos usando a Google Places API, ou reutiliza um resultado externo recente do cache. A operação sempre registra um novo histórico, deduplica leads pelo `googlePlaceId`, calcula score e temperatura e relaciona os leads à busca.
+Executa uma busca de estabelecimentos próximos usando a Google Places API, ou reutiliza um resultado externo recente do cache. A operação sempre registra um novo histórico, deduplica os resultados pelo `googlePlaceId`, ignora nomes correspondentes aos bloqueios cadastrados, calcula score e temperatura e relaciona à busca somente os leads permitidos.
 
 Um lead novo começa com status `NOVO`. Quando um lead já existente reaparece, os dados externos e o scoring podem ser atualizados, mas `status`, `observacoes` e `ultimoContatoEm` são preservados.
 
@@ -108,7 +147,7 @@ DTO real: `BuscaRequest`.
 
 Retorna um `BuscaResponse` com o ID da busca persistida, os parâmetros recebidos, a quantidade bruta de estabelecimentos retornada pela integração e os leads únicos persistidos.
 
-`totalEncontrados` conta os itens da resposta externa antes da deduplicação por `googlePlaceId`; por isso, em uma resposta externa com IDs repetidos, ele pode ser maior que o tamanho de `leads`.
+`totalEncontrados` conta os itens da resposta externa antes da deduplicação e da aplicação dos bloqueios; por isso, pode ser maior que o tamanho de `leads`. `totalBloqueados` conta os estabelecimentos únicos ignorados depois da deduplicação por `googlePlaceId`.
 
 ```json
 {
@@ -119,6 +158,7 @@ Retorna um `BuscaResponse` com o ID da busca persistida, os parâmetros recebido
   "raioKm": 5,
   "categorias": ["PADARIA", "MERCADO", "RESTAURANTE"],
   "totalEncontrados": 1,
+  "totalBloqueados": 0,
   "criadoEm": "2026-08-22T10:00:00",
   "leads": [
     {
@@ -135,7 +175,7 @@ Retorna um `BuscaResponse` com o ID da busca persistida, os parâmetros recebido
 }
 ```
 
-O máximo solicitado à Google por chamada é 20 estabelecimentos. Uma resposta externa vazia é aceita: a busca é persistida com `totalEncontrados: 0` e `leads: []`.
+O máximo solicitado à Google por chamada é 20 estabelecimentos. Uma resposta externa vazia é aceita: a busca é persistida com `totalEncontrados: 0`, `totalBloqueados: 0` e `leads: []`. A contagem de bloqueados pertence apenas ao retorno imediato; o histórico conserva `totalEncontrados` e os vínculos dos leads efetivamente persistidos.
 
 ### Status HTTP
 
@@ -168,6 +208,7 @@ Controller
 → normaliza a resposta externa
 → persiste o histórico da busca
 → deduplica estabelecimentos por `googlePlaceId`
+→ carrega os termos ativos e ignora nomes bloqueados
 → cria ou atualiza leads preservando os dados comerciais
 → normaliza telefone e calcula score/temperatura
 → persiste os vínculos `BuscaLead` com o snapshot do scoring
@@ -939,6 +980,9 @@ Controller
 
 | Método | Endpoint | Função |
 |---|---|---|
+| GET | `/api/bloqueios` | Lista os termos bloqueados. |
+| POST | `/api/bloqueios` | Cadastra um termo bloqueado. |
+| DELETE | `/api/bloqueios/{id}` | Remove um termo bloqueado. |
 | POST | `/api/buscas` | Executa uma busca de estabelecimentos, persiste o histórico e os leads. |
 | GET | `/api/buscas` | Lista o histórico de buscas. |
 | GET | `/api/buscas/{id}` | Consulta uma busca e os leads encontrados naquela execução. |

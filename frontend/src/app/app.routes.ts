@@ -20,6 +20,12 @@ export const routes: Routes = [
       import('./features/historico/historico-page').then(({ HistoricoPage }) => HistoricoPage),
   },
   {
+    path: 'bloqueios',
+    title: 'Bloqueios | Leads Hunter',
+    loadComponent: () =>
+      import('./features/bloqueios/bloqueios-page').then(({ BloqueiosPage }) => BloqueiosPage),
+  },
+  {
     path: 'historico/:id',
     title: 'Detalhe da busca | Leads Hunter',
     loadComponent: () =>

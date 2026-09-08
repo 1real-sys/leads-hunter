@@ -131,4 +131,17 @@ describe('BuscaResultados', () => {
     expect(fixture.nativeElement.querySelector('.resultados__lista')).toBeNull();
     expect(fixture.nativeElement.querySelector('a[routerLink="/kanban"]')).toBeTruthy();
   });
+
+  it('informa os resultados ignorados somente quando a contagem é positiva', async () => {
+    const comBloqueio = await renderizar({ ...RESULTADO, totalBloqueados: 2 });
+    expect(comBloqueio.nativeElement.textContent).toContain(
+      '2 resultados ignorados pelos bloqueios cadastrados.',
+    );
+
+    const semCampo = await renderizar(RESULTADO);
+    expect(semCampo.nativeElement.querySelector('.resultados__bloqueados')).toBeNull();
+
+    const comZero = await renderizar({ ...RESULTADO, totalBloqueados: 0 });
+    expect(comZero.nativeElement.querySelector('.resultados__bloqueados')).toBeNull();
+  });
 });

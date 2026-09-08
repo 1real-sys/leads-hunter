@@ -1290,3 +1290,62 @@ A configuração local deixou de conter valores sensíveis em texto puro. A senh
 - `fluxo.md`
 - `refinamento.md`
 - `src/main/resources/application.yml`
+
+---
+
+## 49. Blacklist cadastrável de nomes — 08/09/2026
+
+Foi entregue a gestão completa de nomes e trechos que não devem virar leads. Os termos são persistidos com unicidade normalizada, podem ser listados, cadastrados e removidos pela API e por uma área própria do frontend.
+
+Durante a busca, os bloqueios são aplicados por substring sem acentos e sem diferença entre maiúsculas e minúsculas, depois da deduplicação por `googlePlaceId`. Estabelecimentos bloqueados não criam `Lead` nem `BuscaLead`; a resposta imediata informa a quantidade única ignorada sem alterar o total bruto retornado pela Google ou apagar leads antigos.
+
+O fechamento incluiu testes de serviço, controller, persistência, interface e um fluxo HTTP integrado com `Supermercados BH`, além de smoke de navegador e revisão de acessibilidade em desktop e mobile.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/bloqueio/NomeBloqueado.java`
+- `src/main/java/dev/jlm/leadshunter/bloqueio/NomeBloqueadoController.java`
+- `src/main/java/dev/jlm/leadshunter/bloqueio/NomeBloqueadoDuplicadoException.java`
+- `src/main/java/dev/jlm/leadshunter/bloqueio/NomeBloqueadoInvalidoException.java`
+- `src/main/java/dev/jlm/leadshunter/bloqueio/NomeBloqueadoNaoEncontradoException.java`
+- `src/main/java/dev/jlm/leadshunter/bloqueio/NomeBloqueadoRepository.java`
+- `src/main/java/dev/jlm/leadshunter/bloqueio/NomeBloqueadoRequest.java`
+- `src/main/java/dev/jlm/leadshunter/bloqueio/NomeBloqueadoResponse.java`
+- `src/main/java/dev/jlm/leadshunter/bloqueio/NomeBloqueadoService.java`
+- `src/main/resources/db/migration/V3__criar_nome_bloqueado.sql`
+- `src/test/java/dev/jlm/leadshunter/BlacklistFlowIntegrationTest.java`
+- `src/test/java/dev/jlm/leadshunter/bloqueio/NomeBloqueadoControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/bloqueio/NomeBloqueadoRepositoryTest.java`
+- `src/test/java/dev/jlm/leadshunter/bloqueio/NomeBloqueadoServiceTest.java`
+- `frontend/src/app/core/api/bloqueio-api.spec.ts`
+- `frontend/src/app/core/api/bloqueio-api.ts`
+- `frontend/src/app/features/bloqueios/bloqueios-page.html`
+- `frontend/src/app/features/bloqueios/bloqueios-page.scss`
+- `frontend/src/app/features/bloqueios/bloqueios-page.spec.ts`
+- `frontend/src/app/features/bloqueios/bloqueios-page.ts`
+- `frontend/src/app/shared/models/bloqueio.model.ts`
+
+**Modificados:**
+
+- `API.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento-blacklist-nomes.md`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
+- `src/main/java/dev/jlm/leadshunter/config/ApiExceptionHandler.java`
+- `src/main/resources/application.yml`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceJpaIntegrationTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceTest.java`
+- `frontend/scripts/mvp-flow-smoke.mjs`
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/app.spec.ts`
+- `frontend/src/app/app.ts`
+- `frontend/src/app/core/api/api-routes.ts`
+- `frontend/src/app/features/busca/busca-resultados.html`
+- `frontend/src/app/features/busca/busca-resultados.scss`
+- `frontend/src/app/features/busca/busca-resultados.spec.ts`
+- `frontend/src/app/shared/models/busca.model.ts`

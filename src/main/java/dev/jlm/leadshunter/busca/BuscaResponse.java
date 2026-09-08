@@ -13,6 +13,7 @@ public record BuscaResponse(
     Integer raioKm,
     List<CategoriaNegocio> categorias,
     Integer totalEncontrados,
+    Integer totalBloqueados,
     LocalDateTime criadoEm,
     List<LeadEncontradoResponse> leads
 ) {

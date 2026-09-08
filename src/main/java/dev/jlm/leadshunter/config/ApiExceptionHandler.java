@@ -1,5 +1,8 @@
 package dev.jlm.leadshunter.config;
 
+import dev.jlm.leadshunter.bloqueio.NomeBloqueadoDuplicadoException;
+import dev.jlm.leadshunter.bloqueio.NomeBloqueadoInvalidoException;
+import dev.jlm.leadshunter.bloqueio.NomeBloqueadoNaoEncontradoException;
 import dev.jlm.leadshunter.busca.BuscaNaoEncontradaException;
 import dev.jlm.leadshunter.geo.BboxInvalidoException;
 import dev.jlm.leadshunter.integracao.places.PlacesApiConfigurationException;
@@ -88,6 +91,30 @@ public class ApiExceptionHandler {
         HttpServletRequest request
     ) {
         return resposta(HttpStatus.NOT_FOUND, "LEAD_NAO_ENCONTRADO", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(NomeBloqueadoNaoEncontradoException.class)
+    public ResponseEntity<ApiErrorResponse> handleBloqueioNotFound(
+        NomeBloqueadoNaoEncontradoException exception,
+        HttpServletRequest request
+    ) {
+        return resposta(HttpStatus.NOT_FOUND, "BLOQUEIO_NAO_ENCONTRADO", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(NomeBloqueadoDuplicadoException.class)
+    public ResponseEntity<ApiErrorResponse> handleBloqueioDuplicado(
+        NomeBloqueadoDuplicadoException exception,
+        HttpServletRequest request
+    ) {
+        return resposta(HttpStatus.BAD_REQUEST, "TERMO_BLOQUEADO_DUPLICADO", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(NomeBloqueadoInvalidoException.class)
+    public ResponseEntity<ApiErrorResponse> handleBloqueioInvalido(
+        NomeBloqueadoInvalidoException exception,
+        HttpServletRequest request
+    ) {
+        return resposta(HttpStatus.BAD_REQUEST, "BLOQUEIO_INVALIDO", exception.getMessage(), request);
     }
 
     @ExceptionHandler(BboxInvalidoException.class)

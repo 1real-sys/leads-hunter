@@ -27,6 +27,7 @@ const MOCK_LEAD = {
 };
 
 const MOCK_STATE = {
+  bloqueios: [],
   lead: { ...MOCK_LEAD },
   busca: {
     id: 1,
@@ -35,7 +36,7 @@ const MOCK_STATE = {
     longitude: -40.3128,
     raioKm: 3,
     categorias: ['PADARIA'],
-    totalEncontrados: 1,
+    totalEncontrados: 2,
     criadoEm: '2026-09-05T10:00:00',
   },
 };
@@ -87,9 +88,32 @@ async function mockApi(route) {
     return;
   }
 
+  if (request.method() === 'GET' && url.pathname === '/api/bloqueios') {
+    await responderJson(route, MOCK_STATE.bloqueios);
+    return;
+  }
+
+  if (request.method() === 'POST' && url.pathname === '/api/bloqueios') {
+    const bloqueio = {
+      id: 1,
+      termo: body?.termo,
+      criadoEm: '2026-09-08T12:00:00',
+    };
+    MOCK_STATE.bloqueios.push(bloqueio);
+    await responderJson(route, bloqueio, 201);
+    return;
+  }
+
+  if (request.method() === 'DELETE' && url.pathname === '/api/bloqueios/1') {
+    MOCK_STATE.bloqueios = [];
+    await route.fulfill({ status: 204 });
+    return;
+  }
+
   if (request.method() === 'POST' && url.pathname === '/api/buscas') {
     await responderJson(route, {
       ...MOCK_STATE.busca,
+      totalBloqueados: MOCK_STATE.bloqueios.length > 0 ? 1 : 0,
       categorias: body?.categorias ?? MOCK_STATE.busca.categorias,
       leads: [
         {
@@ -180,7 +204,30 @@ async function aguardar(locator) {
 }
 
 async function executarFluxo(page) {
-  await page.goto(`${BASE_URL}/busca`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  if (IS_MOCK) {
+    await page.goto(`${BASE_URL}/bloqueios`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
+    });
+    await aguardar(page.locator('.bloqueios-page'));
+    await aguardar(page.getByText('Nenhum termo cadastrado'));
+    await page.locator('#termo-bloqueado').fill('Supermercados BH');
+    await page.getByRole('button', { name: 'Adicionar bloqueio', exact: true }).click();
+    await aguardar(page.getByText('Supermercados BH', { exact: true }));
+    assert(
+      requests.some(
+        (item) =>
+          item.method === 'POST' &&
+          item.path === '/api/bloqueios' &&
+          item.body?.termo === 'Supermercados BH',
+      ),
+      'O cadastro do bloqueio não enviou o termo esperado.',
+    );
+    await page.getByRole('link', { name: /^Busca/ }).click();
+    await page.waitForURL('**/busca');
+  } else {
+    await page.goto(`${BASE_URL}/busca`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  }
   await aguardar(page.locator('.busca-page'));
 
   await page.locator('#endereco-base').fill('Centro de Vitória');
@@ -201,6 +248,10 @@ async function executarFluxo(page) {
     assert(
       buscaRequest?.body?.categorias?.includes('PADARIA'),
       'A busca não enviou a categoria esperada.',
+    );
+    assert(
+      resultadoTexto.includes('1 resultado ignorado pelos bloqueios cadastrados.'),
+      'O resumo não informou o resultado ignorado pela blacklist.',
     );
   }
 
@@ -294,6 +345,20 @@ async function executarFluxo(page) {
     download.suggestedFilename().endsWith('.csv'),
     'A exportação CSV não iniciou um download.',
   );
+
+  if (IS_MOCK) {
+    await page.getByRole('link', { name: /^Bloqueios/ }).click();
+    await page.waitForURL('**/bloqueios');
+    await aguardar(page.locator('.bloqueios-page__list'));
+    await page
+      .getByRole('button', { name: 'Remover bloqueio Supermercados BH', exact: true })
+      .click();
+    await aguardar(page.getByText('Nenhum termo cadastrado'));
+    assert(
+      requests.some((item) => item.method === 'DELETE' && item.path === '/api/bloqueios/1'),
+      'A remoção do bloqueio não chamou o endpoint esperado.',
+    );
+  }
 }
 
 const browser = await firefox.launch({ headless: true });

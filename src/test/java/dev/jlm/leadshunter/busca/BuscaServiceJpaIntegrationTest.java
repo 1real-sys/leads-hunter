@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import dev.jlm.leadshunter.bloqueio.NomeBloqueadoService;
 import dev.jlm.leadshunter.integracao.places.PlacesApiClient;
 import dev.jlm.leadshunter.integracao.places.PlacesSearchResponse;
 import dev.jlm.leadshunter.lead.CategoriaNegocio;
@@ -17,9 +18,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -40,6 +41,9 @@ class BuscaServiceJpaIntegrationTest {
 
     @Autowired
     private LeadRepository leadRepository;
+
+    @Autowired
+    private NomeBloqueadoService nomeBloqueadoService;
 
     @MockitoBean
     private PlacesApiClient placesApiClient;
@@ -108,6 +112,37 @@ class BuscaServiceJpaIntegrationTest {
 
         assertThatThrownBy(() -> leadRepository.saveAndFlush(duplicado))
             .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void deveBloquearNomeDepoisDaDeduplicacaoEPreservarTotalBrutoNoHistorico() {
+        nomeBloqueadoService.cadastrar("Supermercados BH");
+        PlacesSearchResponse.PlaceResult bloqueado = primeiroPlace("Supermercados BH Centro");
+        PlacesSearchResponse.PlaceResult bloqueadoDuplicado = primeiroPlace(
+            "Supermercados BH Centro duplicado"
+        );
+        PlacesSearchResponse.PlaceResult permitido = segundoPlace();
+        when(placesApiClient.buscarProximos(any())).thenReturn(new PlacesSearchResponse(List.of(
+            bloqueado,
+            bloqueadoDuplicado,
+            permitido
+        )));
+
+        BuscaResponse resposta = buscaService.criar(
+            criarRequest("Centro com bloqueio", "-20.3155", "-40.3128")
+        );
+        BuscaDetalheResponse historico = buscaService.buscarHistoricoPorId(resposta.id());
+
+        assertThat(resposta.totalEncontrados()).isEqualTo(3);
+        assertThat(resposta.totalBloqueados()).isEqualTo(1);
+        assertThat(resposta.leads()).singleElement()
+            .extracting(BuscaResponse.LeadEncontradoResponse::nome)
+            .isEqualTo("Restaurante Secundário");
+        assertThat(leadRepository.findByGooglePlaceId(PRIMEIRO_PLACE_ID)).isEmpty();
+        assertThat(buscaLeadRepository.findByBuscaIdOrderByScoreNaBuscaDesc(resposta.id()))
+            .hasSize(1);
+        assertThat(historico.totalEncontrados()).isEqualTo(3);
+        assertThat(historico.leads()).hasSize(1);
     }
 
     private BuscaRequest criarRequest(String endereco, String latitude, String longitude) {

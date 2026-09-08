@@ -19,6 +19,12 @@ export class App {
       description: 'Revisar buscas anteriores',
       exact: false,
     },
+    {
+      label: 'Bloqueios',
+      path: '/bloqueios',
+      description: 'Ignorar nomes nas buscas',
+      exact: true,
+    },
   ] as const;
 
   protected focarConteudo(): void {

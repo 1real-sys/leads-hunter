@@ -1,6 +1,6 @@
 # Fluxo do Leads Hunter
 
-Este documento descreve o fluxo real do projeto no estado atual. O MVP e os sprints FE-00 a FE-17, além da melhoria prioritária FE-100, estão concluídos; no refinamento posterior de IDHM, as sprints IDHM-00 a IDHM-05 também foram entregues e validadas.
+Este documento descreve o fluxo real do projeto no estado atual. O MVP, a melhoria FE-100 e os refinamentos de IDHM e blacklist de nomes estão concluídos e validados.
 
 ## Visão geral
 
@@ -41,6 +41,10 @@ BuscaService.java
     |        |
     |        v
     |    PlacesSearchResponse.java
+    |
+    +--> NomeBloqueadoService.java --> NomeBloqueadoRepository.java --> MySQL
+    |        |
+    |        +--> ignora nomes bloqueados após deduplicar por googlePlaceId
     |
     +--> TelefoneNormalizer.java
     |
@@ -167,7 +171,9 @@ Coordena o caso de uso. Gera uma `BuscaCacheKey` e consulta `BuscaPlacesCache`. 
 
 O cache guarda somente a resposta externa. Cada requisição continua criando uma nova `Busca`, processando os leads e registrando os vínculos `BuscaLead`, inclusive quando ocorre cache hit.
 
-Para cada estabelecimento, consolida resultados repetidos pelo `googlePlaceId` e consulta `LeadRepository`. Se o lead não existir, cria um registro com status `NOVO`. Se já existir, atualiza apenas nome, categoria, endereço, coordenadas, rating e total de reviews quando houver valores novos. Quando a Google fornece um telefone brasileiro válido, salva o valor original e a versão normalizada. Com latitude e longitude disponíveis, consulta `MunicipioService` e atualiza código IBGE, município, UF, IDHM e referência; quando as coordenadas não correspondem ao dataset, limpa somente esses campos geográficos. Depois chama `ScoringService`, atualiza score e temperatura e preserva `status`, `observacoes` e `ultimoContatoEm`.
+Para cada estabelecimento, consolida resultados repetidos pelo `googlePlaceId`, carrega os termos ativos em `NomeBloqueadoService` e ignora nomes que contenham qualquer termo normalizado. A contagem de bloqueados considera somente resultados únicos; `totalEncontrados` continua representando a resposta externa bruta. Um resultado bloqueado não cria `Lead` nem `BuscaLead`, e leads de buscas anteriores não são removidos.
+
+Para cada resultado permitido, consulta `LeadRepository`. Se o lead não existir, cria um registro com status `NOVO`. Se já existir, atualiza apenas nome, categoria, endereço, coordenadas, rating e total de reviews quando houver valores novos. Quando a Google fornece um telefone brasileiro válido, salva o valor original e a versão normalizada. Com latitude e longitude disponíveis, consulta `MunicipioService` e atualiza código IBGE, município, UF, IDHM e referência; quando as coordenadas não correspondem ao dataset, limpa somente esses campos geográficos. Depois chama `ScoringService`, atualiza score e temperatura e preserva `status`, `observacoes` e `ultimoContatoEm`.
 
 Por fim, cria um `BuscaLead` para relacionar a nova busca ao lead e registra nele o score e a temperatura daquela execução. Em seguida, converte os leads persistidos em `BuscaResponse`. Todo o processo ocorre na mesma transação; um resultado sem `googlePlaceId` interrompe e reverte a operação.
 
@@ -178,6 +184,12 @@ Nas consultas do histórico, `listarHistorico` lê as buscas já ordenadas por `
 `BuscaCacheKey` identifica buscas equivalentes usando latitude e longitude arredondadas para quatro casas decimais, raio e categorias distintas em ordem alfabética. O texto de `enderecoBase` não participa da chave.
 
 `BuscaPlacesCache` usa Caffeine para manter `PlacesSearchResponse` em memória. Por padrão, cada entrada expira após 30 minutos e o cache aceita até 100 buscas. Os valores podem ser alterados por `BUSCA_CACHE_EXPIRACAO_MINUTOS` e `BUSCA_CACHE_TAMANHO_MAXIMO`. Falhas do carregador não são armazenadas.
+
+### 4A. `NomeBloqueado`, repository, service e controller
+
+A migration V3 cria `nome_bloqueado` com o termo original, sua forma normalizada, data de criação e unicidade no valor normalizado. `NomeBloqueadoService` exige de 3 a 120 caracteres após `trim`, aplica NFKD, remove marcas diacríticas e converte para minúsculas com `Locale.ROOT`.
+
+`GET /api/bloqueios`, `POST /api/bloqueios` e `DELETE /api/bloqueios/{id}` listam, cadastram e removem termos. Duplicidade normalizada retorna `400`, e remoção de ID inexistente retorna `404`, sempre pelo contrato de erro comum. Não há cache dos termos: cada execução de busca lê o estado atual da tabela.
 
 ### 5. `PlacesSearchRequest.java`
 
@@ -216,7 +228,7 @@ Representa o resultado interno da integração. Cada `PlaceResult` contém `goog
 
 ### 10. `Busca.java` e `BuscaRepository.java`
 
-`Busca` representa o histórico da pesquisa. O repository persiste no MySQL o endereço-base, coordenadas, raio, categorias pesquisadas, total encontrado e data de criação. O schema é criado e validado pela migration `V1__criar_tabelas.sql`, com Flyway e `ddl-auto: validate`.
+`Busca` representa o histórico da pesquisa. O repository persiste no MySQL o endereço-base, coordenadas, raio, categorias pesquisadas, total encontrado e data de criação. O schema inicial é criado pela V1, a geografia do lead pela V2 e os bloqueios pela V3, sempre com Flyway e `ddl-auto: validate`.
 
 ### 11. `TelefoneNormalizer.java` e `WhatsAppLinkGenerator.java`
 
@@ -256,7 +268,7 @@ Representam e persistem o relacionamento N:N. Assim, uma busca pode encontrar v�
 
 ### 16. `BuscaResponse.java`
 
-É a resposta pública do endpoint. Retorna os dados da busca e uma lista resumida dos leads persistidos. O campo `id` contém o identificador do `Lead`; telefone, `whatsappUrl`, score e temperatura são retornados quando disponíveis.
+É a resposta pública do endpoint. Retorna os dados da busca, `totalBloqueados` e uma lista resumida dos leads persistidos. O campo `id` de cada item contém o identificador do `Lead`; telefone, `whatsappUrl`, score e temperatura são retornados quando disponíveis.
 
 ### 17. `BuscaResumoResponse.java` e `BuscaDetalheResponse.java`
 
@@ -268,13 +280,14 @@ Expõem `GET /api/exportacao/leads.csv` e `GET /api/exportacao/leads.xlsx`. Ambo
 
 ### 19. `ApiExceptionHandler.java` e `ApiErrorResponse.java`
 
-`ApiExceptionHandler` centraliza a conversão das falhas de integração, validação de payload, parâmetros inválidos e exceções de recurso não encontrado em um contrato JSON único. Toda resposta contém `timestamp`, `status`, `codigo`, `mensagem` e `path`. Falhas de cota ou do rate limit local retornam `429`; chave ausente ou indisponibilidade retornam `503`; resposta inválida ou consulta rejeitada pela Google retornam `502`; validações, requisições malformadas e bbox inválido retornam `400`; buscas e leads inexistentes retornam `404`. Exceções inesperadas são registradas apenas com método, rota e tipo da exceção e retornam `500 ERRO_INTERNO` com mensagem genérica. O contrato não expõe stack trace, corpo bruto da Google, mensagens internas ou credenciais.
+`ApiExceptionHandler` centraliza a conversão das falhas de integração, validação de payload, parâmetros inválidos e exceções de recurso não encontrado em um contrato JSON único. Toda resposta contém `timestamp`, `status`, `codigo`, `mensagem` e `path`. Falhas de cota ou do rate limit local retornam `429`; chave ausente ou indisponibilidade retornam `503`; resposta inválida ou consulta rejeitada pela Google retornam `502`; validações, requisições malformadas, bbox inválido e bloqueio duplicado retornam `400`; buscas, leads e bloqueios inexistentes retornam `404`. Exceções inesperadas são registradas apenas com método, rota e tipo da exceção e retornam `500 ERRO_INTERNO` com mensagem genérica. O contrato não expõe stack trace, corpo bruto da Google, mensagens internas ou credenciais.
 
 ## Estrutura relacionada
 
 ```text
 src/main/java/dev/jlm/leadshunter/
 ├── busca/                 # Endpoint, service, cache, entidades e histórico
+├── bloqueio/              # Cadastro persistente e normalização da blacklist
 ├── integracao/places/     # Cliente Google, rate limit, contratos e mapper
 ├── lead/                  # Gestão de leads, telefone e link manual de WhatsApp
 ├── scoring/               # Cálculo centralizado de score e temperatura
@@ -299,6 +312,9 @@ src/test/java/dev/jlm/leadshunter/
 - Entidades `Busca`, `Lead` e `BuscaLead`, repositories e migration inicial.
 - Relacionamento N:N modelado entre `Busca` e `Lead` por `BuscaLead`.
 - Restrição única de `Lead.googlePlaceId` no banco.
+- Cadastro persistente de bloqueios por nome, com unicidade normalizada e CRUD REST.
+- Filtro por substring normalizada após a deduplicação, sem criar Lead ou BuscaLead.
+- Contagem `totalBloqueados` no retorno imediato de cada busca.
 - Endpoint `POST /api/buscas` com validação de entrada.
 - Chamada real preparada para o Nearby Search da Google Places API (New).
 - Chave externa por variável de ambiente, sem segredo no código.
@@ -476,9 +492,19 @@ A sprint **IDHM-04** está concluída. `GeografiaApi` consulta o endpoint munici
 
 A sprint **IDHM-05** encerrou a feature com validação integrada. O backend passou com 120 testes e pacote executável; Flyway confirmou no MySQL 8.1 as duas migrations e o schema na versão 2, com Hibernate em `ddl-auto: validate`. O frontend passou com 179 testes e build de produção sem warnings. A revisão em navegador, isolada de serviços externos, percorreu buscas controladas para Vitória/ES e Curitiba/PR e confirmou badges, drawers, exportações CSV/XLSX, legenda, polígonos e popups da camada IDHM nos dois viewports. As credenciais da aplicação permanecem somente em variáveis de ambiente (`DB_PASSWORD` e `GOOGLE_PLACES_API_KEY`); nenhuma chamada externa ou secret passou a fazer parte do runtime versionado.
 
+### Refinamento da blacklist de nomes
+
+As sprints **BL-00** a **BL-04** estão concluídas. A V3 e o pacote `bloqueio` persistem o termo original e sua versão normalizada, rejeitam equivalentes no banco e expõem listagem, cadastro e remoção pela API. Foi adotado o mínimo de 3 e o máximo de 120 caracteres.
+
+Na busca, os nomes são comparados por substring depois da deduplicação por `googlePlaceId`. Resultados bloqueados não viram `Lead` nem `BuscaLead`; `totalEncontrados` permanece bruto e `totalBloqueados` informa quantos resultados únicos foram ignorados no retorno imediato. Não há remoção retroativa nem nova chamada à Google para compensar a filtragem.
+
+O frontend possui a rota `/bloqueios`, acessível pela navegação principal, com Signal Forms, listagem, cadastro, remoção e estados acessíveis. O resumo da busca exibe uma nota neutra apenas quando `totalBloqueados > 0` e aceita respostas antigas sem o campo.
+
+O fechamento passou com 140 testes backend, 189 testes frontend, os dois builds e o smoke de navegador em modo controlado com 27 requisições. O cenário integrado cadastrou `Supermercados BH`, ignorou um resultado único mesmo com duplicata externa, preservou o alvo permitido e removeu o termo. A auditoria WCAG A/AA da nova rota não encontrou violações nem overflow em 1440 × 1000 ou 390 × 844.
+
 ### Próximo passo
 
-Os sprints **FE-00** a **FE-17**, a melhoria prioritária **FE-100**, a manutenção do WhatsApp no card do Kanban e as sprints **IDHM-00** a **IDHM-05** estão concluídos e validados. Não há sprint pendente no refinamento de IDHM. O uso do índice no `ScoringService` permanece deliberadamente fora desta entrega e depende de decisão futura de produto.
+Os sprints **FE-00** a **FE-17**, a melhoria **FE-100**, a manutenção do WhatsApp, **IDHM-00** a **IDHM-05** e **BL-00** a **BL-04** estão concluídos e validados. Não há sprint pendente nos refinamentos de IDHM ou blacklist. O uso do IDHM no `ScoringService` e a limpeza retroativa de leads bloqueados permanecem fora das entregas atuais e dependem de decisão futura de produto.
 
 ## Padrão de boilerplate com Lombok
 

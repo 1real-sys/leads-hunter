@@ -1,0 +1,159 @@
+<section class="bloqueios-page" aria-labelledby="bloqueios-page-title">
+  <header class="bloqueios-page__header">
+    <div>
+      <h1 id="bloqueios-page-title">Bloqueios por nome</h1>
+      <p>Evite que redes ou estabelecimentos sem interesse sejam incluídos como leads.</p>
+    </div>
+
+    @if (estadoLista() === 'success') {
+      <p class="bloqueios-page__total" aria-live="polite">
+        <strong>{{ bloqueios().length }}</strong>
+        {{ bloqueios().length === 1 ? 'termo cadastrado' : 'termos cadastrados' }}
+      </p>
+    }
+  </header>
+
+  <div class="bloqueios-page__workspace">
+    <aside class="bloqueios-page__form-panel" aria-labelledby="novo-bloqueio-title">
+      <div>
+        <h2 id="novo-bloqueio-title">Adicionar bloqueio</h2>
+        <p>
+          Informe um nome ou trecho com pelo menos 3 caracteres. A comparação ignora maiúsculas e
+          acentos.
+        </p>
+      </div>
+
+      <form novalidate (submit)="cadastrar($event)">
+        <div class="bloqueios-page__field">
+          <label for="termo-bloqueado">Nome ou trecho</label>
+          <input
+            id="termo-bloqueado"
+            type="text"
+            autocomplete="off"
+            placeholder="Ex.: Supermercados BH"
+            [attr.aria-describedby]="
+              (bloqueioForm.termo().touched() || bloqueioForm.termo().dirty()) &&
+              bloqueioForm.termo().invalid()
+                ? 'termo-bloqueado-hint termo-bloqueado-error'
+                : 'termo-bloqueado-hint'
+            "
+            [attr.aria-invalid]="
+              (bloqueioForm.termo().touched() || bloqueioForm.termo().dirty()) &&
+              bloqueioForm.termo().invalid()
+            "
+            [formField]="bloqueioForm.termo"
+          />
+          <p id="termo-bloqueado-hint" class="bloqueios-page__hint">
+            O bloqueio valerá para as próximas buscas e não removerá leads existentes.
+          </p>
+          @if (
+            (bloqueioForm.termo().touched() || bloqueioForm.termo().dirty()) &&
+            bloqueioForm.termo().invalid()
+          ) {
+            <p id="termo-bloqueado-error" class="bloqueios-page__field-error" role="alert">
+              {{ bloqueioForm.termo().errors()[0].message }}
+            </p>
+          }
+        </div>
+
+        <button
+          class="bloqueios-page__submit"
+          type="submit"
+          [attr.aria-busy]="cadastrando()"
+          [disabled]="
+            bloqueioForm().invalid() ||
+            bloqueioForm().submitting() ||
+            cadastrando() ||
+            estadoLista() === 'loading' ||
+            estadoLista() === 'error'
+          "
+        >
+          @if (cadastrando()) {
+            <span class="ui-spinner ui-spinner--small" aria-hidden="true"></span>
+            Adicionando...
+          } @else {
+            Adicionar bloqueio
+          }
+        </button>
+      </form>
+
+      @if (mensagemOperacao()) {
+        <p #feedbackOperacao class="bloqueios-page__operation-feedback" role="status" tabindex="-1">
+          {{ mensagemOperacao() }}
+        </p>
+      } @else if (mensagemErroOperacao()) {
+        <p
+          #feedbackOperacao
+          class="bloqueios-page__operation-feedback bloqueios-page__operation-feedback--error"
+          role="alert"
+          tabindex="-1"
+        >
+          {{ mensagemErroOperacao() }}
+        </p>
+      }
+    </aside>
+
+    <section class="bloqueios-page__list-panel" aria-labelledby="bloqueios-list-title">
+      <div class="bloqueios-page__list-heading">
+        <h2 id="bloqueios-list-title">Termos cadastrados</h2>
+        <p>Um resultado é ignorado quando seu nome contém qualquer termo desta lista.</p>
+      </div>
+
+      @if (estadoLista() === 'loading') {
+        <div class="bloqueios-page__feedback" role="status">
+          <span class="ui-spinner ui-spinner--small" aria-hidden="true"></span>
+          <span>Carregando bloqueios...</span>
+        </div>
+      }
+
+      @if (estadoLista() === 'error') {
+        <div
+          #feedbackLista
+          class="bloqueios-page__feedback bloqueios-page__feedback--error"
+          role="alert"
+          tabindex="-1"
+        >
+          <div>
+            <strong>Não foi possível carregar os bloqueios</strong>
+            <span>{{ mensagemErroLista() }}</span>
+          </div>
+          <button type="button" (click)="carregar()">Tentar novamente</button>
+        </div>
+      }
+
+      @if (estadoLista() === 'empty') {
+        <div class="bloqueios-page__empty" role="status">
+          <h3>Nenhum termo cadastrado</h3>
+          <p>As buscas seguem normalmente até que um nome ou trecho seja adicionado.</p>
+        </div>
+      }
+
+      @if (estadoLista() === 'success') {
+        <ul class="bloqueios-page__list" aria-label="Nomes e trechos bloqueados">
+          @for (bloqueio of bloqueios(); track bloqueio.id) {
+            <li>
+              <div>
+                <strong>{{ bloqueio.termo }}</strong>
+                <span>
+                  Cadastrado em
+                  <time [attr.datetime]="bloqueio.criadoEm">
+                    {{ bloqueio.criadoEm | date: 'dd/MM/yyyy' }}
+                  </time>
+                </span>
+              </div>
+              <button
+                type="button"
+                [attr.aria-label]="'Remover bloqueio ' + bloqueio.termo"
+                [attr.aria-busy]="removendoId() === bloqueio.id"
+                [disabled]="removendoId() !== null"
+                (click)="remover(bloqueio)"
+              >
+                {{ removendoId() === bloqueio.id ? 'Removendo...' : 'Remover' }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  </div>
+</section>

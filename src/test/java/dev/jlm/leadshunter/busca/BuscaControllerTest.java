@@ -53,6 +53,7 @@ class BuscaControllerTest {
             5,
             List.of(CategoriaNegocio.PADARIA),
             1,
+            0,
             LocalDateTime.of(2026, 8, 22, 10, 0),
             List.of(new BuscaResponse.LeadEncontradoResponse(
                 20L,
@@ -82,6 +83,7 @@ class BuscaControllerTest {
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
             .andExpect(jsonPath("$.id").value(10))
             .andExpect(jsonPath("$.totalEncontrados").value(1))
+            .andExpect(jsonPath("$.totalBloqueados").value(0))
             .andExpect(jsonPath("$.leads[0].id").value(20))
             .andExpect(jsonPath("$.leads[0].whatsappUrl")
                 .value("https://wa.me/554133334444"));

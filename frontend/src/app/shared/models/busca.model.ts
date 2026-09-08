@@ -17,6 +17,7 @@ export interface BuscaResponse {
   raioKm: number;
   categorias: CategoriaNegocio[];
   totalEncontrados: number;
+  totalBloqueados?: number;
   criadoEm: LocalDateTimeString;
   leads: LeadEncontradoResponse[];
 }

@@ -1,5 +1,6 @@
 package dev.jlm.leadshunter.busca;
 
+import dev.jlm.leadshunter.bloqueio.NomeBloqueadoService;
 import dev.jlm.leadshunter.geo.MunicipioInfo;
 import dev.jlm.leadshunter.geo.MunicipioService;
 import dev.jlm.leadshunter.integracao.places.PlacesApiClient;
@@ -13,6 +14,7 @@ import dev.jlm.leadshunter.lead.TelefoneNormalizer;
 import dev.jlm.leadshunter.lead.Temperatura;
 import dev.jlm.leadshunter.lead.WhatsAppLinkGenerator;
 import dev.jlm.leadshunter.scoring.ScoringService;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +38,7 @@ public class BuscaService {
     private final ScoringService scoringService;
     private final BuscaPlacesCache buscaPlacesCache;
     private final WhatsAppLinkGenerator whatsAppLinkGenerator;
+    private final NomeBloqueadoService nomeBloqueadoService;
 
     @Transactional
     public BuscaResponse criar(BuscaRequest request) {
@@ -59,7 +62,7 @@ public class BuscaService {
         busca.setTotalEncontrados(placesResponse.places().size());
 
         Busca buscaSalva = buscaRepository.saveAndFlush(busca);
-        List<Lead> leads = persistirLeads(buscaSalva, placesResponse);
+        ResultadoPersistencia resultadoPersistencia = persistirLeads(buscaSalva, placesResponse);
 
         return new BuscaResponse(
             buscaSalva.getId(),
@@ -69,8 +72,9 @@ public class BuscaService {
             buscaSalva.getRaioKm(),
             request.categorias(),
             buscaSalva.getTotalEncontrados(),
+            resultadoPersistencia.totalBloqueados(),
             buscaSalva.getCriadoEm(),
-            toLeadEncontradoResponse(leads)
+            toLeadEncontradoResponse(resultadoPersistencia.leads())
         );
     }
 
@@ -103,7 +107,10 @@ public class BuscaService {
         );
     }
 
-    private List<Lead> persistirLeads(Busca busca, PlacesSearchResponse placesResponse) {
+    private ResultadoPersistencia persistirLeads(
+        Busca busca,
+        PlacesSearchResponse placesResponse
+    ) {
         Map<String, PlacesSearchResponse.PlaceResult> placesUnicos = new LinkedHashMap<>();
 
         for (PlacesSearchResponse.PlaceResult place : placesResponse.places()) {
@@ -113,9 +120,19 @@ public class BuscaService {
             placesUnicos.putIfAbsent(place.googlePlaceId(), place);
         }
 
-        return placesUnicos.values().stream()
-            .map(place -> persistirLead(busca, place))
-            .toList();
+        List<String> termosNormalizados = nomeBloqueadoService.listarTermosNormalizados();
+        List<Lead> leads = new ArrayList<>();
+        int totalBloqueados = 0;
+
+        for (PlacesSearchResponse.PlaceResult place : placesUnicos.values()) {
+            if (nomeBloqueadoService.estaBloqueado(place.nome(), termosNormalizados)) {
+                totalBloqueados += 1;
+                continue;
+            }
+            leads.add(persistirLead(busca, place));
+        }
+
+        return new ResultadoPersistencia(List.copyOf(leads), totalBloqueados);
     }
 
     private Lead persistirLead(Busca busca, PlacesSearchResponse.PlaceResult place) {
@@ -274,5 +291,8 @@ public class BuscaService {
                 lead.getTemperatura() != null ? lead.getTemperatura().name() : null
             ))
             .toList();
+    }
+
+    private record ResultadoPersistencia(List<Lead> leads, int totalBloqueados) {
     }
 }

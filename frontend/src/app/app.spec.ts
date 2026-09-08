@@ -17,7 +17,7 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render the accessible shell and its three navigation areas', async () => {
+  it('should render the accessible shell and its four navigation areas', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
@@ -31,11 +31,13 @@ describe('App', () => {
       'Busca',
       'Kanban',
       'Histórico',
+      'Bloqueios',
     ]);
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/busca',
       '/kanban',
       '/historico',
+      '/bloqueios',
     ]);
     expect(compiled.querySelector('header.app-header')).toBeNull();
     expect(compiled.querySelector('footer')).toBeNull();

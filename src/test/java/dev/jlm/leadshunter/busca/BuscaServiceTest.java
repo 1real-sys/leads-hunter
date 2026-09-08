@@ -6,8 +6,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
+import dev.jlm.leadshunter.bloqueio.NomeBloqueadoService;
 import dev.jlm.leadshunter.geo.MunicipioInfo;
 import dev.jlm.leadshunter.geo.MunicipioService;
 import dev.jlm.leadshunter.integracao.places.PlacesApiClient;
@@ -49,6 +51,9 @@ class BuscaServiceTest {
 
     @Mock
     private PlacesApiClient placesApiClient;
+
+    @Mock
+    private NomeBloqueadoService nomeBloqueadoService;
 
     @Test
     void deveBuscarLocaisPersistirResumoERetornarResultados() {
@@ -142,6 +147,7 @@ class BuscaServiceTest {
 
         assertThat(response.id()).isEqualTo(10L);
         assertThat(response.totalEncontrados()).isEqualTo(1);
+        assertThat(response.totalBloqueados()).isZero();
         assertThat(response.leads()).hasSize(1);
         assertThat(response.leads().getFirst().id()).isEqualTo(20L);
         assertThat(response.leads().getFirst().nome()).isEqualTo("Padaria Central");
@@ -150,6 +156,58 @@ class BuscaServiceTest {
             .isEqualTo("https://wa.me/554133334444");
         assertThat(response.leads().getFirst().score()).isEqualTo(95);
         assertThat(response.leads().getFirst().temperatura()).isEqualTo("QUENTE");
+    }
+
+    @Test
+    void deveBloquearResultadoUnicoPorNomeSemCriarLeadOuVinculo() {
+        PlacesSearchResponse.PlaceResult bloqueado = criarPlace(
+            "place-bloqueado",
+            "Supermercados BH Centro"
+        );
+        PlacesSearchResponse.PlaceResult bloqueadoDuplicado = criarPlace(
+            "place-bloqueado",
+            "Supermercados BH Centro duplicado"
+        );
+        PlacesSearchResponse.PlaceResult permitido = criarPlace("place-permitido", "Padaria Central");
+        when(placesApiClient.buscarProximos(any(PlacesSearchRequest.class)))
+            .thenReturn(new PlacesSearchResponse(List.of(
+                bloqueado,
+                bloqueadoDuplicado,
+                permitido
+            )));
+        when(nomeBloqueadoService.listarTermosNormalizados())
+            .thenReturn(List.of("supermercados bh"));
+        when(nomeBloqueadoService.estaBloqueado(
+            "Supermercados BH Centro",
+            List.of("supermercados bh")
+        )).thenReturn(true);
+        when(nomeBloqueadoService.estaBloqueado(
+            "Padaria Central",
+            List.of("supermercados bh")
+        )).thenReturn(false);
+        when(buscaRepository.saveAndFlush(any(Busca.class))).thenAnswer(invocation -> {
+            Busca busca = invocation.getArgument(0);
+            busca.setId(15L);
+            busca.setCriadoEm(LocalDateTime.of(2026, 9, 8, 12, 0));
+            return busca;
+        });
+        when(leadRepository.findByGooglePlaceId("place-permitido")).thenReturn(Optional.empty());
+        when(leadRepository.save(any(Lead.class))).thenAnswer(invocation -> {
+            Lead lead = invocation.getArgument(0);
+            lead.setId(25L);
+            return lead;
+        });
+
+        BuscaResponse response = criarService().criar(criarRequestPadaria());
+
+        assertThat(response.totalEncontrados()).isEqualTo(3);
+        assertThat(response.totalBloqueados()).isEqualTo(1);
+        assertThat(response.leads()).singleElement()
+            .extracting(BuscaResponse.LeadEncontradoResponse::nome)
+            .isEqualTo("Padaria Central");
+        verify(leadRepository, never()).findByGooglePlaceId("place-bloqueado");
+        verify(leadRepository, times(1)).save(any(Lead.class));
+        verify(buscaLeadRepository, times(1)).save(any(BuscaLead.class));
     }
 
     @Test
@@ -387,7 +445,8 @@ class BuscaServiceTest {
             new TelefoneNormalizer(),
             new ScoringService(),
             new BuscaPlacesCache(30, 100),
-            new WhatsAppLinkGenerator()
+            new WhatsAppLinkGenerator(),
+            nomeBloqueadoService
         );
     }
 

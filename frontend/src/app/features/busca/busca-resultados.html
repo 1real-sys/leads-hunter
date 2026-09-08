@@ -47,6 +47,14 @@
     </div>
   </dl>
 
+  @if ((resultado().totalBloqueados ?? 0) > 0) {
+    <p class="resultados__bloqueados" role="status">
+      {{ resultado().totalBloqueados }}
+      {{ resultado().totalBloqueados === 1 ? 'resultado ignorado' : 'resultados ignorados' }} pelos
+      bloqueios cadastrados.
+    </p>
+  }
+
   @if (resultado().leads.length === 0) {
     <div class="resultados__vazio" role="status">
       <h3>Nenhum estabelecimento correspondeu a esta configuração.</h3>

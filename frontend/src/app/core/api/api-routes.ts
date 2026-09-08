@@ -1,6 +1,8 @@
 export const API_PREFIX = '/api';
 
 export const API_ROUTES = {
+  bloqueios: `${API_PREFIX}/bloqueios`,
+  bloqueio: (id: number) => `${API_PREFIX}/bloqueios/${id}`,
   buscas: `${API_PREFIX}/buscas`,
   busca: (id: number) => `${API_PREFIX}/buscas/${id}`,
   leads: `${API_PREFIX}/leads`,
