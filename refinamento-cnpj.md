@@ -1,6 +1,6 @@
 # Refinamento — CNPJ por lead (unidade exata)
 
-Planejamento em sprints para tentar, a partir de cada lead capturado, identificar o **CNPJ (14 dígitos) da unidade específica** e trazer a **razão social** para o lead. **CNPJ-00 a CNPJ-03 estão implementadas e validadas; CNPJ-04 permanece pendente.**
+Planejamento em sprints para tentar, a partir de cada lead capturado, identificar o **CNPJ (14 dígitos) da unidade específica** e trazer a **razão social** para o lead. **CNPJ-00 a CNPJ-04 estão implementadas e validadas.** Este arquivo registra o plano executado e o estado final da entrega.
 
 ## Objetivo
 
@@ -125,7 +125,7 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 
 ### CNPJ-04 — Validação integrada e documentação
 
-**Status: PENDENTE. Não iniciada.**
+**Status: CONCLUÍDA E VALIDADA em 08/09/2026.**
 
 **Objetivo:** fechar com validações e registros.
 
@@ -136,6 +136,8 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 
 **Critérios de aceite:**
 - Suítes e builds passam; documentação fiel ao comportamento real.
+
+**Resultado:** o backend passou com 154 testes e gerou o pacote executável; o frontend passou com 197 testes e build de produção sem warnings. A revisão integrada das unidades conhecidas usa as fixtures transacionais (exclusivas de teste) e confirma a resolução por unidade — Vitória/ES e Vila Velha/ES casam com CNPJs distintos e Curitiba/PR com o seu — sem chamadas à Receita em runtime. `fluxo.md`, `HISTORICO_IMPLEMENTACOES.md` (entrada 53), `API.md` e este arquivo foram sincronizados. A migration `R__carregar_subset_cnpj.sql` permanece como placeholder vazio: a resolução real de CNPJ passa a valer depois que esse arquivo for substituído pela saída revisada do `tools/cnpj` na ingestão mensal da competência RFB (passo a passo em "Custo e manutenção mensal").
 
 ---
 

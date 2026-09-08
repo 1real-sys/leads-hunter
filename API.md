@@ -423,7 +423,7 @@ Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores 
 ]
 ```
 
-Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um link manual e fica `null` quando o telefone normalizado é ausente ou inválido. `cnpj` contém os 14 dígitos da unidade e `razaoSocial` contém o nome empresarial somente quando a correspondência local foi confiável; ambos ficam `null` quando não há identificação segura. Data-base e confiança da correspondência permanecem internas. Os cinco campos geográficos ficam `null` para leads ainda não enriquecidos ou sem correspondência no dataset municipal.
+Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um link manual e fica `null` quando o telefone normalizado é ausente ou inválido. `cnpj` contém os 14 dígitos da unidade e `razaoSocial` contém o nome empresarial somente quando a correspondência local foi confiável; ambos ficam `null` quando não há identificação segura. A correspondência depende do subset local de CNPJ carregado: como a carga mensal é manual (o `R__` inicial é um placeholder vazio), `cnpj`/`razaoSocial` permanecem `null` enquanto não houver base carregada para o município do lead. Data-base e confiança da correspondência permanecem internas. Os cinco campos geográficos ficam `null` para leads ainda não enriquecidos ou sem correspondência no dataset municipal.
 
 ### Status HTTP
 

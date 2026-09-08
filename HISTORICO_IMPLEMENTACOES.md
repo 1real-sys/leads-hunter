@@ -1460,3 +1460,17 @@ As exportações CSV e XLSX ganharam colunas para os dois dados. Valores ausente
 - `frontend/src/app/features/kanban/lead-detalhe.ts`
 - `frontend/src/app/shared/models/api-contracts.spec.ts`
 - `frontend/src/app/shared/models/lead.model.ts`
+
+---
+
+## 53. Fechamento integrado do refinamento CNPJ — 08/09/2026
+
+O refinamento de CNPJ foi encerrado com validação integrada e documentação. A suíte backend passou com 154 testes e o pacote executável foi gerado; a suíte frontend passou com 197 testes e o build de produção terminou sem warnings. A revisão integrada das unidades conhecidas (exclusiva de teste) confirma que Vitória/ES e Vila Velha/ES resolvem CNPJs distintos e Curitiba/PR o seu, sem consulta à Receita em runtime. A migration repetível `R__carregar_subset_cnpj.sql` segue como placeholder vazio até ser substituída pela ingestão mensal revisada; `fluxo.md` e `refinamento-cnpj.md` registraram o estado final das sprints CNPJ-00 a CNPJ-04.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento-cnpj.md`
