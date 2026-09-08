@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 import dev.jlm.leadshunter.bloqueio.NomeBloqueadoService;
+import dev.jlm.leadshunter.cnpj.CnpjService;
 import dev.jlm.leadshunter.geo.MunicipioInfo;
 import dev.jlm.leadshunter.geo.MunicipioService;
 import dev.jlm.leadshunter.integracao.places.PlacesApiClient;
@@ -55,6 +56,9 @@ class BuscaServiceTest {
     @Mock
     private NomeBloqueadoService nomeBloqueadoService;
 
+    @Mock
+    private CnpjService cnpjService;
+
     @Test
     void deveBuscarLocaisPersistirResumoERetornarResultados() {
         BuscaRequest request = new BuscaRequest(
@@ -76,7 +80,13 @@ class BuscaServiceTest {
                 new BigDecimal("4.5"),
                 120,
                 "OPERATIONAL",
-                List.of("bakery")
+                List.of("bakery"),
+                new PlacesSearchResponse.EnderecoEstruturado(
+                    "80420063",
+                    "Rua Central",
+                    "100",
+                    "Centro"
+                )
             )
         ));
         when(placesApiClient.buscarProximos(any(PlacesSearchRequest.class)))
@@ -130,6 +140,10 @@ class BuscaServiceTest {
         assertThat(leadCaptor.getValue().getRatingGoogle()).isEqualByComparingTo("4.5");
         assertThat(leadCaptor.getValue().getTelefone()).isEqualTo("(41) 3333-4444");
         assertThat(leadCaptor.getValue().getTelefoneNormalizado()).isEqualTo("554133334444");
+        assertThat(leadCaptor.getValue().getCep()).isEqualTo("80420063");
+        assertThat(leadCaptor.getValue().getLogradouro()).isEqualTo("Rua Central");
+        assertThat(leadCaptor.getValue().getNumero()).isEqualTo("100");
+        assertThat(leadCaptor.getValue().getBairro()).isEqualTo("Centro");
         assertThat(leadCaptor.getValue().getMunicipioCodigoIbge()).isEqualTo("4106902");
         assertThat(leadCaptor.getValue().getMunicipioNome()).isEqualTo("Curitiba");
         assertThat(leadCaptor.getValue().getUf()).isEqualTo("PR");
@@ -233,6 +247,9 @@ class BuscaServiceTest {
         leadExistente.setUf("ES");
         leadExistente.setIdhm(new BigDecimal("0.845"));
         leadExistente.setIdhmReferencia((short) 2010);
+        leadExistente.setCnpj("43869215000156");
+        leadExistente.setRazaoSocial("CB VITORIA COMERCIO DE ALIMENTOS LTDA");
+        leadExistente.setCnpjCorrespondidoEm(LocalDateTime.of(2026, 8, 12, 8, 0));
 
         when(placesApiClient.buscarProximos(any(PlacesSearchRequest.class)))
             .thenReturn(responseGoogle);
@@ -266,6 +283,12 @@ class BuscaServiceTest {
         assertThat(leadExistente.getUf()).isNull();
         assertThat(leadExistente.getIdhm()).isNull();
         assertThat(leadExistente.getIdhmReferencia()).isNull();
+        assertThat(leadExistente.getCnpj()).isEqualTo("43869215000156");
+        assertThat(leadExistente.getRazaoSocial())
+            .isEqualTo("CB VITORIA COMERCIO DE ALIMENTOS LTDA");
+        assertThat(leadExistente.getCnpjCorrespondidoEm())
+            .isEqualTo(LocalDateTime.of(2026, 8, 12, 8, 0));
+        verifyNoInteractions(cnpjService);
         assertThat(response.totalEncontrados()).isEqualTo(2);
         assertThat(response.leads()).hasSize(1);
         assertThat(response.leads().getFirst().score()).isEqualTo(95);
@@ -446,7 +469,8 @@ class BuscaServiceTest {
             new ScoringService(),
             new BuscaPlacesCache(30, 100),
             new WhatsAppLinkGenerator(),
-            nomeBloqueadoService
+            nomeBloqueadoService,
+            cnpjService
         );
     }
 

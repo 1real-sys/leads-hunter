@@ -21,6 +21,7 @@ public class PlacesApiClient {
         "places.id",
         "places.displayName",
         "places.formattedAddress",
+        "places.addressComponents",
         "places.internationalPhoneNumber",
         "places.nationalPhoneNumber",
         "places.location",
@@ -186,13 +187,48 @@ public class PlacesApiClient {
         Double rating,
         Integer userRatingCount,
         String businessStatus,
-        List<String> types
+        List<String> types,
+        List<AddressComponent> addressComponents
     ) {
+        Place(
+            String id,
+            DisplayName displayName,
+            String formattedAddress,
+            String internationalPhoneNumber,
+            String nationalPhoneNumber,
+            Location location,
+            Double rating,
+            Integer userRatingCount,
+            String businessStatus,
+            List<String> types
+        ) {
+            this(
+                id,
+                displayName,
+                formattedAddress,
+                internationalPhoneNumber,
+                nationalPhoneNumber,
+                location,
+                rating,
+                userRatingCount,
+                businessStatus,
+                types,
+                null
+            );
+        }
     }
 
     record DisplayName(String text, String languageCode) {
     }
 
     record Location(Double latitude, Double longitude) {
+    }
+
+    record AddressComponent(
+        String longText,
+        String shortText,
+        List<String> types,
+        String languageCode
+    ) {
     }
 }

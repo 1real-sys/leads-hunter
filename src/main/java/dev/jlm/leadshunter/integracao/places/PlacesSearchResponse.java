@@ -19,7 +19,44 @@ public record PlacesSearchResponse(
         BigDecimal ratingGoogle,
         Integer totalReviews,
         String businessStatus,
-        List<String> tipos
+        List<String> tipos,
+        EnderecoEstruturado enderecoEstruturado
+    ) {
+        public PlaceResult(
+            String googlePlaceId,
+            String nome,
+            CategoriaNegocio categoria,
+            String enderecoFormatado,
+            String telefone,
+            BigDecimal latitude,
+            BigDecimal longitude,
+            BigDecimal ratingGoogle,
+            Integer totalReviews,
+            String businessStatus,
+            List<String> tipos
+        ) {
+            this(
+                googlePlaceId,
+                nome,
+                categoria,
+                enderecoFormatado,
+                telefone,
+                latitude,
+                longitude,
+                ratingGoogle,
+                totalReviews,
+                businessStatus,
+                tipos,
+                null
+            );
+        }
+    }
+
+    public record EnderecoEstruturado(
+        String cep,
+        String logradouro,
+        String numero,
+        String bairro
     ) {
     }
 }

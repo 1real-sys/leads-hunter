@@ -31,6 +31,27 @@ public class Lead {
     @Column(name = "endereco_formatado", length = 255)
     private String enderecoFormatado;
 
+    @Column(length = 8)
+    private String cep;
+
+    @Column(length = 255)
+    private String logradouro;
+
+    @Column(length = 30)
+    private String numero;
+
+    @Column(length = 120)
+    private String bairro;
+
+    @Column(length = 14)
+    private String cnpj;
+
+    @Column(name = "razao_social", length = 255)
+    private String razaoSocial;
+
+    @Column(name = "cnpj_correspondido_em")
+    private LocalDateTime cnpjCorrespondidoEm;
+
     @Column(length = 30)
     private String telefone;
 

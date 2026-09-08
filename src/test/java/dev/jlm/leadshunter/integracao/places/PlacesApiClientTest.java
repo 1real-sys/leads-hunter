@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClient;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 @ExtendWith(MockitoExtension.class)
@@ -107,6 +108,33 @@ class PlacesApiClientTest {
         assertThatThrownBy(() -> client.buscarProximos(criarRequest()))
             .isInstanceOf(PlacesApiInvalidResponseException.class)
             .hasMessageContaining("resposta inválida");
+
+        server.verify();
+    }
+
+    @Test
+    void deveSolicitarComponentesDoEnderecoNaFieldMask() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        PlacesApiClient client = new PlacesApiClient(
+            builder,
+            responseMapper,
+            rateLimiter,
+            "chave-de-teste",
+            URL
+        );
+        server.expect(requestTo(URL))
+            .andExpect(header("X-Goog-FieldMask", org.hamcrest.Matchers.containsString(
+                "places.addressComponents"
+            )))
+            .andRespond(withStatus(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"places\":[]}"));
+        when(responseMapper.toPlacesSearchResponse(any()))
+            .thenReturn(new PlacesSearchResponse(List.of()));
+        permitirExecucaoDoRateLimiter();
+
+        client.buscarProximos(criarRequest());
 
         server.verify();
     }

@@ -145,6 +145,51 @@ class BuscaServiceJpaIntegrationTest {
         assertThat(historico.leads()).hasSize(1);
     }
 
+    @Test
+    void deveAssociarCnpjsDistintosAsUnidadesDeVitoriaEVilaVelha() {
+        PlacesSearchResponse.PlaceResult vitoria = cocoBambu(
+            "cnpj-jpa-vitoria",
+            "Coco Bambu Vitória",
+            "-20.2976",
+            "-40.2958",
+            "29055620",
+            "Rua João da Cruz",
+            "10",
+            "Praia do Canto"
+        );
+        PlacesSearchResponse.PlaceResult vilaVelha = cocoBambu(
+            "cnpj-jpa-vila-velha",
+            "Coco Bambu Vila Velha",
+            "-20.3402",
+            "-40.2884",
+            "29101950",
+            "Avenida Doutor Olívio Lira",
+            "353",
+            "Praia da Costa"
+        );
+        when(placesApiClient.buscarProximos(any()))
+            .thenReturn(new PlacesSearchResponse(List.of(vitoria)))
+            .thenReturn(new PlacesSearchResponse(List.of(vilaVelha)));
+
+        buscaService.criar(criarRequest("Vitória", "-20.2976", "-40.2958"));
+        buscaService.criar(criarRequest("Vila Velha", "-20.3402", "-40.2884"));
+
+        Lead leadVitoria = leadRepository.findByGooglePlaceId("cnpj-jpa-vitoria").orElseThrow();
+        Lead leadVilaVelha = leadRepository.findByGooglePlaceId("cnpj-jpa-vila-velha")
+            .orElseThrow();
+        assertThat(leadVitoria.getMunicipioCodigoIbge()).isEqualTo("3205309");
+        assertThat(leadVitoria.getCnpj()).isEqualTo("43869215000156");
+        assertThat(leadVitoria.getRazaoSocial())
+            .isEqualTo("CB VITORIA COMERCIO DE ALIMENTOS LTDA");
+        assertThat(leadVitoria.getCnpjCorrespondidoEm()).isNotNull();
+        assertThat(leadVilaVelha.getMunicipioCodigoIbge()).isEqualTo("3205200");
+        assertThat(leadVilaVelha.getCnpj()).isEqualTo("23681920000118");
+        assertThat(leadVilaVelha.getRazaoSocial())
+            .isEqualTo("CB VILA VELHA COMERCIO DE ALIMENTOS LTDA");
+        assertThat(leadVilaVelha.getCnpjCorrespondidoEm()).isNotNull();
+        assertThat(leadVitoria.getCnpj()).isNotEqualTo(leadVilaVelha.getCnpj());
+    }
+
     private BuscaRequest criarRequest(String endereco, String latitude, String longitude) {
         return new BuscaRequest(
             endereco,
@@ -167,7 +212,13 @@ class BuscaServiceJpaIntegrationTest {
             new BigDecimal("4.8"),
             120,
             "OPERATIONAL",
-            List.of("bakery")
+            List.of("bakery"),
+            new PlacesSearchResponse.EnderecoEstruturado(
+                "80420063",
+                "Rua Principal",
+                "100",
+                "Centro"
+            )
         );
     }
 
@@ -184,6 +235,37 @@ class BuscaServiceJpaIntegrationTest {
             5,
             "CLOSED",
             List.of("restaurant")
+        );
+    }
+
+    private PlacesSearchResponse.PlaceResult cocoBambu(
+        String placeId,
+        String nome,
+        String latitude,
+        String longitude,
+        String cep,
+        String logradouro,
+        String numero,
+        String bairro
+    ) {
+        return new PlacesSearchResponse.PlaceResult(
+            placeId,
+            nome,
+            CategoriaNegocio.RESTAURANTE,
+            logradouro + ", " + numero,
+            null,
+            new BigDecimal(latitude),
+            new BigDecimal(longitude),
+            new BigDecimal("4.8"),
+            100,
+            "OPERATIONAL",
+            List.of("restaurant"),
+            new PlacesSearchResponse.EnderecoEstruturado(
+                cep,
+                logradouro,
+                numero,
+                bairro
+            )
         );
     }
 }

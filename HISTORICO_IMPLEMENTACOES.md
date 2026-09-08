@@ -1349,3 +1349,46 @@ O fechamento incluiu testes de serviço, controller, persistência, interface e 
 - `frontend/src/app/features/busca/busca-resultados.scss`
 - `frontend/src/app/features/busca/busca-resultados.spec.ts`
 - `frontend/src/app/shared/models/busca.model.ts`
+
+---
+
+## 50. Ingestão e correspondência local de CNPJ — 08/09/2026
+
+Foi implementado o enriquecimento seguro de CNPJ até a etapa CNPJ-02. Uma ferramenta offline passou a transformar os arquivos mensais oficiais da Receita Federal em um recorte reproduzível e determinístico, verificando manifesto, origem, checksums, limites, municípios e situação cadastral antes de gerar o JSON e a carga Flyway.
+
+O backend passou a capturar CEP, logradouro, número e bairro estruturados da Google Places, persistir o espelho local de empresas e estabelecimentos e tentar identificar a unidade exata durante a captura. A correspondência usa município, endereço e nome, exige candidato único acima do limiar e mantém o lead sem CNPJ diante de ambiguidade ou baixa confiança. Valores já correspondidos e dados comerciais existentes são preservados, sem alterar o scoring.
+
+A carga inicial e os testes confirmam CNPJs distintos para unidades da mesma rede em Vitória e Vila Velha. A exposição em contratos, exportações e frontend permanece fora desta entrada porque o trabalho foi interrompido antes da CNPJ-03, conforme solicitado.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjEmpresa.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjEmpresaRepository.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjEstabelecimento.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjEstabelecimentoRepository.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjService.java`
+- `src/main/resources/db/migration/R__carregar_subset_cnpj.sql`
+- `src/main/resources/db/migration/V4__adicionar_endereco_estruturado_e_cnpj.sql`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjRepositoryTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjServiceTest.java`
+- `tools/cnpj/README.md`
+- `tools/cnpj/gerar_dataset.py`
+- `tools/cnpj/test_gerar_dataset.py`
+
+**Modificados:**
+
+- `.gitignore`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento-cnpj.md`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/places/PlacesApiClient.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/places/PlacesResponseMapper.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/places/PlacesSearchResponse.java`
+- `src/main/java/dev/jlm/leadshunter/lead/Lead.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceJpaIntegrationTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/places/PlacesApiClientTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/places/PlacesResponseMapperTest.java`

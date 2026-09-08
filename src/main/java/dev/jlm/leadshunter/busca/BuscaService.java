@@ -1,6 +1,7 @@
 package dev.jlm.leadshunter.busca;
 
 import dev.jlm.leadshunter.bloqueio.NomeBloqueadoService;
+import dev.jlm.leadshunter.cnpj.CnpjService;
 import dev.jlm.leadshunter.geo.MunicipioInfo;
 import dev.jlm.leadshunter.geo.MunicipioService;
 import dev.jlm.leadshunter.integracao.places.PlacesApiClient;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class BuscaService {
     private final BuscaPlacesCache buscaPlacesCache;
     private final WhatsAppLinkGenerator whatsAppLinkGenerator;
     private final NomeBloqueadoService nomeBloqueadoService;
+    private final CnpjService cnpjService;
 
     @Transactional
     public BuscaResponse criar(BuscaRequest request) {
@@ -141,6 +144,7 @@ public class BuscaService {
 
         atualizarDadosExternos(lead, place);
         atualizarGeografia(lead);
+        atualizarCnpj(lead);
         ScoringService.Resultado scoring = scoringService.calcular(
             lead.getCategoria(),
             lead.getTelefoneNormalizado(),
@@ -173,11 +177,25 @@ public class BuscaService {
         atualizarSePresente(place.nome(), lead::setNome);
         atualizarSePresente(place.categoria(), lead::setCategoria);
         atualizarSePresente(place.enderecoFormatado(), lead::setEnderecoFormatado);
+        atualizarEnderecoEstruturado(lead, place.enderecoEstruturado());
         atualizarSePresente(place.latitude(), lead::setLatitude);
         atualizarSePresente(place.longitude(), lead::setLongitude);
         atualizarSePresente(place.ratingGoogle(), lead::setRatingGoogle);
         atualizarSePresente(place.totalReviews(), lead::setTotalReviews);
         atualizarTelefone(lead, place.telefone());
+    }
+
+    private void atualizarEnderecoEstruturado(
+        Lead lead,
+        PlacesSearchResponse.EnderecoEstruturado endereco
+    ) {
+        if (endereco == null) {
+            return;
+        }
+        atualizarSePresente(endereco.cep(), lead::setCep);
+        atualizarSePresente(endereco.logradouro(), lead::setLogradouro);
+        atualizarSePresente(endereco.numero(), lead::setNumero);
+        atualizarSePresente(endereco.bairro(), lead::setBairro);
     }
 
     private void atualizarTelefone(Lead lead, String telefone) {
@@ -217,6 +235,17 @@ public class BuscaService {
         lead.setUf(null);
         lead.setIdhm(null);
         lead.setIdhmReferencia(null);
+    }
+
+    private void atualizarCnpj(Lead lead) {
+        if (lead.getCnpj() != null) {
+            return;
+        }
+        cnpjService.corresponder(lead).ifPresent(correspondencia -> {
+            lead.setCnpj(correspondencia.cnpj());
+            lead.setRazaoSocial(correspondencia.razaoSocial());
+            lead.setCnpjCorrespondidoEm(LocalDateTime.now());
+        });
     }
 
     private <T> void atualizarSePresente(T valor, Consumer<T> atualizador) {

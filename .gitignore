@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+# Fontes brutas mensais dos Dados Abertos do CNPJ (varios GiB)
+tools/cnpj/sources/
+
+### Python ###
+__pycache__/
+*.py[cod]
