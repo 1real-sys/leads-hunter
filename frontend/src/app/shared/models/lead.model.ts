@@ -5,6 +5,8 @@ export interface LeadResponse {
   id: number;
   googlePlaceId: string;
   nome: string | null;
+  cnpj?: string | null;
+  razaoSocial?: string | null;
   categoria: CategoriaNegocio | null;
   enderecoFormatado: string | null;
   telefone: string | null;

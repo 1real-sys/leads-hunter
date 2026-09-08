@@ -1427,3 +1427,36 @@ O SQL gerado pelo ingestor agora inclui competência, URLs e checksums no cabeç
 - `tools/cnpj/README.md`
 - `tools/cnpj/gerar_dataset.py`
 - `tools/cnpj/test_gerar_dataset.py`
+
+---
+
+## 52. Exposição de CNPJ e razão social — 08/09/2026
+
+O CNPJ de 14 dígitos e a razão social passaram a fazer parte das respostas completas de lead, inclusive na paginação do Kanban. A competência e a confiança da correspondência continuam internas, evitando ampliar o contrato além da decisão de produto desta etapa.
+
+As exportações CSV e XLSX ganharam colunas para os dois dados. Valores ausentes geram células vazias, o CNPJ permanece textual na planilha Excel e campos externos com aparência de fórmula não são executados. No frontend, o contrato aceita os campos de forma opcional e anulável, e o drawer apresenta o CNPJ formatado e a razão social ou mensagens neutras quando não há identificação segura.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/shared/utils/cnpj.ts`
+- `frontend/src/app/shared/utils/cnpj.spec.ts`
+
+**Modificados:**
+
+- `API.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento-cnpj.md`
+- `src/main/java/dev/jlm/leadshunter/exportacao/ExportService.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadResponse.java`
+- `src/test/java/dev/jlm/leadshunter/exportacao/ExportServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/lead/LeadControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/lead/LeadServiceTest.java`
+- `frontend/src/app/features/kanban/lead-detalhe.html`
+- `frontend/src/app/features/kanban/lead-detalhe.scss`
+- `frontend/src/app/features/kanban/lead-detalhe.spec.ts`
+- `frontend/src/app/features/kanban/lead-detalhe.ts`
+- `frontend/src/app/shared/models/api-contracts.spec.ts`
+- `frontend/src/app/shared/models/lead.model.ts`

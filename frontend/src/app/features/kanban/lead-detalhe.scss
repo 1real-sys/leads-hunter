@@ -216,6 +216,10 @@
   font-weight: 700;
 }
 
+.lead-detalhe-panel__cnpj dd {
+  font-variant-numeric: tabular-nums;
+}
+
 .lead-detalhe-panel__coordenadas dd {
   color: var(--muted);
   font-size: var(--font-size-xs);

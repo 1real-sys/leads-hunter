@@ -8,7 +8,7 @@ import {
   TEMPERATURAS,
   CategoriaNegocio,
   StatusFunil,
-  Temperatura
+  Temperatura,
 } from './enums.model';
 import { AtualizarLeadRequest, LeadResponse } from './lead.model';
 import {
@@ -17,14 +17,20 @@ import {
   BuscaResponse,
   BuscaResumoResponse,
   LeadEncontradoResponse,
-  LeadHistoricoResponse
+  LeadHistoricoResponse,
 } from './busca.model';
 
 describe('contratos TypeScript da API', () => {
   it('mantém enums e prefixo alinhados aos contratos reais', () => {
     expect(CATEGORIAS_NEGOCIO).toEqual([
-      'MERCADO', 'PADARIA', 'DOCERIA', 'RESTAURANTE',
-      'DISTRIBUIDORA', 'ACOUGUE', 'FARMACIA', 'OUTROS'
+      'MERCADO',
+      'PADARIA',
+      'DOCERIA',
+      'RESTAURANTE',
+      'DISTRIBUIDORA',
+      'ACOUGUE',
+      'FARMACIA',
+      'OUTROS',
     ]);
     expect(STATUS_FUNIL).toEqual(['NOVO', 'QUALIFICADO', 'CONTATADO', 'GANHO', 'PERDIDO']);
     expect(TEMPERATURAS).toEqual(['QUENTE', 'MORNO', 'FRIO']);
@@ -44,7 +50,7 @@ describe('contratos TypeScript da API', () => {
       latitude: -25.4284,
       longitude: -49.2733,
       raioKm: 5,
-      categorias: [categoria]
+      categorias: [categoria],
     } satisfies BuscaRequest;
 
     const leadEncontrado = {
@@ -55,7 +61,7 @@ describe('contratos TypeScript da API', () => {
       telefone: null,
       whatsappUrl: null,
       score: 95,
-      temperatura
+      temperatura,
     } satisfies LeadEncontradoResponse;
 
     const busca = {
@@ -67,7 +73,7 @@ describe('contratos TypeScript da API', () => {
       categorias: request.categorias,
       totalEncontrados: 1,
       criadoEm: localDateTime,
-      leads: [leadEncontrado]
+      leads: [leadEncontrado],
     } satisfies BuscaResponse;
 
     const resumo = {
@@ -78,7 +84,7 @@ describe('contratos TypeScript da API', () => {
       raioKm: busca.raioKm,
       categorias: busca.categorias,
       totalEncontrados: busca.totalEncontrados,
-      criadoEm: busca.criadoEm
+      criadoEm: busca.criadoEm,
     } satisfies BuscaResumoResponse;
 
     const leadHistorico = {
@@ -92,18 +98,20 @@ describe('contratos TypeScript da API', () => {
       temperaturaNaBusca: leadEncontrado.temperatura,
       status,
       observacoes: null,
-      ultimoContatoEm: null
+      ultimoContatoEm: null,
     } satisfies LeadHistoricoResponse;
 
     const detalhe = {
       ...resumo,
-      leads: [leadHistorico]
+      leads: [leadHistorico],
     } satisfies BuscaDetalheResponse;
 
     const lead = {
       id: 20,
       googlePlaceId: 'place-20',
       nome: 'Padaria Central',
+      cnpj: '12345678000190',
+      razaoSocial: 'Padaria Central Ltda',
       categoria,
       enderecoFormatado: null,
       telefone: null,
@@ -119,13 +127,13 @@ describe('contratos TypeScript da API', () => {
       observacoes: null,
       ultimoContatoEm: null,
       criadoEm: localDateTime,
-      atualizadoEm: localDateTime
+      atualizadoEm: localDateTime,
     } satisfies LeadResponse;
 
     const update = {
       status,
       observacoes: null,
-      ultimoContatoEm: localDateTime
+      ultimoContatoEm: localDateTime,
     } satisfies AtualizarLeadRequest;
 
     const apiError = {
@@ -133,7 +141,7 @@ describe('contratos TypeScript da API', () => {
       status: 400,
       codigo: 'VALIDACAO_INVALIDA',
       mensagem: 'Dados inválidos',
-      path: '/api/leads/20'
+      path: '/api/leads/20',
     } satisfies ApiErrorResponse;
 
     expect({ busca, resumo, detalhe, lead, update, apiError, temperatura }).toBeDefined();
@@ -146,7 +154,7 @@ describe('contratos TypeScript da API', () => {
     const somenteNulos: AtualizarLeadRequest = {
       status: null,
       observacoes: null,
-      ultimoContatoEm: null
+      ultimoContatoEm: null,
     };
 
     expect([semCampos, somenteNulos]).toHaveLength(2);

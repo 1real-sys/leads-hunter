@@ -396,6 +396,8 @@ Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores 
     "id": 35,
     "googlePlaceId": "place-35",
     "nome": "Padaria Central",
+    "cnpj": "12345678000190",
+    "razaoSocial": "Padaria Central Ltda",
     "categoria": "PADARIA",
     "enderecoFormatado": "Rua Central, 100",
     "telefone": "(27) 99999-0000",
@@ -421,7 +423,7 @@ Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores 
 ]
 ```
 
-Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um link manual e fica `null` quando o telefone normalizado é ausente ou inválido. Os cinco campos geográficos ficam `null` para leads ainda não enriquecidos ou sem correspondência no dataset municipal.
+Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um link manual e fica `null` quando o telefone normalizado é ausente ou inválido. `cnpj` contém os 14 dígitos da unidade e `razaoSocial` contém o nome empresarial somente quando a correspondência local foi confiável; ambos ficam `null` quando não há identificação segura. Data-base e confiança da correspondência permanecem internas. Os cinco campos geográficos ficam `null` para leads ainda não enriquecidos ou sem correspondência no dataset municipal.
 
 ### Status HTTP
 
@@ -483,6 +485,8 @@ Retorna somente os leads da página solicitada, ordenados por score decrescente,
       "id": 35,
       "googlePlaceId": "place-35",
       "nome": "Padaria Central",
+      "cnpj": "12345678000190",
+      "razaoSocial": "Padaria Central Ltda",
       "categoria": "PADARIA",
       "enderecoFormatado": "Rua Central, 100",
       "telefone": "(27) 99999-0000",
@@ -563,6 +567,8 @@ Retorna um `LeadResponse` com a mesma estrutura apresentada em `GET /api/leads`.
   "id": 35,
   "googlePlaceId": "place-35",
   "nome": "Padaria Central",
+  "cnpj": "12345678000190",
+  "razaoSocial": "Padaria Central Ltda",
   "categoria": "PADARIA",
   "enderecoFormatado": "Rua Central, 100",
   "telefone": "(27) 99999-0000",
@@ -660,6 +666,8 @@ Persiste somente os campos não nulos recebidos e retorna o `LeadResponse` compl
   "id": 35,
   "googlePlaceId": "place-35",
   "nome": "Padaria Central",
+  "cnpj": "12345678000190",
+  "razaoSocial": "Padaria Central Ltda",
   "categoria": "PADARIA",
   "enderecoFormatado": "Rua Central, 100",
   "telefone": "(27) 99999-0000",
@@ -712,7 +720,9 @@ As duas exportações usam a mesma consulta e a mesma ordenação de `GET /api/l
 
 As colunas, nesta ordem, são:
 
-`id`, `googlePlaceId`, `nome`, `categoria`, `enderecoFormatado`, `telefone`, `telefoneNormalizado`, `whatsappUrl`, `latitude`, `longitude`, `uf`, `municipioNome`, `idhm`, `ratingGoogle`, `totalReviews`, `score`, `temperatura`, `status`, `observacoes`, `ultimoContatoEm`, `criadoEm`, `atualizadoEm`.
+`id`, `googlePlaceId`, `nome`, `cnpj`, `razaoSocial`, `categoria`, `enderecoFormatado`, `telefone`, `telefoneNormalizado`, `whatsappUrl`, `latitude`, `longitude`, `uf`, `municipioNome`, `idhm`, `ratingGoogle`, `totalReviews`, `score`, `temperatura`, `status`, `observacoes`, `ultimoContatoEm`, `criadoEm`, `atualizadoEm`.
+
+O CNPJ é serializado com os 14 dígitos; no XLSX, a célula é explicitamente textual e preserva eventuais zeros à esquerda. CNPJ e razão social ficam em branco quando o lead não possui correspondência segura.
 
 ## GET /api/exportacao/leads.csv
 
@@ -748,8 +758,8 @@ Retorna bytes do arquivo, inclusive quando não há leads. Nesse caso, o CSV con
 Exemplo simplificado do conteúdo:
 
 ```csv
-id,googlePlaceId,nome,categoria,enderecoFormatado,telefone,telefoneNormalizado,whatsappUrl,latitude,longitude,uf,municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,status,observacoes,ultimoContatoEm,criadoEm,atualizadoEm
-15,place-15,Padaria Central,PADARIA,"Rua Central, 100",(27) 99999-0000,5527999990000,https://wa.me/5527999990000,-20.3155,-40.3128,ES,Vitória,0.845,4.8,120,95,QUENTE,CONTATADO,Retornar amanhã,2026-08-20T10:30,2026-08-19T09:00,2026-08-20T10:30
+id,googlePlaceId,nome,cnpj,razaoSocial,categoria,enderecoFormatado,telefone,telefoneNormalizado,whatsappUrl,latitude,longitude,uf,municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,status,observacoes,ultimoContatoEm,criadoEm,atualizadoEm
+15,place-15,Padaria Central,12345678000190,Padaria Central Ltda,PADARIA,"Rua Central, 100",(27) 99999-0000,5527999990000,https://wa.me/5527999990000,-20.3155,-40.3128,ES,Vitória,0.845,4.8,120,95,QUENTE,CONTATADO,Retornar amanhã,2026-08-20T10:30,2026-08-19T09:00,2026-08-20T10:30
 ```
 
 Headers de resposta:
@@ -777,6 +787,7 @@ Controller
 → reutiliza a listagem filtrada e ordenada do `LeadService`
 → monta cabeçalho e linhas CSV em UTF-8
 → aplica escaping estrutural a vírgulas, aspas e quebras de linha
+→ neutraliza como texto valores externos iniciados por caracteres de fórmula
 → retorna o arquivo como attachment.
 
 ## GET /api/exportacao/leads.xlsx
@@ -808,7 +819,7 @@ Não possui.
 
 ### Resultado esperado
 
-Retorna os bytes de uma pasta de trabalho XLSX com uma planilha chamada `Leads`. O cabeçalho é exibido em negrito, a primeira linha fica congelada, há filtro automático, as colunas são autoajustadas e números/datas são gravados como células tipadas.
+Retorna os bytes de uma pasta de trabalho XLSX com uma planilha chamada `Leads`. O cabeçalho é exibido em negrito, a primeira linha fica congelada, há filtro automático, as colunas são autoajustadas e números/datas são gravados como células tipadas. Campos textuais, inclusive valores que se parecem com fórmulas, são gravados explicitamente como texto.
 
 Quando não há leads, ainda retorna um arquivo válido com o cabeçalho.
 

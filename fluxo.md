@@ -1,6 +1,6 @@
 # Fluxo do Leads Hunter
 
-Este documento descreve o fluxo real do projeto no estado atual. O MVP, a melhoria FE-100, os refinamentos de IDHM e blacklist de nomes e as sprints CNPJ-00 a CNPJ-02 estão concluídos e validados.
+Este documento descreve o fluxo real do projeto no estado atual. O MVP, a melhoria FE-100, os refinamentos de IDHM e blacklist de nomes e as sprints CNPJ-00 a CNPJ-03 estão concluídos e validados.
 
 ## Visão geral
 
@@ -534,11 +534,13 @@ A sprint **CNPJ-01** está concluída. O cliente Places solicita `addressCompone
 
 A sprint **CNPJ-02** está concluída, incluindo a revisão de proveniência. A busca chama o `CnpjService` depois da localização municipal e antes do scoring. A correspondência exige candidato ativo único, município, número, rua e nome compatíveis; usa CEP quando disponível, aumenta o limiar no fallback sem CEP e falha de modo seguro diante de baixa confiança, ambiguidade ou excesso de candidatos. A V5 persiste competência e confiança, remove a antiga carga não rastreável e habilita revalidação quando a competência municipal mudar. Se a nova base não confirmar a unidade, o enriquecimento anterior é limpo; dados comerciais, deduplicação e scoring permanecem preservados. As fixtures integradas confirmam CNPJs distintos para as unidades Coco Bambu de Vitória e Vila Velha.
 
-O fechamento revisado de CNPJ-00 a CNPJ-02 passou com cinco testes do ingestor e 154 testes backend. O pacote executável foi gerado sem executar nova chamada externa. **CNPJ-03 e CNPJ-04 não foram iniciadas**: os dados ainda não são expostos nos contratos, exportações ou frontend, conforme a pausa solicitada ao final da CNPJ-02.
+O fechamento revisado de CNPJ-00 a CNPJ-02 passou com cinco testes do ingestor e 154 testes backend. O pacote executável foi gerado sem executar nova chamada externa.
+
+A sprint **CNPJ-03** está concluída. `LeadResponse`, inclusive dentro de `PaginaLeadsResponse`, expõe `cnpj` e `razaoSocial` quando disponíveis, mantendo confiança e competência fora do contrato público. CSV e XLSX ganharam as duas colunas, com células vazias para ausência; o CSV neutraliza strings externas iniciadas como fórmulas e o XLSX mantém os campos textuais tipados. No Angular 22, o modelo aceita os campos opcionais e anuláveis, e o drawer mostra CNPJ formatado e razão social ou rótulos neutros quando a API os entrega como `null`, preservando compatibilidade com respostas anteriores que omitem ambos. A validação concluiu 154 testes backend, 197 testes frontend, os dois builds e uma inspeção controlada do drawer em 1440 × 1000 e 390 × 844 sem overflow horizontal. **CNPJ-04 permanece pendente e não recebeu a revisão integrada de unidades conhecidas.**
 
 ### Próximo passo
 
-Os sprints **FE-00** a **FE-17**, a melhoria **FE-100**, a manutenção do WhatsApp, **IDHM-00** a **IDHM-05**, **BL-00** a **BL-04** e **CNPJ-00** a **CNPJ-02** estão concluídos e validados. O trabalho está pausado antes de **CNPJ-03**, aguardando nova instrução. O uso do IDHM no `ScoringService`, a limpeza retroativa de leads bloqueados e o enriquecimento retroativo de CNPJ permanecem fora das entregas atuais.
+Os sprints **FE-00** a **FE-17**, a melhoria **FE-100**, a manutenção do WhatsApp, **IDHM-00** a **IDHM-05**, **BL-00** a **BL-04** e **CNPJ-00** a **CNPJ-03** estão concluídos e validados. O próximo passo planejado é **CNPJ-04**, ainda não iniciado. O uso do IDHM no `ScoringService`, a limpeza retroativa de leads bloqueados e o enriquecimento retroativo de CNPJ permanecem fora das entregas atuais.
 
 ## Padrão de boilerplate com Lombok
 

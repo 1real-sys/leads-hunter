@@ -53,6 +53,8 @@ class LeadControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value(35))
             .andExpect(jsonPath("$[0].nome").value("Padaria Central"))
+            .andExpect(jsonPath("$[0].cnpj").value("12345678000190"))
+            .andExpect(jsonPath("$[0].razaoSocial").value("Padaria Central Ltda"))
             .andExpect(jsonPath("$[0].status").value("CONTATADO"))
             .andExpect(jsonPath("$[0].municipioCodigoIbge").value("3205309"))
             .andExpect(jsonPath("$[0].municipioNome").value("Vitória"))
@@ -89,6 +91,8 @@ class LeadControllerTest {
                 .param("size", "25"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.leads[0].id").value(35))
+            .andExpect(jsonPath("$.leads[0].cnpj").value("12345678000190"))
+            .andExpect(jsonPath("$.leads[0].razaoSocial").value("Padaria Central Ltda"))
             .andExpect(jsonPath("$.leads[0].municipioNome").value("Vitória"))
             .andExpect(jsonPath("$.pagina").value(1))
             .andExpect(jsonPath("$.tamanho").value(25))
@@ -207,6 +211,8 @@ class LeadControllerTest {
             35L,
             "place-35",
             "Padaria Central",
+            "12345678000190",
+            "Padaria Central Ltda",
             CategoriaNegocio.PADARIA,
             "Rua Central, 100",
             "(27) 99999-0000",

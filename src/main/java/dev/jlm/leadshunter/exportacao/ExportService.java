@@ -31,6 +31,8 @@ public class ExportService {
         "id",
         "googlePlaceId",
         "nome",
+        "cnpj",
+        "razaoSocial",
         "categoria",
         "enderecoFormatado",
         "telefone",
@@ -162,6 +164,8 @@ public class ExportService {
             lead.id(),
             lead.googlePlaceId(),
             lead.nome(),
+            lead.cnpj(),
+            lead.razaoSocial(),
             lead.categoria(),
             lead.enderecoFormatado(),
             lead.telefone(),
@@ -191,11 +195,22 @@ public class ExportService {
         String texto = valor instanceof Enum<?> enumValue
             ? enumValue.name()
             : valor.toString();
+        if (valor instanceof String) {
+            texto = protegerContraFormula(texto);
+        }
         if (texto.indexOf(',') >= 0
             || texto.indexOf('"') >= 0
             || texto.indexOf('\r') >= 0
             || texto.indexOf('\n') >= 0) {
             return "\"" + texto.replace("\"", "\"\"") + "\"";
+        }
+        return texto;
+    }
+
+    private String protegerContraFormula(String texto) {
+        String inicio = texto.stripLeading();
+        if (!inicio.isEmpty() && "=+-@".indexOf(inicio.charAt(0)) >= 0) {
+            return "'" + texto;
         }
         return texto;
     }

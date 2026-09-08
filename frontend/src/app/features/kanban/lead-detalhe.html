@@ -94,7 +94,9 @@
           item.enderecoFormatado ||
           (item.latitude !== null && item.longitude !== null) ||
           localidade() ||
-          idhmApresentacao()
+          idhmApresentacao() ||
+          item.cnpj !== undefined ||
+          item.razaoSocial !== undefined
         ) {
           <section
             class="lead-detalhe-panel__secao lead-detalhe-panel__estabelecimento"
@@ -114,6 +116,26 @@
                   <dd>{{ endereco }}</dd>
                 </div>
               }
+              <div class="lead-detalhe-panel__cnpj">
+                <dt>CNPJ</dt>
+                <dd>
+                  @if (cnpjFormatado(); as cnpj) {
+                    {{ cnpj }}
+                  } @else {
+                    <span class="lead-detalhe-panel__sem-valor">Não identificado</span>
+                  }
+                </dd>
+              </div>
+              <div class="lead-detalhe-panel__razao-social">
+                <dt>Razão social</dt>
+                <dd>
+                  @if (razaoSocialApresentacao(); as razaoSocial) {
+                    {{ razaoSocial }}
+                  } @else {
+                    <span class="lead-detalhe-panel__sem-valor">Não informada</span>
+                  }
+                </dd>
+              </div>
               @if (localidade(); as localidade) {
                 <div class="lead-detalhe-panel__localidade">
                   <dt>Município / UF</dt>

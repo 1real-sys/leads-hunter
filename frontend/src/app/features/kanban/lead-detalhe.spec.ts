@@ -11,6 +11,8 @@ const LEAD_COMPLETO: LeadResponse = {
   id: 7,
   googlePlaceId: 'place-7',
   nome: 'Padaria Central',
+  cnpj: '12345678000190',
+  razaoSocial: 'Padaria Central Ltda',
   categoria: 'PADARIA',
   enderecoFormatado: 'Rua Central, 100, Centro, Vitória - ES',
   telefone: '(27) 3333-4444',
@@ -86,6 +88,8 @@ describe('LeadDetalhe', () => {
     expect(conteudo).toContain('Score');
     expect(conteudo).toContain('82');
     expect(conteudo).toContain('Rua Central, 100');
+    expect(conteudo).toContain('12.345.678/0001-90');
+    expect(conteudo).toContain('Padaria Central Ltda');
     expect(conteudo).toContain('(27) 3333-4444');
     expect(conteudo).toContain('-20.3155');
     expect(conteudo).toContain('Nota Google');
@@ -112,6 +116,22 @@ describe('LeadDetalhe', () => {
     expect(idhm.querySelector('strong')?.textContent).toBe('0,845');
     expect(idhm.querySelector('span')?.textContent?.trim()).toBe('· Muito alto');
     expect(idhm.querySelector('small')?.textContent?.trim()).toBe('· Referência 2010');
+  });
+
+  it('informa com neutralidade quando CNPJ e razão social estão ausentes', async () => {
+    const fixture = await renderizar({
+      ...LEAD_COMPLETO,
+      cnpj: null,
+      razaoSocial: null,
+    });
+    const estabelecimento = fixture.nativeElement.querySelector(
+      '.lead-detalhe-panel__estabelecimento',
+    ) as HTMLElement;
+
+    expect(estabelecimento.textContent).toContain('CNPJ');
+    expect(estabelecimento.textContent).toContain('Não identificado');
+    expect(estabelecimento.textContent).toContain('Razão social');
+    expect(estabelecimento.textContent).toContain('Não informada');
   });
 
   it('agrupa resumo, estabelecimento e dados comerciais em seções identificáveis', async () => {
@@ -156,7 +176,7 @@ describe('LeadDetalhe', () => {
     expect(conteudo).toContain('WhatsApp indisponível');
   });
 
-  it('omite campos externos nulos e informa ausência comercial sem inventar dados', async () => {
+  it('aceita resposta anterior sem os campos novos e omite dados externos ausentes', async () => {
     const fixture = await renderizar({
       ...LEAD_COMPLETO,
       nome: null,
@@ -177,6 +197,8 @@ describe('LeadDetalhe', () => {
       uf: null,
       idhm: null,
       idhmReferencia: null,
+      cnpj: undefined,
+      razaoSocial: undefined,
     });
     const conteudo = fixture.nativeElement.textContent as string;
 

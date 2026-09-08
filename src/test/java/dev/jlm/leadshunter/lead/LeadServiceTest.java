@@ -57,6 +57,8 @@ class LeadServiceTest {
             assertThat(item.id()).isEqualTo(15L);
             assertThat(item.googlePlaceId()).isEqualTo("place-15");
             assertThat(item.nome()).isEqualTo("Padaria Central");
+            assertThat(item.cnpj()).isEqualTo("12345678000190");
+            assertThat(item.razaoSocial()).isEqualTo("Padaria Central Ltda");
             assertThat(item.telefoneNormalizado()).isEqualTo("5527999990000");
             assertThat(item.whatsappUrl()).isEqualTo("https://wa.me/5527999990000");
             assertThat(item.municipioCodigoIbge()).isEqualTo("3205309");
@@ -189,6 +191,8 @@ class LeadServiceTest {
         lead.setId(15L);
         lead.setGooglePlaceId("place-15");
         lead.setNome("Padaria Central");
+        lead.setCnpj("12345678000190");
+        lead.setRazaoSocial("Padaria Central Ltda");
         lead.setCategoria(CategoriaNegocio.PADARIA);
         lead.setEnderecoFormatado("Rua Central, 100");
         lead.setTelefone("(27) 99999-0000");

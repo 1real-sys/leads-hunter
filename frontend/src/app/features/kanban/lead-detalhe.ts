@@ -17,6 +17,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
 import { LeadApi } from '../../core/api/lead-api';
 import { AtualizarLeadRequest, LeadResponse } from '../../shared/models/lead.model';
+import { formatarCnpj } from '../../shared/utils/cnpj';
 import { classificarIdhm, formatarIdhm } from '../../shared/utils/idhm';
 import { ROTULOS_CATEGORIA, ROTULOS_TEMPERATURA, obterRotuloStatus } from './kanban.model';
 
@@ -42,6 +43,10 @@ export class LeadDetalhe {
 
   protected readonly tituloId = computed(() => `detalhe-lead-${this.lead().id}-titulo`);
   protected readonly rotuloStatus = computed(() => obterRotuloStatus(this.lead().status));
+  protected readonly cnpjFormatado = computed(() => formatarCnpj(this.lead().cnpj));
+  protected readonly razaoSocialApresentacao = computed(
+    () => this.lead().razaoSocial?.trim() || null,
+  );
   protected readonly localidade = computed(() => {
     const municipio = this.lead().municipioNome?.trim();
     const uf = this.lead().uf?.trim().toUpperCase();
@@ -71,7 +76,9 @@ export class LeadDetalhe {
   protected readonly avisoAlteracoes = signal(false);
 
   private readonly observacoesOrigem = computed(() => this.lead().observacoes ?? '');
-  private readonly contatoOrigem = computed(() => paraValorDatetimeLocal(this.lead().ultimoContatoEm));
+  private readonly contatoOrigem = computed(() =>
+    paraValorDatetimeLocal(this.lead().ultimoContatoEm),
+  );
 
   protected readonly observacoesAlteradas = computed(
     () => this.observacoesDigitadas() !== this.observacoesOrigem(),
@@ -84,8 +91,9 @@ export class LeadDetalhe {
     () => this.observacoesAlteradas() || this.contatoAlterado(),
   );
   protected readonly temAlteracaoPendente = computed(
-    () => this.observacoesDigitadas() !== this.observacoesOrigem()
-      || this.contatoDigitado() !== this.contatoOrigem(),
+    () =>
+      this.observacoesDigitadas() !== this.observacoesOrigem() ||
+      this.contatoDigitado() !== this.contatoOrigem(),
   );
   protected readonly camposDesabilitados = computed(() => this.salvando());
 

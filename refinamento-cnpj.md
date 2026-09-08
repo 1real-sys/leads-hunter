@@ -1,6 +1,6 @@
 # Refinamento — CNPJ por lead (unidade exata)
 
-Planejamento em sprints para tentar, a partir de cada lead capturado, identificar o **CNPJ (14 dígitos) da unidade específica** e trazer a **razão social** para o lead. **CNPJ-00, CNPJ-01 e CNPJ-02 estão implementadas e validadas; CNPJ-03 e CNPJ-04 permanecem pendentes.**
+Planejamento em sprints para tentar, a partir de cada lead capturado, identificar o **CNPJ (14 dígitos) da unidade específica** e trazer a **razão social** para o lead. **CNPJ-00 a CNPJ-03 estão implementadas e validadas; CNPJ-04 permanece pendente.**
 
 ## Objetivo
 
@@ -110,7 +110,7 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 
 ### CNPJ-03 — Exposição e frontend
 
-**Status: PENDENTE. Não iniciada por pausa explícita após CNPJ-02.**
+**Status: CONCLUÍDA E VALIDADA em 08/09/2026.** `LeadResponse` e sua paginação expõem CNPJ/razão social sem publicar confiança ou data-base; CSV/XLSX incluem as duas colunas, e o drawer formata os 14 dígitos e representa ausências sem sugerir uma correspondência inexistente.
 
 **Objetivo:** disponibilizar CNPJ/razão social ao usuário.
 
@@ -125,7 +125,7 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 
 ### CNPJ-04 — Validação integrada e documentação
 
-**Status: PENDENTE. Não iniciada por pausa explícita após CNPJ-02.**
+**Status: PENDENTE. Não iniciada.**
 
 **Objetivo:** fechar com validações e registros.
 
