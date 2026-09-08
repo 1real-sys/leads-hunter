@@ -113,10 +113,15 @@ def carregar_manifesto(caminho: Path) -> dict[str, Any]:
         if (
             not isinstance(arquivo, str)
             or Path(arquivo).name != arquivo
+            or not re.fullmatch(r"[A-Za-z0-9._-]+", arquivo)
             or arquivo in arquivos
         ):
             raise ErroIngestao(f"Nome de arquivo inseguro ou duplicado: {arquivo!r}")
-        if not isinstance(url, str) or not url.startswith("https://"):
+        if (
+            not isinstance(url, str)
+            or not url.startswith("https://")
+            or any(ord(caractere) < 32 for caractere in url)
+        ):
             raise ErroIngestao(f"URL HTTPS obrigatoria para {arquivo}")
         host = urllib.parse.urlparse(url).hostname
         if host not in HOSTS_PERMITIDOS:
@@ -510,9 +515,21 @@ def escrever_migration_sql(dataset: dict[str, Any], destino: Path) -> None:
         ]
         for item in dataset["estabelecimentos"]
     ]
+    comentarios_fontes = [
+        "-- Fonte: "
+        + fonte["tipo"]
+        + " | "
+        + fonte["arquivo"]
+        + " | sha256="
+        + fonte["sha256"]
+        + " | "
+        + fonte["url"]
+        for fonte in dataset["metadata"]["fontes"]
+    ]
     comandos = [
         "-- Gerado por tools/cnpj/gerar_dataset.py; nao editar manualmente.",
-        f"-- Base: {dataset['metadata']['dataBase']}.",
+        f"-- Competencia da base RFB: {dataset['metadata']['dataBase']}.",
+        *comentarios_fontes,
         "DELETE FROM cnpj_estabelecimento WHERE municipio_codigo_ibge IN ("
         + ",".join(literal_sql(codigo) for codigo in municipios)
         + ");",

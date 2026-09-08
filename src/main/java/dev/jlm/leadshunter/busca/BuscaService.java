@@ -15,13 +15,14 @@ import dev.jlm.leadshunter.lead.TelefoneNormalizer;
 import dev.jlm.leadshunter.lead.Temperatura;
 import dev.jlm.leadshunter.lead.WhatsAppLinkGenerator;
 import dev.jlm.leadshunter.scoring.ScoringService;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -238,14 +239,45 @@ public class BuscaService {
     }
 
     private void atualizarCnpj(Lead lead) {
-        if (lead.getCnpj() != null) {
+        boolean possuiCnpj = lead.getCnpj() != null;
+        if (possuiCnpj && !codigoMunicipioValido(lead.getMunicipioCodigoIbge())) {
             return;
         }
-        cnpjService.corresponder(lead).ifPresent(correspondencia -> {
+
+        if (possuiCnpj) {
+            Optional<LocalDate> dataBaseAtual = cnpjService.buscarDataBaseAtual(
+                lead.getMunicipioCodigoIbge()
+            );
+            if (dataBaseAtual.isEmpty()
+                || dataBaseAtual.get().equals(lead.getCnpjDataBase())) {
+                return;
+            }
+        }
+
+        Optional<CnpjService.Correspondencia> correspondenciaAtual = cnpjService
+            .corresponder(lead);
+        if (correspondenciaAtual.isPresent()) {
+            CnpjService.Correspondencia correspondencia = correspondenciaAtual.get();
             lead.setCnpj(correspondencia.cnpj());
             lead.setRazaoSocial(correspondencia.razaoSocial());
             lead.setCnpjCorrespondidoEm(LocalDateTime.now());
-        });
+            lead.setCnpjDataBase(correspondencia.dataBase());
+            lead.setCnpjConfianca(correspondencia.confianca());
+        } else if (possuiCnpj) {
+            limparCnpj(lead);
+        }
+    }
+
+    private void limparCnpj(Lead lead) {
+        lead.setCnpj(null);
+        lead.setRazaoSocial(null);
+        lead.setCnpjCorrespondidoEm(null);
+        lead.setCnpjDataBase(null);
+        lead.setCnpjConfianca(null);
+    }
+
+    private boolean codigoMunicipioValido(String valor) {
+        return valor != null && valor.matches("\\d{7}");
     }
 
     private <T> void atualizarSePresente(T valor, Consumer<T> atualizador) {

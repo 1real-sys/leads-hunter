@@ -1,7 +1,10 @@
 package dev.jlm.leadshunter.cnpj;
 
 import dev.jlm.leadshunter.lead.Lead;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.Normalizer;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -87,8 +90,22 @@ public class CnpjService {
         CnpjEstabelecimento escolhido = aprovados.getFirst().estabelecimento();
         return Optional.of(new Correspondencia(
             escolhido.getCnpj(),
-            escolhido.getEmpresa().getRazaoSocial()
+            escolhido.getEmpresa().getRazaoSocial(),
+            escolhido.getDataBase(),
+            BigDecimal.valueOf(aprovados.getFirst().pontuacao())
+                .setScale(4, RoundingMode.HALF_UP)
         ));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<LocalDate> buscarDataBaseAtual(String municipioCodigoIbge) {
+        if (!codigoMunicipioValido(municipioCodigoIbge)) {
+            return Optional.empty();
+        }
+        return estabelecimentoRepository.findDataBaseAtual(
+            municipioCodigoIbge,
+            SITUACAO_ATIVA
+        );
     }
 
     private Optional<CandidatoPontuado> pontuar(
@@ -271,7 +288,12 @@ public class CnpjService {
         return valor != null && valor.matches("\\d{7}");
     }
 
-    public record Correspondencia(String cnpj, String razaoSocial) {
+    public record Correspondencia(
+        String cnpj,
+        String razaoSocial,
+        LocalDate dataBase,
+        BigDecimal confianca
+    ) {
     }
 
     private record CandidatoPontuado(

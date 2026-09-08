@@ -20,7 +20,7 @@ Guardar no Lead o CNPJ e a razão social quando houver correspondência confiáv
 - Capturar **endereço estruturado** do Google (`places.addressComponents`) para CEP, logradouro, número e bairro.
 - Procurar o CNPJ **na captura** (`BuscaService`), logo após a geografia/município, apenas para novos resultados processados.
 - Estratégia de correspondência por município (IBGE) → CEP exato quando presente → similaridade de logradouro/número e de nome fantasia/razão social → exigir candidato único acima de limiar.
-- Persistir no lead: `cnpj`, `razao_social` e data da correspondência. Não alterar `ScoringService`.
+- Persistir no lead: `cnpj`, `razao_social`, data da correspondência, competência da base e confiança. Não alterar `ScoringService`.
 - Expor CNPJ/razão social nos contratos, exportação e drawer (rotulagem neutra quando ausente).
 - Base local reingerida manualmente quando houver nova base mensal ou novos municípios de interesse.
 
@@ -29,7 +29,7 @@ Guardar no Lead o CNPJ e a razão social quando houver correspondência confiáv
 - **Dados**: ferramenta `tools/cnpj/` (como `tools/idhm/`) que baixa/consome os arquivos de Empresas e Estabelecimentos da Receita, filtra municípios de interesse e grava o subset normalizado.
 - **Backend**
   - Tabelas locais `cnpj_empresa` (cnpj base 8, razão social) e `cnpj_estabelecimento` (cnpj 14, nome fantasia, logradouro/número/bairro/CEP, município IBGE, UF, situação, situação cadastral, data da base), alimentadas pela ingestão.
-  - Campos de endereço estruturado no `Lead` (cep, logradouro, número, bairro) capturados do Google.
+  - Campos de endereço estruturado no `Lead` (cep, logradouro, número, bairro) capturados do Google, além de competência e confiança da correspondência CNPJ.
   - `CnpjService` de correspondência com pontuação e limiar; integração no fluxo de captura.
   - Migration Flyway nova com colunas do lead + tabelas locais.
 - **Frontend**: campos opcionais no modelo, exibição no drawer, colunas de exportação.
@@ -53,7 +53,7 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 
 ### CNPJ-00 — Dados: fontes e ingestor
 
-**Status: CONCLUÍDA E VALIDADA em 08/09/2026.** O ingestor, a documentação operacional e quatro testes Python foram entregues. A migration repetível versionada contém uma carga inicial mínima das três unidades usadas na validação; a atualização mensal completa depende do manifesto e dos arquivos oficiais da competência escolhida.
+**Status: CONCLUÍDA E VALIDADA em 08/09/2026.** O ingestor, a documentação operacional e cinco testes Python foram entregues. A migration repetível versionada é um placeholder sem estabelecimentos e só passa a alimentar o runtime quando for regenerada com o manifesto e todos os arquivos oficiais da competência escolhida.
 
 **Objetivo:** obter e indexar, local e reproduzivelmente, o subset de CNPJ dos municípios de interesse.
 
@@ -70,7 +70,7 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 
 ### CNPJ-01 — Backend: endereço estruturado e persistência
 
-**Status: CONCLUÍDA E VALIDADA em 08/09/2026.** Field mask, mapper, modelo JPA, V4, carga repetível e testes de persistência foram entregues; Flyway e Hibernate validaram o schema no MySQL 8.1.
+**Status: CONCLUÍDA E VALIDADA em 08/09/2026.** Field mask, mapper, modelo JPA, V4, estrutura da carga repetível e testes de persistência foram entregues; Flyway e Hibernate validaram o schema no MySQL 8.1. As três unidades de validação foram isoladas em fixtures transacionais de teste e não são carregadas em runtime.
 
 **Objetivo:** receber endereço estruturado do Google e preparar o modelo.
 
@@ -87,26 +87,26 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 
 ### CNPJ-02 — Backend: correspondência da unidade na captura
 
-**Status: CONCLUÍDA E VALIDADA em 08/09/2026.** O serviço usa candidatos limitados por município/endereço, rejeita ambiguidades e foi integrado após a geografia, preservando CNPJ anterior e todas as regras comerciais/scoring. Vitória e Vila Velha foram confirmadas com CNPJs distintos em teste JPA.
+**Status: CONCLUÍDA E VALIDADA em 08/09/2026, incluindo as correções da revisão.** O serviço usa candidatos limitados por município/endereço, rejeita ambiguidades e foi integrado após a geografia. Cada correspondência registra competência e confiança; um CNPJ anterior é preservado enquanto a competência municipal não muda e é revalidado quando houver uma carga nova. Vitória e Vila Velha foram confirmadas com CNPJs distintos em teste JPA, sem alterar regras comerciais ou scoring.
 
 **Objetivo:** casar o lead com o CNPJ da unidade exata e trazer a razão social.
 
 **Entregáveis:**
 - `CnpjService`: candidatos por município IBGE ativo; quando CEP presente, filtrar por CEP; pontuar similaridade de logradouro/número e de nome fantasia/razão social; exigir candidato único acima do limiar.
-- Integração em `BuscaService` (após geografia): preenche `cnpj`/`razao_social`/`cnpj_correspondido_em` apenas em correspondência confiável; caso contrário mantém nulo e preserva valor anterior quando já houver.
+- Integração em `BuscaService` (após geografia): preenche `cnpj`/`razao_social`/`cnpj_correspondido_em`/`cnpj_data_base`/`cnpj_confianca` apenas em correspondência confiável; caso contrário mantém nulo. Um valor anterior só é reavaliado quando a competência local do município muda; se a nova base não o confirmar, todos os campos CNPJ são limpos.
 - Regra explícita: duas unidades da mesma rede em cidades diferentes (ex.: Coco Bambu Vitória vs Vila Velha) casam com **CNPJs distintos** por município + endereço.
 
 **Critérios de aceite:**
-- Fixture de Vitória resolve CNPJ da unidade de Vitória; fixture de Vila Velha resolve o de Vila Velha (valores congelados a partir da base ingerida).
+- Fixture de Vitória resolve CNPJ da unidade de Vitória; fixture de Vila Velha resolve o de Vila Velha (valores conferidos nas páginas oficiais das unidades e isolados do runtime).
 - Candidato ambíguo ou abaixo do limiar ⇒ CNPJ nulo, sem Lead inválido.
 - Dados de `ScoringService`, deduplicação e preservação comercial intactos.
 - Testes de serviço e integração JPA cobrem unidade certa, rede multi-cidade, sem endereço e sem candidato.
 
-**Observações da revisão (endereçar antes de seguir para CNPJ-03):**
+**Observações da revisão — análise e resolução:**
 
-- **A carga inicial do `R__carregar_subset_cnpj.sql` é sintética, mas o cabeçalho do arquivo diz "base pública RFB 2026-08".** O arquivo contém somente 3 registros (razões "CB VITORIA/VILA VELHA/CURITIBA COMERCIO DE ALIMENTOS LTDA" com CNPJs plausíveis), que não foram gerados pela ferramenta `tools/cnpj` — se fossem, haveria milhares de linhas para Vitória/Vila Velha/Curitiba. Esse conjunto serve como semente fixa de validação, não como dado real da Receita. Rotular o SQL explicitamente como semente sintética de teste (remover a alegação "RFB 2026-08") e garantir que a ingestão mensal real o substitua antes de qualquer uso em prospecção real.
-- **Risco de "CNPJ falso permanente":** `BuscaService.atualizarCnpj` só corresponde quando `lead.getCnpj() == null` e nunca revalida. Um lead correspondido contra a semente sintética acima gravaria um CNPJ não verificado e o manteria para sempre, mesmo após a ingestão real da base. Recomendo: (a) gravar também a `data_base` da fonte correspondida (nova coluna) e re-corresponder quando a base local mudar; e/ou (b) antes de colocar em uso real, limpar/recorresponder os leads afetados pela semente.
-- **Sem gravação de confiança/limiar:** a pontuação é descartada; fica sem rastreio de quão certa foi a correspondência. Opcional para uma próxima versão (ex.: registrar `cnpj_confianca`).
+- **Procede parcialmente — proveniência da antiga carga.** Os três CNPJs não eram sintéticos: as páginas oficiais do Coco Bambu publicam os mesmos números. Porém, o arquivo não havia sido gerado pelo snapshot RFB declarado e não podia ser tratado como subset mensal. Os registros foram removidos do runtime e movidos para `src/test/resources/cnpj/fixtures.sql`; `R__carregar_subset_cnpj.sql` agora é um placeholder explícito até ser regenerado com a competência oficial completa. O SQL produzido pela ferramenta registra competência, URLs e checksums no cabeçalho.
+- **Procede — risco de permanência sem revalidação.** A V5 adiciona `cnpj_data_base`, remove os antigos registros bootstrap e limpa enriquecimentos que apontavam para eles. Em novas correspondências, o lead recebe a competência escolhida; quando a base ativa daquele município muda, `BuscaService` tenta corresponder novamente e limpa o CNPJ anterior se a nova competência não o confirmar.
+- **Aplicada — confiança da correspondência.** A pontuação aprovada passa a ser persistida em `cnpj_confianca` com quatro casas decimais e restrição entre 0 e 1. O campo permanece interno nesta etapa e só deverá entrar nos contratos caso uma decisão de produto o exija em CNPJ-03.
 
 ### CNPJ-03 — Exposição e frontend
 

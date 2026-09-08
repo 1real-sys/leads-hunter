@@ -2,6 +2,7 @@ package dev.jlm.leadshunter.lead;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -51,6 +52,12 @@ public class Lead {
 
     @Column(name = "cnpj_correspondido_em")
     private LocalDateTime cnpjCorrespondidoEm;
+
+    @Column(name = "cnpj_data_base")
+    private LocalDate cnpjDataBase;
+
+    @Column(name = "cnpj_confianca", precision = 5, scale = 4)
+    private BigDecimal cnpjConfianca;
 
     @Column(length = 30)
     private String telefone;

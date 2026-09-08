@@ -1392,3 +1392,38 @@ A carga inicial e os testes confirmam CNPJs distintos para unidades da mesma red
 - `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceTest.java`
 - `src/test/java/dev/jlm/leadshunter/integracao/places/PlacesApiClientTest.java`
 - `src/test/java/dev/jlm/leadshunter/integracao/places/PlacesResponseMapperTest.java`
+
+---
+
+## 51. Revisão de proveniência e revalidação do CNPJ — 08/09/2026
+
+A carga mínima usada na validação de CNPJ foi retirada do runtime e movida para fixtures transacionais de teste. Os números das três unidades foram confirmados nas páginas oficiais da rede, mas o antigo arquivo não havia sido produzido por um snapshot completo da Receita Federal; por isso, a migration repetível passou a permanecer vazia até ser regenerada pelo ingestor com todos os lotes oficiais da competência escolhida.
+
+O lead passou a registrar a data-base e a confiança da correspondência. Quando a competência ativa do município muda, a captura reavalia o estabelecimento: uma nova correspondência atualiza CNPJ, razão social, data-base, confiança e instante; a ausência de confirmação limpa somente o enriquecimento CNPJ. A V5 também remove a antiga carga sem proveniência e as correspondências produzidas por ela, preservando leads e dados comerciais.
+
+O SQL gerado pelo ingestor agora inclui competência, URLs e checksums no cabeçalho e rejeita metadados com caracteres de controle. A revisão permaneceu restrita à CNPJ-02, sem expor novos campos na API ou alterar frontend e scoring.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/resources/db/migration/V5__adicionar_proveniencia_e_confianca_cnpj.sql`
+- `src/test/resources/cnpj/fixtures.sql`
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento-cnpj.md`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjEstabelecimentoRepository.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjService.java`
+- `src/main/java/dev/jlm/leadshunter/lead/Lead.java`
+- `src/main/resources/db/migration/R__carregar_subset_cnpj.sql`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceJpaIntegrationTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjRepositoryTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjServiceTest.java`
+- `tools/cnpj/README.md`
+- `tools/cnpj/gerar_dataset.py`
+- `tools/cnpj/test_gerar_dataset.py`

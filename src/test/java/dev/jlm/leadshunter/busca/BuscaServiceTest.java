@@ -25,6 +25,7 @@ import dev.jlm.leadshunter.lead.Temperatura;
 import dev.jlm.leadshunter.lead.WhatsAppLinkGenerator;
 import dev.jlm.leadshunter.scoring.ScoringService;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -296,6 +297,49 @@ class BuscaServiceTest {
     }
 
     @Test
+    void deveRevalidarCnpjQuandoCompetenciaMunicipalMudar() {
+        Lead lead = leadComCnpjDaCompetenciaAnterior("place-cnpj-revalidado");
+        prepararNovaCapturaDoLead(lead);
+        when(cnpjService.buscarDataBaseAtual("3205309"))
+            .thenReturn(Optional.of(LocalDate.of(2026, 9, 8)));
+        when(cnpjService.corresponder(lead)).thenReturn(Optional.of(
+            new CnpjService.Correspondencia(
+                "43869215000156",
+                "CB VITORIA COMERCIO DE ALIMENTOS LTDA",
+                LocalDate.of(2026, 9, 8),
+                new BigDecimal("0.9876")
+            )
+        ));
+
+        criarService().criar(criarRequestPadaria());
+
+        assertThat(lead.getCnpj()).isEqualTo("43869215000156");
+        assertThat(lead.getCnpjDataBase()).isEqualTo(LocalDate.of(2026, 9, 8));
+        assertThat(lead.getCnpjConfianca()).isEqualByComparingTo("0.9876");
+        assertThat(lead.getCnpjCorrespondidoEm())
+            .isAfter(LocalDateTime.of(2026, 8, 8, 10, 0));
+        verify(cnpjService).buscarDataBaseAtual("3205309");
+        verify(cnpjService).corresponder(lead);
+    }
+
+    @Test
+    void deveLimparCnpjQuandoNovaCompetenciaNaoConfirmarCorrespondencia() {
+        Lead lead = leadComCnpjDaCompetenciaAnterior("place-cnpj-nao-confirmado");
+        prepararNovaCapturaDoLead(lead);
+        when(cnpjService.buscarDataBaseAtual("3205309"))
+            .thenReturn(Optional.of(LocalDate.of(2026, 9, 8)));
+        when(cnpjService.corresponder(lead)).thenReturn(Optional.empty());
+
+        criarService().criar(criarRequestPadaria());
+
+        assertThat(lead.getCnpj()).isNull();
+        assertThat(lead.getRazaoSocial()).isNull();
+        assertThat(lead.getCnpjCorrespondidoEm()).isNull();
+        assertThat(lead.getCnpjDataBase()).isNull();
+        assertThat(lead.getCnpjConfianca()).isNull();
+    }
+
+    @Test
     void deveReutilizarCacheSemDeixarDePersistirCadaBusca() {
         BuscaRequest primeiraRequest = new BuscaRequest(
             "Centro, Curitiba - PR",
@@ -472,6 +516,48 @@ class BuscaServiceTest {
             nomeBloqueadoService,
             cnpjService
         );
+    }
+
+    private Lead leadComCnpjDaCompetenciaAnterior(String googlePlaceId) {
+        Lead lead = new Lead();
+        lead.setId(80L);
+        lead.setGooglePlaceId(googlePlaceId);
+        lead.setNome("Coco Bambu Vitória");
+        lead.setStatus(StatusFunil.NOVO);
+        lead.setCep("29055620");
+        lead.setLogradouro("Rua João da Cruz");
+        lead.setNumero("10");
+        lead.setBairro("Praia do Canto");
+        lead.setCnpj("43869215000156");
+        lead.setRazaoSocial("CB VITORIA COMERCIO DE ALIMENTOS LTDA");
+        lead.setCnpjCorrespondidoEm(LocalDateTime.of(2026, 8, 8, 10, 0));
+        lead.setCnpjDataBase(LocalDate.of(2026, 8, 8));
+        lead.setCnpjConfianca(new BigDecimal("0.9500"));
+        return lead;
+    }
+
+    private void prepararNovaCapturaDoLead(Lead lead) {
+        when(placesApiClient.buscarProximos(any(PlacesSearchRequest.class)))
+            .thenReturn(new PlacesSearchResponse(List.of(
+                criarPlace(lead.getGooglePlaceId(), "Coco Bambu Vitória")
+            )));
+        when(buscaRepository.saveAndFlush(any(Busca.class))).thenAnswer(invocation -> {
+            Busca busca = invocation.getArgument(0);
+            busca.setId(81L);
+            busca.setCriadoEm(LocalDateTime.of(2026, 9, 8, 10, 0));
+            return busca;
+        });
+        when(leadRepository.findByGooglePlaceId(lead.getGooglePlaceId()))
+            .thenReturn(Optional.of(lead));
+        when(leadRepository.save(lead)).thenReturn(lead);
+        when(municipioService.localizar(any(BigDecimal.class), any(BigDecimal.class)))
+            .thenReturn(Optional.of(new MunicipioInfo(
+                "3205309",
+                "Vitória",
+                "ES",
+                new BigDecimal("0.845"),
+                (short) 2010
+            )));
     }
 
     private BuscaRequest criarRequestPadaria() {

@@ -180,7 +180,7 @@ Para cada estabelecimento, consolida resultados repetidos pelo `googlePlaceId`, 
 
 Para cada resultado permitido, consulta `LeadRepository`. Se o lead não existir, cria um registro com status `NOVO`. Se já existir, atualiza somente os dados externos presentes. Além do endereço formatado, persiste CEP, logradouro, número e bairro quando a Google fornece `addressComponents`; a ausência de um componente novo não apaga o valor já conhecido. Quando há telefone brasileiro válido, salva o valor original e a versão normalizada. Com latitude e longitude disponíveis, consulta `MunicipioService` e atualiza código IBGE, município, UF, IDHM e referência; quando as coordenadas não correspondem ao dataset, limpa somente esses campos geográficos.
 
-Depois da geografia e antes do scoring, um lead ainda sem CNPJ passa pelo `CnpjService`. O serviço restringe os candidatos aos estabelecimentos ativos do município, usa CEP quando disponível e exige endereço, número e nome compatíveis, candidato único e limiar mínimo. Correspondências confiáveis preenchem CNPJ, razão social e instante da correspondência; ausência, baixa confiança, ambiguidade ou limite excedido deixam o CNPJ nulo. Um CNPJ já persistido nunca é recalculado pela captura. Por fim, `ScoringService` atualiza score e temperatura, preservando `status`, `observacoes` e `ultimoContatoEm`; a regra de pontuação não usa CNPJ.
+Depois da geografia e antes do scoring, um lead ainda sem CNPJ passa pelo `CnpjService`. O serviço restringe os candidatos aos estabelecimentos ativos do município, usa CEP quando disponível e exige endereço, número e nome compatíveis, candidato único e limiar mínimo. Correspondências confiáveis preenchem CNPJ, razão social, instante, competência da base e confiança. Um CNPJ existente é preservado enquanto a competência ativa do município permanece igual; quando uma carga nova aparece, a captura revalida e limpa todos os campos CNPJ se a nova base não confirmar a unidade. Ausência, baixa confiança, ambiguidade ou limite excedido continuam sem gerar CNPJ. Por fim, `ScoringService` atualiza score e temperatura, preservando `status`, `observacoes` e `ultimoContatoEm`; a regra de pontuação não usa CNPJ.
 
 Por fim, cria um `BuscaLead` para relacionar a nova busca ao lead e registra nele o score e a temperatura daquela execução. Em seguida, converte os leads persistidos em `BuscaResponse`. Todo o processo ocorre na mesma transação; um resultado sem `googlePlaceId` interrompe e reverte a operação.
 
@@ -235,7 +235,7 @@ Representa o resultado interno da integração. Cada `PlaceResult` contém `goog
 
 ### 10. `Busca.java` e `BuscaRepository.java`
 
-`Busca` representa o histórico da pesquisa. O repository persiste no MySQL o endereço-base, coordenadas, raio, categorias pesquisadas, total encontrado e data de criação. O schema inicial é criado pela V1, a geografia do lead pela V2, os bloqueios pela V3 e o endereço estruturado/CNPJ pela V4, sempre com Flyway e `ddl-auto: validate`. A migration repetível `R__carregar_subset_cnpj.sql` mantém o recorte local usado na correspondência.
+`Busca` representa o histórico da pesquisa. O repository persiste no MySQL o endereço-base, coordenadas, raio, categorias pesquisadas, total encontrado e data de criação. O schema inicial é criado pela V1, a geografia do lead pela V2, os bloqueios pela V3, o endereço estruturado/CNPJ pela V4 e a proveniência/confiança pela V5, sempre com Flyway e `ddl-auto: validate`. A migration repetível `R__carregar_subset_cnpj.sql` é um placeholder sem dados até ser substituída pela saída revisada do ingestor mensal.
 
 ### 11. `TelefoneNormalizer.java` e `WhatsAppLinkGenerator.java`
 
@@ -251,7 +251,7 @@ A temperatura é calculada pelo resultado: `FRIO` de 0 a 39, `MORNO` de 40 a 69 
 
 ### 13. `Lead.java` e `LeadRepository.java`
 
-`Lead` representa um estabelecimento único. `LeadRepository.findByGooglePlaceId` é usado como chave de deduplicação. Um lead novo começa em `NOVO`; um lead existente mantém os dados comerciais definidos pelo usuário quando reaparece em outra busca. A migration V2 adicionou código IBGE, nome do município, UF, IDHM e ano de referência; a V4 adicionou CEP, logradouro, número, bairro, CNPJ, razão social e instante da correspondência, com restrição para CNPJ de 14 dígitos. A consulta parametrizada de pendências geográficas usa paginação por ID e lotes limitados.
+`Lead` representa um estabelecimento único. `LeadRepository.findByGooglePlaceId` é usado como chave de deduplicação. Um lead novo começa em `NOVO`; um lead existente mantém os dados comerciais definidos pelo usuário quando reaparece em outra busca. A migration V2 adicionou código IBGE, nome do município, UF, IDHM e ano de referência; a V4 adicionou CEP, logradouro, número, bairro, CNPJ, razão social e instante da correspondência, com restrição para CNPJ de 14 dígitos. A V5 acrescentou `cnpj_data_base` e `cnpj_confianca`, restringiu confiança ao intervalo de 0 a 1 e limpou correspondências produzidas pela antiga carga sem proveniência. A consulta parametrizada de pendências geográficas usa paginação por ID e lotes limitados.
 
 ### 13A. `MunicipioDataset.java`, `MunicipioService.java` e backfill
 
@@ -265,7 +265,7 @@ O `MunicipioBackfillRunner` só existe quando `leadhunter.backfill-municipio=tru
 
 `CnpjEmpresa` guarda CNPJ básico e razão social; `CnpjEstabelecimento` representa a unidade de 14 dígitos, com nome fantasia, endereço estruturado, município IBGE, UF, situação cadastral e data da base. A associação JPA usa o CNPJ básico e os repositories oferecem consultas paginadas e limitadas para município ativo com CEP ou número.
 
-`CnpjService` executa correspondência local e sem chamada externa. A normalização ignora acentos, caixa, pontuação, abreviações usuais de logradouro e termos jurídicos/genéricos; siglas podem ser comparadas às iniciais consecutivas do nome. O número deve coincidir e a pontuação combina rua, nome e bairro, com CEP como filtro forte. O fallback sem CEP exige limiar maior. Mais de 200 candidatos, múltiplos resultados aprovados ou qualquer insuficiência deixam o lead sem correspondência.
+`CnpjService` executa correspondência local e sem chamada externa. A normalização ignora acentos, caixa, pontuação, abreviações usuais de logradouro e termos jurídicos/genéricos; siglas podem ser comparadas às iniciais consecutivas do nome. O número deve coincidir e a pontuação combina rua, nome e bairro, com CEP como filtro forte. O fallback sem CEP exige limiar maior. Mais de 200 candidatos, múltiplos resultados aprovados ou qualquer insuficiência deixam o lead sem correspondência. O resultado aprovado inclui a data-base do estabelecimento e a pontuação arredondada para quatro casas; o repository também consulta a maior competência ativa por município para orientar a revalidação.
 
 ### 14. `LeadController.java`, `LeadService.java` e `LeadResponse.java`
 
@@ -336,10 +336,10 @@ src/test/java/dev/jlm/leadshunter/
 - Conversão de categorias do domínio para tipos da Google.
 - Mapeamento da resposta externa para `PlacesSearchResponse`.
 - Captura e persistência de CEP, logradouro, número e bairro a partir de `addressComponents`.
-- Ferramenta offline reproduzível em `tools/cnpj/`, com manifesto, checksums, filtros de município/atividade e saídas determinísticas JSON/SQL.
-- Tabelas locais de empresa e estabelecimento, carregadas por migration Flyway repetível.
+- Ferramenta offline reproduzível em `tools/cnpj/`, com manifesto, checksums, filtros de município/atividade e saídas determinísticas JSON/SQL com proveniência no cabeçalho.
+- Tabelas locais de empresa e estabelecimento preparadas para a migration Flyway repetível; o arquivo versionado permanece sem dados até a ingestão mensal oficial.
 - Correspondência de CNPJ por município, endereço e nome, com limite de candidatos, limiar e rejeição de ambiguidades.
-- Preservação de CNPJ/razão social já existentes em capturas posteriores.
+- Persistência da competência e confiança da correspondência, com revalidação quando a base municipal muda.
 - Persistência do resumo da busca e de `totalEncontrados`.
 - Persistência de cada estabelecimento como `Lead`.
 - Deduplicação de leads e de resultados repetidos por `googlePlaceId`.
@@ -391,8 +391,9 @@ src/test/java/dev/jlm/leadshunter/
 - Validação da preservação comercial e do snapshot de score/temperatura em buscas repetidas.
 - Validação da restrição única de `googlePlaceId` diretamente no banco.
 - Testes de resposta completa, vazia e endereço estruturado do `PlacesResponseMapper`.
-- Testes do ingestor CNPJ para parser Latin-1, normalização, filtros, determinismo e checksums.
-- Testes do `CnpjService` para unidade correta, rede em cidades distintas, ambiguidade, baixa confiança, fallback sem CEP e limite de candidatos.
+- Testes do ingestor CNPJ para parser Latin-1, normalização, filtros, determinismo, proveniência, metadados seguros e checksums.
+- Testes do `CnpjService` para unidade correta, rede em cidades distintas, ambiguidade, baixa confiança, fallback sem CEP, limite de candidatos e consulta da competência municipal.
+- Testes do `BuscaService` para preservar competência atual, revalidar carga nova e limpar correspondência não confirmada.
 - Teste JPA do recorte CNPJ e do fluxo de captura para Vitória/ES e Vila Velha/ES.
 - Testes de formatos nacionais, internacionais, ausentes e inválidos de telefone.
 - Testes das faixas de score, reviews, rating e limites de temperatura.
@@ -415,7 +416,7 @@ src/test/java/dev/jlm/leadshunter/
 - Testes de leitura da planilha Excel gerada, tipos de célula e headers HTTP de download.
 - Chamada externa controlada com Google Places API (New), retornando e persistindo leads reais.
 
-A última execução de `./mvnw test`, com um agente Byte Buddy informado somente em runtime para compatibilidade do Mockito com a JVM Java 25 do ambiente de validação, concluiu 151 testes sem falhas, incluindo o contexto Spring com MySQL 8.1, cinco migrations Flyway, Hibernate em `ddl-auto: validate` e a integração JPA de CNPJ. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
+A última execução de `./mvnw test`, com um agente Byte Buddy informado somente em runtime para compatibilidade do Mockito com a JVM Java 25 do ambiente de validação, concluiu 154 testes sem falhas, incluindo o contexto Spring com MySQL 8.1, sete migrations Flyway, schema na versão 5, Hibernate em `ddl-auto: validate` e a integração JPA de CNPJ. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
 
 A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`. Os novos endpoints também foram validados contra o MySQL local: a listagem retornou a busca existente com HTTP `200`, o detalhe retornou seus 18 vínculos ordenados pelo score histórico com HTTP `200` e um ID inexistente retornou HTTP `404`. A exportação CSV filtrada por `status=NOVO` retornou HTTP `200`, `Content-Type: text/csv;charset=UTF-8`, nome de download `leads.csv` e 18 linhas de dados. A exportação Excel com o mesmo filtro retornou HTTP `200`, `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, nome `leads.xlsx` e arquivo reconhecido como Excel 2007+ com ZIP íntegro.
 
@@ -527,13 +528,13 @@ O fechamento passou com 140 testes backend, 189 testes frontend, os dois builds 
 
 ### Refinamento CNPJ
 
-A sprint **CNPJ-00** está concluída. `tools/cnpj/gerar_dataset.py` consome os arquivos mensais oficiais de Empresas, Estabelecimentos e Municípios mediante manifesto com data, URLs HTTPS e checksums SHA-256. A ferramenta valida origem e limites, filtra apenas estabelecimentos ativos dos municípios configurados, normaliza os campos e gera JSON e SQL determinísticos. Os quatro testes Python cobrem parser Latin-1, normalização, filtros, ordenação, checksum e ausência de registros. Os arquivos brutos permanecem fora do Git.
+A sprint **CNPJ-00** está concluída. `tools/cnpj/gerar_dataset.py` consome os arquivos mensais oficiais de Empresas, Estabelecimentos e Municípios mediante manifesto com data, URLs HTTPS e checksums SHA-256. A ferramenta valida origem e limites, filtra apenas estabelecimentos ativos dos municípios configurados, normaliza os campos e gera JSON e SQL determinísticos com competência e fontes no cabeçalho. Os cinco testes Python cobrem parser Latin-1, normalização, filtros, ordenação, proveniência, metadados seguros, checksum e ausência de registros. Os arquivos brutos permanecem fora do Git.
 
-A sprint **CNPJ-01** está concluída. O cliente Places solicita `addressComponents`, e o mapper extrai CEP, logradouro, número e bairro. A V4 adiciona o endereço estruturado e os dados CNPJ ao lead e cria `cnpj_empresa`/`cnpj_estabelecimento`; a migration repetível traz uma carga inicial mínima e verificável das unidades conhecidas em Vitória/ES, Vila Velha/ES e Curitiba/PR. Flyway, Hibernate e os testes de mapper, cliente e persistência passaram no MySQL 8.1.
+A sprint **CNPJ-01** está concluída. O cliente Places solicita `addressComponents`, e o mapper extrai CEP, logradouro, número e bairro. A V4 adiciona o endereço estruturado e os dados CNPJ ao lead e cria `cnpj_empresa`/`cnpj_estabelecimento`. A migration repetível permanece como placeholder seguro até ser gerada a partir da competência mensal oficial; as unidades conhecidas de Vitória/ES, Vila Velha/ES e Curitiba/PR ficam somente em fixtures transacionais. Flyway, Hibernate e os testes de mapper, cliente e persistência passaram no MySQL 8.1.
 
-A sprint **CNPJ-02** está concluída. A busca chama o `CnpjService` depois da localização municipal e antes do scoring. A correspondência exige candidato ativo único, município, número, rua e nome compatíveis; usa CEP quando disponível, aumenta o limiar no fallback sem CEP e falha de modo seguro diante de baixa confiança, ambiguidade ou excesso de candidatos. As fixtures integradas confirmam CNPJs distintos para as unidades Coco Bambu de Vitória e Vila Velha. CNPJ anterior, dados comerciais, deduplicação e scoring permanecem preservados.
+A sprint **CNPJ-02** está concluída, incluindo a revisão de proveniência. A busca chama o `CnpjService` depois da localização municipal e antes do scoring. A correspondência exige candidato ativo único, município, número, rua e nome compatíveis; usa CEP quando disponível, aumenta o limiar no fallback sem CEP e falha de modo seguro diante de baixa confiança, ambiguidade ou excesso de candidatos. A V5 persiste competência e confiança, remove a antiga carga não rastreável e habilita revalidação quando a competência municipal mudar. Se a nova base não confirmar a unidade, o enriquecimento anterior é limpo; dados comerciais, deduplicação e scoring permanecem preservados. As fixtures integradas confirmam CNPJs distintos para as unidades Coco Bambu de Vitória e Vila Velha.
 
-O fechamento de CNPJ-00 a CNPJ-02 passou com quatro testes do ingestor e 151 testes backend. O pacote executável foi gerado sem executar nova chamada externa. **CNPJ-03 e CNPJ-04 não foram iniciadas**: os dados ainda não são expostos nos contratos, exportações ou frontend, conforme a pausa solicitada ao final da CNPJ-02.
+O fechamento revisado de CNPJ-00 a CNPJ-02 passou com cinco testes do ingestor e 154 testes backend. O pacote executável foi gerado sem executar nova chamada externa. **CNPJ-03 e CNPJ-04 não foram iniciadas**: os dados ainda não são expostos nos contratos, exportações ou frontend, conforme a pausa solicitada ao final da CNPJ-02.
 
 ### Próximo passo
 

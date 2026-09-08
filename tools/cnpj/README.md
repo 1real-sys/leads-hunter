@@ -18,13 +18,19 @@ Este diretório contém o ingestor one-off da CNPJ-00. Ele transforma os arquivo
 O manifesto é obrigatório e congela `dataBase`, municípios, URL HTTPS e SHA-256 de cada arquivo. O ingestor:
 
 - aceita download somente dos hosts oficiais declarados no código;
-- rejeita redirecionamento para outro host, nomes de arquivo/caminhos inseguros, ZIPs com quantidade ou tamanho fora dos limites e CNPJ/CEP inválidos;
+- rejeita redirecionamento para outro host, nomes de arquivo/caminhos inseguros, caracteres de controle nas URLs, ZIPs com quantidade ou tamanho fora dos limites e CNPJ/CEP inválidos;
 - calcula o SHA-256 antes de ler qualquer CSV e para se a fonte mudar;
 - mantém somente estabelecimentos com situação cadastral `02` (ativa);
 - exige pelo menos uma unidade ativa em cada município configurado;
 - grava o resultado atomicamente e sem timestamp variável.
 
 Os arquivos brutos são grandes e não devem ser versionados. `tools/cnpj/sources/` está ignorado pelo Git.
+
+## Estado do artefato de runtime
+
+`src/main/resources/db/migration/R__carregar_subset_cnpj.sql` é mantido como um placeholder seguro, sem estabelecimentos. A aplicação só terá candidatos para prospecção depois que esse arquivo for substituído pela saída do ingestor usando **todos os lotes oficiais da mesma competência**, com manifesto e checksums revisados.
+
+Os três casos Coco Bambu usados no desenvolvimento ficam exclusivamente em `src/test/resources/cnpj/fixtures.sql`. Seus CNPJs não são inventados: foram conferidos nas páginas oficiais das unidades [Vitória](https://www.cocobambu.com/unidades/cb-vitoria), [Vila Velha](https://cocobambu.com/unidades/cb-vila-velha) e [Curitiba](https://cocobambu.com/unidades/cb-curitiba). Essas fixtures não afirmam representar um recorte da Receita nem são carregadas no runtime.
 
 ## Preparar a competência mensal
 
@@ -62,7 +68,7 @@ Os arquivos brutos são grandes e não devem ser versionados. `tools/cnpj/source
 }
 ```
 
-Repita as entradas para todos os lotes numerados. Calcule o checksum local com `sha256sum tools/cnpj/sources/*.zip`, confira os nomes/URLs no catálogo e só então registre os valores no manifesto. Não reutilize arquivos ou checksums de competências diferentes.
+Repita as entradas para **todos** os lotes numerados de Empresas e Estabelecimentos publicados naquela competência. Calcule o checksum local com `sha256sum tools/cnpj/sources/*.zip`, confira os nomes/URLs no catálogo e só então registre os valores no manifesto. Não reutilize arquivos ou checksums de competências diferentes.
 
 ## Gerar
 
@@ -77,7 +83,9 @@ python3 tools/cnpj/gerar_dataset.py \
 
 Para o ingestor baixar exatamente as URLs congeladas no manifesto, omita `--source-dir`. O download pode ocupar vários gigabytes e só deve ser feito manualmente durante a atualização mensal.
 
-A saída JSON padrão é `src/main/resources/cnpj/cnpj-subset.json`. `--output-sql` gera a migration Flyway repetível consumida pelo backend: ela substitui somente os municípios do manifesto, remove empresas que ficaram órfãs e faz a carga em lotes de 500. Para conferir sem substituir os artefatos usados pelo backend, passe saídas em `/tmp`.
+A saída JSON padrão é `src/main/resources/cnpj/cnpj-subset.json`. `--output-sql` substitui o placeholder pela migration Flyway repetível consumida pelo backend: ela identifica competência, URL e checksum de cada fonte no cabeçalho, substitui somente os municípios do manifesto, remove empresas que ficaram órfãs e faz a carga em lotes de 500. Para conferir sem substituir os artefatos usados pelo backend, passe saídas em `/tmp`.
+
+Antes de iniciar prospecção real, revise no SQL gerado se todos os lotes esperados constam no cabeçalho e execute a suíte de persistência. Alterar a competência do recorte faz o backend revalidar, na próxima captura, os CNPJs já correspondidos naquele município.
 
 ## Validar
 
@@ -85,7 +93,7 @@ A saída JSON padrão é `src/main/resources/cnpj/cnpj-subset.json`. `--output-s
 python3 tools/cnpj/test_gerar_dataset.py
 ```
 
-Os testes constroem ZIPs oficiais mínimos em diretório temporário e cobrem parser Latin-1, normalização, filtro de ativos/localidades, ordenação determinística, CNPJ/endereço e falha por checksum ou município sem registros.
+Os testes constroem ZIPs oficiais mínimos em diretório temporário e cobrem parser Latin-1, normalização, filtro de ativos/localidades, ordenação determinística, proveniência no SQL, CNPJ/endereço, metadado inseguro e falha por checksum ou município sem registros.
 
 ## Saída
 

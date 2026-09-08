@@ -8,10 +8,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @Transactional
+@Sql("/cnpj/fixtures.sql")
 class CnpjRepositoryTest {
 
     @Autowired
@@ -51,7 +53,7 @@ class CnpjRepositoryTest {
             assertThat(item.getLogradouroNormalizado()).isEqualTo("rua joao da cruz");
             assertThat(item.getEmpresa().getRazaoSocial())
                 .isEqualTo("CB VITORIA COMERCIO DE ALIMENTOS LTDA");
-            assertThat(item.getDataBase()).isEqualTo(LocalDate.of(2026, 8, 8));
+            assertThat(item.getDataBase()).isEqualTo(LocalDate.of(2026, 9, 8));
         });
         assertThat(vilaVelha.getContent()).singleElement()
             .extracting(CnpjEstabelecimento::getCnpj)
@@ -59,5 +61,7 @@ class CnpjRepositoryTest {
         assertThat(curitiba.getContent()).singleElement()
             .extracting(CnpjEstabelecimento::getCnpj)
             .isEqualTo("23502037000113");
+        assertThat(estabelecimentoRepository.findDataBaseAtual("3205309", "02"))
+            .contains(LocalDate.of(2026, 9, 8));
     }
 }

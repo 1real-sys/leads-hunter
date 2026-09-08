@@ -14,6 +14,7 @@ import dev.jlm.leadshunter.lead.LeadRepository;
 import dev.jlm.leadshunter.lead.StatusFunil;
 import dev.jlm.leadshunter.lead.Temperatura;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -21,10 +22,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @Transactional
+@Sql("/cnpj/fixtures.sql")
 class BuscaServiceJpaIntegrationTest {
 
     private static final String PRIMEIRO_PLACE_ID = "jpa-integration-place-001";
@@ -182,11 +185,21 @@ class BuscaServiceJpaIntegrationTest {
         assertThat(leadVitoria.getRazaoSocial())
             .isEqualTo("CB VITORIA COMERCIO DE ALIMENTOS LTDA");
         assertThat(leadVitoria.getCnpjCorrespondidoEm()).isNotNull();
+        assertThat(leadVitoria.getCnpjDataBase()).isEqualTo(LocalDate.of(2026, 9, 8));
+        assertThat(leadVitoria.getCnpjConfianca()).isBetween(
+            new BigDecimal("0.8200"),
+            BigDecimal.ONE
+        );
         assertThat(leadVilaVelha.getMunicipioCodigoIbge()).isEqualTo("3205200");
         assertThat(leadVilaVelha.getCnpj()).isEqualTo("23681920000118");
         assertThat(leadVilaVelha.getRazaoSocial())
             .isEqualTo("CB VILA VELHA COMERCIO DE ALIMENTOS LTDA");
         assertThat(leadVilaVelha.getCnpjCorrespondidoEm()).isNotNull();
+        assertThat(leadVilaVelha.getCnpjDataBase()).isEqualTo(LocalDate.of(2026, 9, 8));
+        assertThat(leadVilaVelha.getCnpjConfianca()).isBetween(
+            new BigDecimal("0.8200"),
+            BigDecimal.ONE
+        );
         assertThat(leadVitoria.getCnpj()).isNotEqualTo(leadVilaVelha.getCnpj());
     }
 

@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.jlm.leadshunter.lead.Lead;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +41,9 @@ class CnpjServiceTest {
         assertThat(new CnpjService(repository).corresponder(lead))
             .contains(new CnpjService.Correspondencia(
                 "43869215000156",
-                "CB VITORIA COMERCIO DE ALIMENTOS LTDA"
+                "CB VITORIA COMERCIO DE ALIMENTOS LTDA",
+                LocalDate.of(2026, 9, 8),
+                new BigDecimal("1.0000")
             ));
     }
 
@@ -155,6 +159,19 @@ class CnpjServiceTest {
         assertThat(new CnpjService(repository).corresponder(lead)).isEmpty();
     }
 
+    @Test
+    void deveConsultarCompetenciaMaisRecenteDoMunicipioAtivo() {
+        when(repository.findDataBaseAtual("3205309", "02"))
+            .thenReturn(java.util.Optional.of(LocalDate.of(2026, 9, 8)));
+
+        CnpjService service = new CnpjService(repository);
+
+        assertThat(service.buscarDataBaseAtual("3205309"))
+            .contains(LocalDate.of(2026, 9, 8));
+        assertThat(service.buscarDataBaseAtual("codigo-invalido")).isEmpty();
+        verify(repository).findDataBaseAtual("3205309", "02");
+    }
+
     private Lead criarLead(
         String nome,
         String municipio,
@@ -187,6 +204,7 @@ class CnpjServiceTest {
         empresa.setCnpjBase(cnpj.substring(0, 8));
         empresa.setRazaoSocial(razaoSocial);
         empresa.setRazaoSocialNormalizada(CnpjService.normalizarTexto(razaoSocial));
+        empresa.setDataBase(LocalDate.of(2026, 9, 8));
 
         CnpjEstabelecimento candidato = new CnpjEstabelecimento();
         candidato.setCnpj(cnpj);
@@ -202,6 +220,7 @@ class CnpjServiceTest {
         candidato.setCep(cep);
         candidato.setMunicipioCodigoIbge(municipio);
         candidato.setSituacaoCadastral("02");
+        candidato.setDataBase(LocalDate.of(2026, 9, 8));
         return candidato;
     }
 

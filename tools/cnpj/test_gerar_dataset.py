@@ -88,8 +88,12 @@ class GerarDatasetCnpjTest(unittest.TestCase):
 
         self.assertEqual(primeira.read_bytes(), segunda.read_bytes())
         self.assertEqual(primeira_sql.read_bytes(), segunda_sql.read_bytes())
-        self.assertIn("DELETE FROM cnpj_estabelecimento", primeira_sql.read_text())
-        self.assertIn("'43869215000156'", primeira_sql.read_text())
+        conteudo_sql = primeira_sql.read_text()
+        self.assertIn("Competencia da base RFB: 2026-08-08", conteudo_sql)
+        self.assertIn("-- Fonte: empresas | Empresas0.zip | sha256=", conteudo_sql)
+        self.assertIn("https://arquivos.receitafederal.gov.br/", conteudo_sql)
+        self.assertIn("DELETE FROM cnpj_estabelecimento", conteudo_sql)
+        self.assertIn("'43869215000156'", conteudo_sql)
         self.assertEqual(3, dataset["metadata"]["estabelecimentos"])
         self.assertEqual(3, dataset["metadata"]["empresas"])
         self.assertEqual(
@@ -124,6 +128,14 @@ class GerarDatasetCnpjTest(unittest.TestCase):
             fontes = cnpj.resolver_fontes(carregado, self.fontes, Path(tmp))
             with self.assertRaisesRegex(cnpj.ErroIngestao, "3550308"):
                 cnpj.gerar_dataset(carregado, fontes)
+
+    def test_deve_rejeitar_metadado_inseguro_para_comentario_sql(self) -> None:
+        manifesto = json.loads(self.manifesto.read_text(encoding="utf-8"))
+        manifesto["fontes"][0]["url"] += "\nSELECT 1;"
+        self.manifesto.write_text(json.dumps(manifesto), encoding="utf-8")
+
+        with self.assertRaisesRegex(cnpj.ErroIngestao, "URL HTTPS obrigatoria"):
+            cnpj.carregar_manifesto(self.manifesto)
 
     def _gravar_manifesto(self) -> None:
         base_url = "https://arquivos.receitafederal.gov.br/dados/cnpj/2026-08/"
