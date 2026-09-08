@@ -31,6 +31,10 @@
         <p class="mapa-busca__idhm-feedback mapa-busca__idhm-feedback--erro" role="alert">
           {{ mensagem }}
         </p>
+      } @else if (mensagemOrientacaoIdhm(); as mensagem) {
+        <p class="mapa-busca__idhm-feedback" role="status">
+          {{ mensagem }}
+        </p>
       } @else if (totalMunicipiosIdhm() === 0) {
         <p class="mapa-busca__idhm-feedback" role="status">
           Nenhum município encontrado nesta área.
@@ -48,7 +52,8 @@
         @if (carregandoIdhm()) {
           Carregando municípios…
         } @else if (idhmAtivo() && totalMunicipiosIdhm(); as total) {
-          {{ total }} {{ total === 1 ? 'município' : 'municípios' }}
+          {{ total }}
+          {{ total === 1 ? 'município carregado' : 'municípios carregados' }} na região
         }
       </span>
       <button

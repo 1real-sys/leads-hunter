@@ -1,6 +1,6 @@
 # Refinamento — IDHM no Lead e mapa coroplético do Brasil
 
-Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-00 a IDHM-04 estão concluídas e validadas**; a sprint IDHM-05 continua pendente. Este documento é o plano de referência e será atualizado conforme o estado real da execução.
+Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-00 a IDHM-05 estão concluídas e validadas**. Este documento registra o plano executado e o estado final da entrega.
 
 ## Objetivo
 
@@ -143,11 +143,18 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 - Drawer e card mostram o valor quando existe e omitem com neutralidade quando nulo.
 - Testes de frontend do card, drawer e util de classificação passam; suíte completa passa.
 
-**Resultado:** `LeadResponse` passou a aceitar os cinco campos geográficos opcionais e anuláveis. Um util compartilhado concentra as faixas PNUD, os rótulos, a escala verde→vermelho, o estado neutro sem dado e a formatação brasileira com três casas. O card mostra um badge compacto com IDHM e UF, sem controles interativos adicionais; o drawer inclui Município/UF, valor, faixa e referência na seção Estabelecimento. Campos ausentes ou inválidos são omitidos. A suíte frontend passou com 171 testes, o build de produção concluiu sem warnings e a inspeção em 1.440 px e 390 px confirmou ausência de overflow e preservação de título, drag e WhatsApp.
+**Resultado:** `LeadResponse` passou a aceitar os cinco campos geográficos opcionais e anuláveis. Um util compartilhado concentra as faixas PNUD, os rótulos, a escala verde→vermelho, o estado neutro sem dado e a formatação brasileira com três casas. O card mostra um badge compacto com IDHM e UF, sem controles interativos adicionais; o drawer inclui Município/UF, valor, faixa e referência na seção Estabelecimento. Campos ausentes ou inválidos são omitidos. A revisão de acessibilidade do badge foi resolvida com papel semântico de imagem, nome acessível completo e texto de faixa visualmente oculto, sem depender apenas da cor. A suíte frontend passou com 171 testes, o build de produção concluiu sem warnings e a inspeção em 1.440 px e 390 px confirmou ausência de overflow e preservação de título, drag e WhatsApp.
+
+**Observações da revisão:**
+
+- **A faixa do IDHM no badge do card é transmitida quase só por cor, e o `aria-label` está num `<p>` sem `role`, que leitores de tela tendem a ignorar.** O badge mostra "IDHM 0,845 · ES" e a faixa ("Muito alto" etc.) apenas pelo círculo colorido. Sugestão: incluir a faixa como texto visualmente oculto (sr-only) dentro do badge, ex.: `<span class="sr-only">, faixa Muito alto</span>`, e/ou dar um `role` adequado ao elemento em vez de depender do `aria-label` em elemento genérico. No drawer a faixa já é texto visível (correto).
+- **Sem discordância funcional** no restante: campos opcionais, omissão neutra de nulos, formatação `pt-BR` de três casas e faixas PNUD estão coerentes e testados.
+
+**Resolução:** o badge agora usa `role="img"`, mantém um nome acessível com valor, faixa e UF, e inclui a faixa em texto visualmente oculto. A classificação não depende mais apenas da cor nem de `aria-label` em elemento genérico.
 
 ### IDHM-04 — Frontend: mapa coroplético do Brasil por IDHM
 
-**Status:** CONCLUÍDO em 07/09/2026.
+**Status:** CONCLUÍDO em 08/09/2026.
 
 **Objetivo:** camada ligável no mapa da busca com municípios coloridos por IDHM.
 
@@ -168,9 +175,19 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 - Marcar centro e círculo de raio continuam funcionando por cima da camada.
 - Testes e build frontend passam.
 
-**Resultado:** o mapa da Busca recebeu um switch IDHM que carrega o GeoJSON municipal somente quando ativado. O bbox é normalizado em células de viewport, chamadas de `moveend` são agrupadas por 250 ms, requisições obsoletas são canceladas e até 80 respostas são mantidas em cache na sessão. A camada usa as cinco faixas PNUD e o estado cinza sem dado, apresenta legenda com referência ao Atlas Brasil 2010 e abre popup com localidade, valor e faixa. Os polígonos possuem nome acessível, foco visível e abertura por Enter/Espaço. Uma pane dedicada mantém os polígonos abaixo do círculo e do marcador, e o desligamento/destruição remove camada, timers, requisições e listeners. A suíte frontend passou com 178 testes, o build de produção terminou sem warnings e as inspeções em 1.440 px e 390 px não encontraram overflow nem violações WCAG A/AA após a estabilização das transições.
+**Resultado:** o mapa da Busca recebeu um switch IDHM que carrega o GeoJSON municipal somente quando ativado. O bbox é normalizado em células de viewport, chamadas de `moveend` são agrupadas por 250 ms, requisições obsoletas são canceladas e até 80 respostas são mantidas em cache na sessão. Viewports com amplitude acima de 5° não iniciam uma consulta potencialmente rejeitada pelo teto de 1.500 municípios; a camada permanece ativa e orienta o usuário a aproximar o mapa. Eventos dos polígonos não reposicionam mais o centro, a legenda não intercepta ponteiro e o contador identifica explicitamente a região carregada. A camada usa as cinco faixas PNUD e o estado cinza sem dado, apresenta legenda com referência ao Atlas Brasil 2010 e abre popup com localidade, valor e faixa. Os polígonos possuem nome acessível, foco visível e abertura por Enter/Espaço; por ser opt-in, cada município mantém seu próprio tabstop para navegação direta em áreas densas. Uma pane dedicada mantém os polígonos abaixo do círculo e do marcador, e o desligamento/destruição remove camada, timers, requisições e listeners. A suíte frontend passou com 179 testes, o build de produção terminou sem warnings e as inspeções em 1.440 px e 390 px não encontraram overflow nem violações WCAG A/AA após a estabilização das transições.
+
+**Observações e decisões da revisão:**
+
+- **Zoom amplo — decisão de produto:** a camada adota a alternativa de orientação em zoom baixo. Viewports acima de 5° não geram o bbox de 30° que provocava `400`; o toggle permanece ativo, sem camada renderizada, e informa “Aproxime o mapa para visualizar a camada de IDHM nesta região”. A visão país integral fica explicitamente fora do carregamento por causa do teto de 1.500 municípios do endpoint.
+- **Conflito de interação com a seleção do centro — resolvido:** `bubblingMouseEvents: false` impede que o clique em um município abra o popup e altere simultaneamente o centro da busca.
+- **Legenda — resolvida:** `.mapa-busca__idhm-legenda` usa `pointer-events: none`, preservando drag e zoom na área do mapa sem conteúdo interativo.
+- **Contador — resolvido:** o status informa “municípios carregados na região”, deixando claro que o total representa a célula consultada, não necessariamente o viewport exato.
+- **Navegação por Tab — decisão mantida:** a camada opt-in conserva um tabstop por município para que todos os polígonos permaneçam diretamente acessíveis; os testes cobrem foco, Enter e Espaço, inclusive o estado sem IDHM.
 
 ### IDHM-05 — Validação integrada e documentação
+
+**Status:** CONCLUÍDO em 08/09/2026.
 
 **Objetivo:** fechar a feature com validações e registros.
 
@@ -184,6 +201,15 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 - Suítes backend e frontend passam; build sem warnings.
 - Migração Flyway `V2` aplicada em MySQL sem `ddl-auto=update`.
 - Nenhuma chamada externa introduzida em runtime; nenhum segredo adicionado.
+
+**Resultado:** a suíte backend passou com 120 testes no Java 25 e o pacote executável foi gerado. Durante a inicialização integrada, Flyway validou as duas migrations no MySQL 8.1 e confirmou o schema `leadsradar` na versão 2; o Hibernate permaneceu em `ddl-auto: validate`. A suíte frontend passou com 179 testes e o build de produção terminou sem warnings. A revisão ponta a ponta, com respostas locais controladas, percorreu buscas para Vitória/ES e Curitiba/PR, confirmou os badges `0,845 / ES` e `0,823 / PR`, os dados de município e referência nos drawers, os downloads CSV/XLSX e a camada coroplética nos dois viewports, incluindo legenda e popup por teclado. Requisições a domínios externos foram bloqueadas durante a validação; a feature continua usando somente o dataset congelado em runtime e não adicionou secrets ao conteúdo versionado.
+
+**Observações e resoluções da revisão:**
+
+- **Validações reproduzidas no fechamento:** `./mvnw test` com 120 testes verdes no backend e, no frontend, `npm test` com 179 testes e `npm run build` sem warnings. O smoke de navegador controlado percorreu as buscas de Vitória/ES e Curitiba/PR, confirmou badges, drawers, CSV/XLSX, popups por teclado nos dois viewports geográficos e nenhum problema WCAG no Kanban em 1.440 px. Os tiles externos foram bloqueados durante a inspeção.
+- **Execução após a remoção dos segredos:** sem `DB_PASSWORD` definida no ambiente atual, `./mvnw test` iniciou 120 testes, com 116 aprovações e 4 erros de contexto nos testes que dependem do MySQL autenticado. Os testes unitários de integração (`PlacesApiClientTest` e `ApiExceptionHandlerTest`) passaram; a suíte integrada deve ser repetida com as credenciais fornecidas por ambiente.
+- **Segurança do `application.yml` — resolvida:** a senha do MySQL e a chave da Google Places passaram a ser lidas exclusivamente de `${DB_PASSWORD:}` e `${GOOGLE_PLACES_API_KEY:}`. Essas credenciais não permanecem no arquivo de configuração versionável; a chave conhecida também não aparece no histórico do Git.
+- **Escopo de zoom amplo — decisão registrada:** a camada é regional e orienta aproximação acima de 5° para respeitar o teto de 1.500 municípios; a visão país integral não é carregada nesta versão.
 
 ---
 

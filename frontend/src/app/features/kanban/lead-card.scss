@@ -153,6 +153,18 @@
   color: var(--border);
 }
 
+.lead-card__idhm-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+}
+
 .lead-card__contato {
   display: flex;
   align-items: flex-start;

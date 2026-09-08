@@ -857,6 +857,12 @@ Header de cache:
 
 - `Cache-Control: max-age=86400, public` — permite reutilizar por 24 horas uma resposta do mesmo bbox, pois o dataset é estático nesta versão da aplicação.
 
+### Integração com a feature IDHM
+
+O mapa da Busca envia o bbox do viewport somente quando a camada IDHM está ativa e reutiliza respostas durante a sessão. Badge e drawer do Kanban leem os campos geográficos persistidos do contrato de lead, enquanto CSV/XLSX recebem os mesmos dados pelo fluxo de exportação. O endpoint geográfico e o enriquecimento do lead usam o dataset congelado no classpath: não há consulta a IBGE, Atlas Brasil ou serviço de geocodificação em runtime.
+
+No fechamento da feature, os contratos foram validados de ponta a ponta com dados controlados de Vitória/ES (`idhm: 0.845`) e Curitiba/PR (`idhm: 0.823`), cobrindo busca, apresentação no Kanban, exportações e os dois viewports da camada coroplética.
+
 ### Status HTTP
 
 - `200 OK` — coleção retornada, inclusive quando vazia.

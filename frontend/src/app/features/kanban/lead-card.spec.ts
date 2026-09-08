@@ -71,8 +71,13 @@ describe('LeadCard', () => {
       'IDHM 0,845',
       '·',
       'ES',
+      'Faixa Muito alto',
     ]);
+    expect(badge.getAttribute('role')).toBe('img');
     expect(badge.getAttribute('aria-label')).toBe('IDHM 0,845, faixa Muito alto, ES');
+    expect(badge.querySelector('.lead-card__idhm-sr-only')?.textContent?.trim()).toBe(
+      'Faixa Muito alto',
+    );
     expect(badge.querySelector('button, a')).toBeNull();
     expect(
       (badge.querySelector('.lead-card__idhm-marker') as HTMLElement).style.backgroundColor,

@@ -41,6 +41,9 @@ const IDHM_PANE = 'idhm-municipios';
 const IDHM_PANE_Z_INDEX = '350';
 const VIEWPORT_THROTTLE_MS = 250;
 const MAX_VIEWPORT_CACHE = 80;
+const MAX_IDHM_VIEWPORT_AMPLITUDE = 5;
+const IDHM_VIEWPORT_TOO_BROAD_MESSAGE =
+  'Aproxime o mapa para visualizar a camada de IDHM nesta região.';
 
 interface CelulaViewport {
   readonly chave: string;
@@ -70,6 +73,7 @@ export class MapaBusca {
   protected readonly idhmAtivo = signal(false);
   protected readonly carregandoIdhm = signal(false);
   protected readonly mensagemErroIdhm = signal<string | null>(null);
+  protected readonly mensagemOrientacaoIdhm = signal<string | null>(null);
   protected readonly totalMunicipiosIdhm = signal<number | null>(null);
   protected readonly legendaIdhm = LEGENDA_IDHM;
 
@@ -142,6 +146,7 @@ export class MapaBusca {
 
     this.idhmAtivo.set(true);
     this.mensagemErroIdhm.set(null);
+    this.mensagemOrientacaoIdhm.set(null);
     this.agendarCarregamentoIdhm(0);
   }
 
@@ -226,7 +231,18 @@ export class MapaBusca {
     }
 
     const celula = this.obterCelulaViewport();
-    if (!celula || celula.chave === this.chavePendente) {
+    if (!celula) {
+      this.cancelarRequestPendente();
+      this.totalMunicipiosIdhm.set(null);
+      this.removerCamadaIdhm();
+      this.mensagemErroIdhm.set(null);
+      this.mensagemOrientacaoIdhm.set(IDHM_VIEWPORT_TOO_BROAD_MESSAGE);
+      return;
+    }
+
+    this.mensagemOrientacaoIdhm.set(null);
+
+    if (celula.chave === this.chavePendente) {
       return;
     }
 
@@ -246,6 +262,7 @@ export class MapaBusca {
     this.chavePendente = celula.chave;
     this.carregandoIdhm.set(true);
     this.mensagemErroIdhm.set(null);
+    this.mensagemOrientacaoIdhm.set(null);
     const requestId = ++this.requestSequence;
 
     this.viewportRequest = this.geografiaApi.listarMunicipios(celula.bbox).subscribe({
@@ -258,6 +275,7 @@ export class MapaBusca {
         this.viewportRequest = null;
         this.chavePendente = null;
         this.carregandoIdhm.set(false);
+        this.mensagemOrientacaoIdhm.set(null);
         this.renderizarMunicipios(response, celula.chave);
       },
       error: (error: unknown) => {
@@ -268,6 +286,7 @@ export class MapaBusca {
         this.chavePendente = null;
         this.viewportRequest = null;
         this.carregandoIdhm.set(false);
+        this.mensagemOrientacaoIdhm.set(null);
         this.totalMunicipiosIdhm.set(null);
         this.removerCamadaIdhm();
         this.mensagemErroIdhm.set(
@@ -295,14 +314,24 @@ export class MapaBusca {
     }
 
     const maiorAmplitude = Math.max(leste - oeste, norte - sul);
-    const tamanhoCelula =
-      maiorAmplitude <= 0.25 ? 0.25 : maiorAmplitude <= 1 ? 1 : maiorAmplitude <= 5 ? 5 : 30;
+    if (maiorAmplitude > MAX_IDHM_VIEWPORT_AMPLITUDE) {
+      return null;
+    }
+
+    const tamanhoCelula = maiorAmplitude <= 0.25 ? 0.25 : maiorAmplitude <= 1 ? 1 : 5;
     const bbox: BboxGeografico = {
       minLng: this.normalizarCoordenada(Math.floor(oeste / tamanhoCelula) * tamanhoCelula),
       minLat: this.normalizarCoordenada(Math.floor(sul / tamanhoCelula) * tamanhoCelula),
       maxLng: this.normalizarCoordenada(Math.ceil(leste / tamanhoCelula) * tamanhoCelula),
       maxLat: this.normalizarCoordenada(Math.ceil(norte / tamanhoCelula) * tamanhoCelula),
     };
+
+    if (
+      bbox.maxLng - bbox.minLng > MAX_IDHM_VIEWPORT_AMPLITUDE ||
+      bbox.maxLat - bbox.minLat > MAX_IDHM_VIEWPORT_AMPLITUDE
+    ) {
+      return null;
+    }
 
     return {
       chave: [bbox.minLng, bbox.minLat, bbox.maxLng, bbox.maxLat].join(','),
@@ -332,6 +361,7 @@ export class MapaBusca {
 
     this.removerCamadaIdhm();
     this.idhmLayer = geoJSON<MunicipioGeoJsonProperties>(response, {
+      bubblingMouseEvents: false,
       pane: IDHM_PANE,
       style: (feature) => this.estiloMunicipio(feature?.properties.idhm ?? null),
       onEachFeature: (feature, layer) => this.configurarMunicipio(feature.properties, layer),
@@ -424,6 +454,7 @@ export class MapaBusca {
     this.idhmAtivo.set(false);
     this.cancelarRequestPendente();
     this.mensagemErroIdhm.set(null);
+    this.mensagemOrientacaoIdhm.set(null);
     this.totalMunicipiosIdhm.set(null);
 
     if (this.viewportTimer !== null) {

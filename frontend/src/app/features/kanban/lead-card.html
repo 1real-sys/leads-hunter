@@ -40,6 +40,7 @@
     @if (idhmApresentacao(); as idhm) {
       <p
         class="lead-card__idhm"
+        role="img"
         [attr.aria-label]="
           'IDHM ' + idhm.valor + ', faixa ' + idhm.classificacao.rotulo + (idhm.uf ? ', ' + idhm.uf : '')
         "
@@ -54,6 +55,7 @@
           <span class="lead-card__idhm-separator" aria-hidden="true">·</span>
           <span>{{ uf }}</span>
         }
+        <span class="lead-card__idhm-sr-only">Faixa {{ idhm.classificacao.rotulo }}</span>
       </p>
     }
 

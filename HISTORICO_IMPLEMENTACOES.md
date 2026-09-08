@@ -1225,3 +1225,68 @@ O carregamento consulta o endpoint geográfico somente quando a camada está ati
 - `frontend/src/app/shared/utils/idhm.spec.ts`
 - `frontend/src/app/shared/utils/idhm.ts`
 - `frontend/src/styles.scss`
+
+## 45. Fechamento integrado da feature IDHM — 08/09/2026
+
+A entrega de IDHM foi encerrada após a validação conjunta do enriquecimento municipal, dos contratos de lead, das exportações e da camada coroplética. O fluxo controlado confirmou Vitória/ES e Curitiba/PR desde a busca até os badges e detalhes do Kanban, além dos arquivos CSV/XLSX e dos polígonos e popups do mapa.
+
+A documentação passou a registrar o estado final das seis sprints, o uso exclusivamente offline do dataset em runtime e a ausência de pendências dentro deste refinamento.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `API.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento.md`
+
+---
+
+## 46. Acessibilidade do badge de IDHM — 08/09/2026
+
+O badge de IDHM do card do Kanban passou a expor a classificação de forma semântica e textual. O elemento recebeu um papel acessível e mantém a faixa em texto visualmente oculto, evitando que a identificação dependa somente da cor ou de um `aria-label` em elemento genérico.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento.md`
+- `frontend/src/app/features/kanban/lead-card.html`
+- `frontend/src/app/features/kanban/lead-card.scss`
+- `frontend/src/app/features/kanban/lead-card.spec.ts`
+
+---
+
+## 47. Refinamento de interação da camada IDHM — 08/09/2026
+
+A camada coroplética passou a orientar o usuário quando o viewport é amplo demais para o limite seguro do endpoint, evitando consultas rejeitadas. Os municípios não propagam clique para a seleção do centro, a legenda deixa de bloquear o mapa e o contador identifica a região carregada. A navegação por teclado continua disponível em cada município da camada opt-in, incluindo Enter e Espaço.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento.md`
+- `frontend/src/app/features/busca/mapa-busca.html`
+- `frontend/src/app/features/busca/mapa-busca.scss`
+- `frontend/src/app/features/busca/mapa-busca.spec.ts`
+- `frontend/src/app/features/busca/mapa-busca.ts`
+
+---
+
+## 48. Parametrização de credenciais da aplicação — 08/09/2026
+
+A configuração local deixou de conter valores sensíveis em texto puro. A senha do banco e a chave da Google Places passaram a ser fornecidas por variáveis de ambiente, evitando que credenciais sejam adicionadas acidentalmente ao repositório.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento.md`
+- `src/main/resources/application.yml`

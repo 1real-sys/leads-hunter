@@ -27,6 +27,7 @@ const leaflet = vi.hoisted(() => {
     setStyle: ReturnType<typeof vi.fn>;
   };
   type GeoJsonOptions = {
+    bubblingMouseEvents?: boolean;
     pane?: string;
     style?: (feature?: Feature) => unknown;
     onEachFeature?: (feature: Feature, layer: FeatureLayer) => void;
@@ -295,7 +296,7 @@ describe('MapaBusca', () => {
     expect(legenda.textContent).toContain('Sem IDHM');
     expect(leaflet.geoJSON).toHaveBeenCalledWith(
       MUNICIPIOS,
-      expect.objectContaining({ pane: 'idhm-municipios' }),
+      expect.objectContaining({ bubblingMouseEvents: false, pane: 'idhm-municipios' }),
     );
     expect(leaflet.circleInstance.bringToFront).toHaveBeenCalledOnce();
 
@@ -316,6 +317,13 @@ describe('MapaBusca', () => {
 
     const popupSemIndice = semIndice.bindPopup.mock.calls[0][0] as HTMLElement;
     expect(popupSemIndice.textContent).toContain('IDHM não disponível · Sem IDHM');
+    const elementoSemIndice = semIndice.getElement.mock.results[0].value as SVGElement;
+    elementoSemIndice.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
+    expect(semIndice.openPopup).toHaveBeenCalledOnce();
+
+    expect(fixture.nativeElement.querySelector('.mapa-busca__idhm-status')?.textContent).toContain(
+      '2 municípios carregados na região',
+    );
   });
 
   it('aplica throttle, evita chamadas duplicadas e reutiliza células em cache', async () => {
@@ -392,6 +400,29 @@ describe('MapaBusca', () => {
     ) as HTMLElement;
     expect(feedback.getAttribute('role')).toBe('alert');
     expect(feedback.textContent).toContain('Aproxime o mapa para carregar uma região menor.');
+  });
+
+  it('evita consultar uma região ampla e orienta o usuário a aproximar o mapa', async () => {
+    const { fixture } = await enableIdhm();
+    expectMunicipiosRequest('-49.5,-25.5,-49.25,-25.25').flush(MUNICIPIOS);
+    await fixture.whenStable();
+
+    leaflet.setBounds({ west: -75, south: -35, east: -34, north: 6 });
+    leaflet.triggerMoveEnd();
+    await aguardar(275);
+    await fixture.whenStable();
+
+    httpTesting.expectNone(API_ROUTES.geografiaMunicipios);
+    const feedback = fixture.nativeElement.querySelector(
+      '.mapa-busca__idhm-feedback:not(.mapa-busca__idhm-feedback--erro)',
+    ) as HTMLElement;
+    expect(feedback.getAttribute('role')).toBe('status');
+    expect(feedback.textContent).toContain(
+      'Aproxime o mapa para visualizar a camada de IDHM nesta região.',
+    );
+    expect(fixture.nativeElement.querySelector('.mapa-busca__idhm-status')?.textContent).not.toContain(
+      'municípios carregados',
+    );
   });
 
   it('emite coordenadas válidas e atualiza as camadas ao clicar no mapa', async () => {
