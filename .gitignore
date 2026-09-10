@@ -33,6 +33,12 @@ build/
 .vscode/
 # Fontes brutas mensais dos Dados Abertos do CNPJ (varios GiB)
 tools/cnpj/sources/
+# Manifestos e artefatos mensais locais gerados pelo ingestor
+tools/cnpj/fontes-*.json
+tools/cnpj/cnpj-subset*.json
+tools/cnpj/cnpj-*.sql
+src/main/resources/cnpj/
+# O catalogo tools/cnpj/municipios-ibge.csv e os scripts sao versionados.
 
 ### Python ###
 __pycache__/
