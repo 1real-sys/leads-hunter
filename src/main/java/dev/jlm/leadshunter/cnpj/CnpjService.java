@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.Normalizer;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -294,6 +295,13 @@ public class CnpjService {
         LocalDate dataBase,
         BigDecimal confianca
     ) {
+        public void preencherLead(Lead lead) {
+            lead.setCnpj(cnpj);
+            lead.setRazaoSocial(razaoSocial);
+            lead.setCnpjCorrespondidoEm(LocalDateTime.now());
+            lead.setCnpjDataBase(dataBase);
+            lead.setCnpjConfianca(confianca);
+        }
     }
 
     private record CandidatoPontuado(

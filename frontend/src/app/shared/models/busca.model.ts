@@ -61,6 +61,8 @@ export interface LeadHistoricoResponse {
   nome: string | null;
   categoria: CategoriaNegocio | null;
   enderecoFormatado: string | null;
+  cnpj?: string | null;
+  razaoSocial?: string | null;
   telefone: string | null;
   whatsappUrl: string | null;
   scoreNaBusca: number | null;
@@ -68,4 +70,11 @@ export interface LeadHistoricoResponse {
   status: StatusFunil | null;
   observacoes: string | null;
   ultimoContatoEm: LocalDateTimeString | null;
+}
+
+export interface BuscaCnpjResponse {
+  totalLeads: number;
+  ignoradosJaComCnpj: number;
+  encontrados: number;
+  semCorrespondencia: number;
 }

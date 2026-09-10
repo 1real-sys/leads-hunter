@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.jlm.leadshunter.busca.BuscaController;
+import dev.jlm.leadshunter.busca.BuscaCnpjService;
 import dev.jlm.leadshunter.busca.BuscaNaoEncontradaException;
 import dev.jlm.leadshunter.busca.BuscaService;
 import dev.jlm.leadshunter.integracao.places.PlacesApiConfigurationException;
@@ -28,11 +29,14 @@ class ApiExceptionHandlerTest {
     @Mock
     private BuscaService buscaService;
 
+    @Mock
+    private BuscaCnpjService buscaCnpjService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new BuscaController(buscaService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new BuscaController(buscaService, buscaCnpjService))
             .setControllerAdvice(new ApiExceptionHandler())
             .build();
     }

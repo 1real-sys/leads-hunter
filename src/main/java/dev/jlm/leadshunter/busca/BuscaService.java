@@ -257,12 +257,7 @@ public class BuscaService {
         Optional<CnpjService.Correspondencia> correspondenciaAtual = cnpjService
             .corresponder(lead);
         if (correspondenciaAtual.isPresent()) {
-            CnpjService.Correspondencia correspondencia = correspondenciaAtual.get();
-            lead.setCnpj(correspondencia.cnpj());
-            lead.setRazaoSocial(correspondencia.razaoSocial());
-            lead.setCnpjCorrespondidoEm(LocalDateTime.now());
-            lead.setCnpjDataBase(correspondencia.dataBase());
-            lead.setCnpjConfianca(correspondencia.confianca());
+            correspondenciaAtual.get().preencherLead(lead);
         } else if (possuiCnpj) {
             limparCnpj(lead);
         }
@@ -323,6 +318,8 @@ public class BuscaService {
             lead.getNome(),
             lead.getCategoria(),
             lead.getEnderecoFormatado(),
+            lead.getCnpj(),
+            lead.getRazaoSocial(),
             lead.getTelefone(),
             whatsAppLinkGenerator.gerar(lead.getTelefoneNormalizado()),
             buscaLead.getScoreNaBusca(),

@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  BuscaCnpjResponse,
   BuscaDetalheResponse,
   BuscaRequest,
   BuscaResponse,
@@ -23,5 +24,9 @@ export class BuscaApi {
 
   buscarHistoricoPorId(id: number): Observable<BuscaDetalheResponse> {
     return this.http.get<BuscaDetalheResponse>(API_ROUTES.busca(id));
+  }
+
+  buscarCnpj(id: number): Observable<BuscaCnpjResponse> {
+    return this.http.post<BuscaCnpjResponse>(`${API_ROUTES.busca(id)}/cnpj`, null);
   }
 }

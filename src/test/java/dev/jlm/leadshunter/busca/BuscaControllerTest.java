@@ -34,11 +34,14 @@ class BuscaControllerTest {
     @Mock
     private BuscaService buscaService;
 
+    @Mock
+    private BuscaCnpjService buscaCnpjService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new BuscaController(buscaService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new BuscaController(buscaService, buscaCnpjService))
             .setControllerAdvice(new ApiExceptionHandler())
             .build();
     }
@@ -198,6 +201,8 @@ class BuscaControllerTest {
                 "Padaria Central",
                 CategoriaNegocio.PADARIA,
                 "Rua Sete, 100",
+                "12345678000190",
+                "Padaria Central LTDA",
                 "(27) 99999-0000",
                 "https://wa.me/5527999990000",
                 55,
@@ -213,11 +218,39 @@ class BuscaControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(22))
             .andExpect(jsonPath("$.leads[0].id").value(35))
+            .andExpect(jsonPath("$.leads[0].cnpj").value("12345678000190"))
+            .andExpect(jsonPath("$.leads[0].razaoSocial").value("Padaria Central LTDA"))
             .andExpect(jsonPath("$.leads[0].scoreNaBusca").value(55))
             .andExpect(jsonPath("$.leads[0].temperaturaNaBusca").value("MORNO"))
             .andExpect(jsonPath("$.leads[0].status").value("CONTATADO"))
             .andExpect(jsonPath("$.leads[0].whatsappUrl")
                 .value("https://wa.me/5527999990000"));
+    }
+
+    @Test
+    void deveBuscarCnpjViaHttp() throws Exception {
+        when(buscaCnpjService.buscarCnpj(22L)).thenReturn(new BuscaCnpjResponse(3, 1, 1, 1));
+        mockMvc.perform(post("/api/buscas/22/cnpj"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalLeads").value(3))
+            .andExpect(jsonPath("$.ignoradosJaComCnpj").value(1))
+            .andExpect(jsonPath("$.encontrados").value(1))
+            .andExpect(jsonPath("$.semCorrespondencia").value(1));
+        verifyNoInteractions(buscaService);
+    }
+
+    @Test
+    void deveRetornar404AoBuscarCnpjDeBuscaInexistente() throws Exception {
+        when(buscaCnpjService.buscarCnpj(999L)).thenThrow(new BuscaNaoEncontradaException(999L));
+        mockMvc.perform(post("/api/buscas/999/cnpj"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.codigo").value("BUSCA_NAO_ENCONTRADA"));
+    }
+
+    @Test
+    void deveRejeitarIdNaoNumericoSemExecutarCorrespondencia() throws Exception {
+        mockMvc.perform(post("/api/buscas/invalido/cnpj")).andExpect(status().isBadRequest());
+        verifyNoInteractions(buscaCnpjService);
     }
 
     @Test

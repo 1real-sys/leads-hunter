@@ -18,6 +18,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 public class BuscaController {
 
     private final BuscaService buscaService;
+    private final BuscaCnpjService buscaCnpjService;
+
+    @PostMapping("/{id}/cnpj")
+    public BuscaCnpjResponse buscarCnpj(@PathVariable Long id) {
+        return buscaCnpjService.buscarCnpj(id);
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

@@ -24,6 +24,8 @@ public record BuscaDetalheResponse(
         String nome,
         CategoriaNegocio categoria,
         String enderecoFormatado,
+        String cnpj,
+        String razaoSocial,
         String telefone,
         String whatsappUrl,
         Integer scoreNaBusca,

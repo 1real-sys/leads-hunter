@@ -9,11 +9,13 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
 import { BuscaApi } from '../../core/api/busca-api';
 import { BuscaDetalheResponse } from '../../shared/models/busca.model';
 import { CategoriaNegocio, StatusFunil, Temperatura } from '../../shared/models/enums.model';
+import { formatarCnpj } from '../../shared/utils/cnpj';
 
 type EstadoDetalhe = 'loading' | 'success' | 'empty' | 'invalid' | 'not-found' | 'error';
 
@@ -61,6 +63,9 @@ export class HistoricoDetalhePage {
     this.buscaIdNumerico === null ? 'invalid' : 'loading',
   );
   protected readonly mensagemErro = signal<string | null>(null);
+  protected readonly buscandoCnpj = signal(false);
+  protected readonly mensagemCnpj = signal<string | null>(null);
+  protected readonly erroCnpj = signal<string | null>(null);
   private readonly feedbackErro = viewChild<ElementRef<HTMLElement>>('feedbackErro');
 
   constructor() {
@@ -103,6 +108,31 @@ export class HistoricoDetalhePage {
       });
   }
 
+  protected buscarCnpj(): void {
+    if (this.buscaIdNumerico === null || this.buscandoCnpj() || this.estado() !== 'success') {
+      return;
+    }
+    this.buscandoCnpj.set(true);
+    this.mensagemCnpj.set(null);
+    this.erroCnpj.set(null);
+    this.buscaApi.buscarCnpj(this.buscaIdNumerico)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.buscandoCnpj.set(false)),
+      )
+      .subscribe({
+        next: (resumo) => {
+          this.mensagemCnpj.set(
+            `Consulta concluída: ${resumo.encontrados} encontrados, ` +
+            `${resumo.ignoradosJaComCnpj} já com CNPJ e ` +
+            `${resumo.semCorrespondencia} sem correspondência, de ${resumo.totalLeads} leads.`,
+          );
+          this.carregar();
+        },
+        error: (error: unknown) => this.erroCnpj.set(getApiErrorMessage(error)),
+      });
+  }
+
   protected formatarDataLocal(data: string): string {
     const correspondencia = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(data);
 
@@ -134,6 +164,10 @@ export class HistoricoDetalhePage {
 
   protected enderecoExibido(endereco: string | null): string {
     return endereco?.trim() || 'Endereço não informado';
+  }
+
+  protected cnpjExibido(cnpj: string | null | undefined): string {
+    return formatarCnpj(cnpj) ?? 'CNPJ não encontrado';
   }
 
   private obterIdValido(valor: string): number | null {

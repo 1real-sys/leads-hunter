@@ -24,6 +24,7 @@ const DETALHE: BuscaDetalheResponse = {
       nome: 'Zeta Farmácia',
       categoria: 'FARMACIA',
       enderecoFormatado: 'Rua Sete, 80',
+      cnpj: '12345678000190',
       telefone: '(27) 99999-0000',
       whatsappUrl: 'https://wa.me/5527999990000',
       scoreNaBusca: 62,
@@ -37,6 +38,7 @@ const DETALHE: BuscaDetalheResponse = {
       nome: 'Alfa Padaria',
       categoria: 'PADARIA',
       enderecoFormatado: null,
+      cnpj: null,
       telefone: null,
       whatsappUrl: null,
       scoreNaBusca: null,
@@ -66,6 +68,74 @@ describe('HistoricoDetalhePage', () => {
 
   afterEach(() => httpTesting.verify());
 
+  it('busca CNPJ pelo botão à direita do voltar, bloqueia duplicatas e recarrega os dados', async () => {
+    const page = await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    await harness.fixture.whenStable();
+    const voltar = harness.routeNativeElement!.querySelector('a[routerLink="/historico"]')!;
+    const botao = voltar.nextElementSibling as HTMLButtonElement;
+    expect(botao.textContent?.trim()).toBe('Buscar CNPJ');
+    botao.click();
+    await harness.fixture.whenStable();
+    expect(botao.disabled).toBe(true);
+    expect(botao.textContent).toContain('Buscando CNPJ');
+    page['buscarCnpj']();
+    const request = httpTesting.expectOne(`${API_ROUTES.busca(42)}/cnpj`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toBeNull();
+    request.flush({ totalLeads: 2, ignoradosJaComCnpj: 1, encontrados: 1, semCorrespondencia: 0 });
+    await harness.fixture.whenStable();
+    expect(botao.disabled).toBe(true);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush({
+      ...DETALHE,
+      leads: [DETALHE.leads[0], { ...DETALHE.leads[1], cnpj: '43869215000156', razaoSocial: 'Empresa encontrada' }],
+    });
+    await harness.fixture.whenStable();
+    expect(botao.disabled).toBe(false);
+    expect(harness.routeNativeElement?.textContent).toContain('1 encontrados');
+    expect(harness.routeNativeElement?.textContent).toContain('43.869.215/0001-56');
+    expect(harness.routeNativeElement?.textContent).toContain('Razão social: Empresa encontrada');
+  });
+
+  it('mostra erro da correspondência sem perder o detalhe e permite nova tentativa', async () => {
+    await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    await harness.fixture.whenStable();
+    const botao = harness.routeNativeElement!.querySelector('.historico-detalhe__actions button') as HTMLButtonElement;
+    botao.click();
+    httpTesting.expectOne(`${API_ROUTES.busca(42)}/cnpj`).flush(
+      { mensagem: 'Não foi possível buscar CNPJ.' }, { status: 500, statusText: 'Internal Server Error' },
+    );
+    await harness.fixture.whenStable();
+    expect(botao.disabled).toBe(false);
+    expect(harness.routeNativeElement!.querySelector('[role="alert"]')?.textContent).toContain('Ocorreu um erro interno. Tente novamente mais tarde.');
+    expect(harness.routeNativeElement?.textContent).toContain('Zeta Farmácia');
+    httpTesting.expectNone(API_ROUTES.busca(42));
+    botao.click();
+    httpTesting.expectOne(`${API_ROUTES.busca(42)}/cnpj`).flush({
+      totalLeads: 2, ignoradosJaComCnpj: 1, encontrados: 0, semCorrespondencia: 1,
+    });
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement!.querySelector('[role="alert"]')).toBeNull();
+    expect(harness.routeNativeElement?.textContent).toContain('0 encontrados');
+    expect(harness.routeNativeElement?.textContent).toContain('1 sem correspondência');
+  });
+
+  it('distingue sucesso da correspondência de falha ao recarregar o detalhe', async () => {
+    const page = await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    page['buscarCnpj']();
+    httpTesting.expectOne(`${API_ROUTES.busca(42)}/cnpj`).flush({
+      totalLeads: 2, ignoradosJaComCnpj: 1, encontrados: 1, semCorrespondencia: 0,
+    });
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush({}, { status: 500, statusText: 'Error' });
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.textContent).toContain('Consulta concluída');
+    expect(harness.routeNativeElement?.textContent).toContain('Não foi possível carregar esta busca');
+    expect(page['buscandoCnpj']()).toBe(false);
+  });
+
   it('consulta somente o detalhe, mostra o resumo e preserva a ordem dos leads da API', async () => {
     const page = await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
     const request = httpTesting.expectOne(API_ROUTES.busca(42));
@@ -86,7 +156,23 @@ describe('HistoricoDetalhePage', () => {
     expect(texto).toContain('-20.3155, -40.3128');
     expect(linhas).toHaveLength(2);
     expect(linhas[0].textContent).toContain('Zeta Farmácia');
+    expect(linhas[0].textContent).toContain('12.345.678/0001-90');
     expect(linhas[1].textContent).toContain('Alfa Padaria');
+    expect(linhas[1].textContent).toContain('CNPJ não encontrado');
+  });
+
+  it('aceita resposta antiga sem o campo CNPJ e apresenta ausência neutra', async () => {
+    const leadSemCnpj = { ...DETALHE.leads[0] };
+    delete leadSemCnpj.cnpj;
+
+    const page = await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    httpTesting
+      .expectOne(API_ROUTES.busca(42))
+      .flush({ ...DETALHE, totalEncontrados: 1, leads: [leadSemCnpj] });
+    harness.detectChanges();
+
+    expect(page['estado']()).toBe('success');
+    expect(harness.routeNativeElement?.textContent).toContain('CNPJ não encontrado');
   });
 
   it('mantém resumo e resultados dentro da região útil do workspace', async () => {

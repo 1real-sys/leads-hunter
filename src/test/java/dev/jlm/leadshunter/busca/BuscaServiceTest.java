@@ -462,6 +462,8 @@ class BuscaServiceTest {
         lead.setNome("Padaria Central");
         lead.setCategoria(CategoriaNegocio.PADARIA);
         lead.setEnderecoFormatado("Rua Sete, 100");
+        lead.setCnpj("12345678000190");
+        lead.setRazaoSocial("Padaria Central LTDA");
         lead.setTelefone("(27) 99999-0000");
         lead.setTelefoneNormalizado("5527999990000");
         lead.setScore(95);
@@ -485,6 +487,8 @@ class BuscaServiceTest {
         assertThat(resposta.id()).isEqualTo(22L);
         assertThat(resposta.leads()).singleElement().satisfies(item -> {
             assertThat(item.id()).isEqualTo(35L);
+            assertThat(item.cnpj()).isEqualTo("12345678000190");
+            assertThat(item.razaoSocial()).isEqualTo("Padaria Central LTDA");
             assertThat(item.scoreNaBusca()).isEqualTo(55);
             assertThat(item.temperaturaNaBusca()).isEqualTo(Temperatura.MORNO);
             assertThat(item.status()).isEqualTo(StatusFunil.CONTATADO);

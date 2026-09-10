@@ -4,10 +4,26 @@
       <h1 id="historico-detalhe-title">Busca #{{ buscaId }}</h1>
       <p>Consulte os resultados registrados nesta execução e o estado comercial atual dos leads.</p>
     </div>
-    <a class="historico-detalhe__back" routerLink="/historico">Voltar ao histórico</a>
+    <div class="historico-detalhe__actions">
+      <a class="historico-detalhe__back" routerLink="/historico">Voltar ao histórico</a>
+      <button class="historico-detalhe__back" type="button"
+        [disabled]="buscandoCnpj() || estado() !== 'success'"
+        [attr.aria-busy]="buscandoCnpj()" (click)="buscarCnpj()">
+        {{ buscandoCnpj() ? 'Buscando CNPJ…' : 'Buscar CNPJ' }}
+      </button>
+    </div>
   </header>
 
   <div class="historico-detalhe__workspace">
+    @if (buscandoCnpj()) {
+      <p role="status">Buscando CNPJ dos leads desta busca…</p>
+    }
+    @if (mensagemCnpj()) {
+      <p role="status">{{ mensagemCnpj() }}</p>
+    }
+    @if (erroCnpj()) {
+      <p role="alert">{{ erroCnpj() }}</p>
+    }
     @if (estado() === 'loading') {
       <div class="historico-detalhe__feedback" role="status">
         <span class="ui-spinner ui-spinner--small" aria-hidden="true"></span>
@@ -109,8 +125,8 @@
               </h2>
             </div>
             <p class="historico-detalhe__snapshot-note">
-              Score e temperatura são valores preservados daquela execução. Status, observações e
-              último contato refletem os dados atuais.
+              Score e temperatura são valores preservados daquela execução. CNPJ, status,
+              observações e último contato refletem os dados atuais.
             </p>
           </header>
 
@@ -140,6 +156,10 @@
                       <strong>{{ lead.nome || 'Lead #' + lead.id }}</strong>
                       <span>{{ rotuloCategoria(lead.categoria) }}</span>
                       <span>{{ lead.enderecoFormatado || 'Endereço não informado' }}</span>
+                      <span>{{ cnpjExibido(lead.cnpj) }}</span>
+                      @if (lead.razaoSocial) {
+                        <span>Razão social: {{ lead.razaoSocial }}</span>
+                      }
                     </td>
                     <td>
                       <dl class="historico-detalhe__lead-data">
