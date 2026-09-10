@@ -1474,3 +1474,90 @@ O refinamento de CNPJ foi encerrado com validação integrada e documentação. 
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
 - `refinamento-cnpj.md`
+
+---
+
+## 54. CNPJ no detalhe do histórico — 08/09/2026
+
+O detalhe de uma busca histórica passou a incluir o CNPJ atual de cada lead. Na interface, o valor aparece formatado logo abaixo do endereço; quando não existe ou não é válido, a tela informa de forma neutra que o CNPJ não foi encontrado. O contrato TypeScript mantém o campo opcional para continuar aceitando respostas anteriores.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `API.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento-cnpj.md`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaDetalheResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceTest.java`
+- `frontend/src/app/features/historico/historico-detalhe-page.html`
+- `frontend/src/app/features/historico/historico-detalhe-page.spec.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.ts`
+- `frontend/src/app/shared/models/busca.model.ts`
+
+---
+
+## 55. Ingestão CNPJ otimizada por UF — 08/09/2026
+
+O ingestor mensal de CNPJ passou a aceitar uma ou mais UFs e expandi-las automaticamente para todos os municípios correspondentes, mantendo compatibilidade e união com recortes municipais pontuais. Um catálogo IBGE pequeno e reproduzível foi versionado para desacoplar essa expansão do artefato de geografia.
+
+O processamento foi otimizado para descartar cedo os estabelecimentos fora do alvo, carregar somente as empresas necessárias, escrever as saídas em streaming e permitir geração exclusiva do SQL. A leitura paralela limitada dos lotes foi adotada após comparação no hardware-alvo, mantendo resultado idêntico ao modo sequencial e pico agregado abaixo de 2 GiB no smoke completo do Espírito Santo. Um medidor Linux registra tempo e memória do processo e de seus workers.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `tools/cnpj/gerar_municipios_ibge.py`
+- `tools/cnpj/medir_ingestao.py`
+- `tools/cnpj/municipios-ibge.csv`
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `refinamento-cnpj.md`
+- `tools/cnpj/README.md`
+- `tools/cnpj/gerar_dataset.py`
+- `tools/cnpj/test_gerar_dataset.py`
+
+---
+
+## 56. Correspondência CNPJ sob demanda no histórico — 09/09/2026
+
+O detalhe do histórico ganhou o botão Buscar CNPJ ao lado de Voltar ao histórico. A ação consulta a base local para os leads daquela busca que ainda não possuem CNPJ, persiste correspondências confiáveis e informa quantos foram encontrados, ignorados ou ficaram sem correspondência. A tela apresenta carregamento e erros, impede cliques repetidos e recarrega os dados ao concluir, exibindo também a razão social.
+
+O preenchimento dos cinco campos da correspondência passou a ser reutilizado pela captura e pelo novo serviço transacional. Leads já preenchidos, dados comerciais e snapshots históricos permanecem preservados. Não foram adicionadas chamadas externas ou migrations.
+
+Passaram 41 testes backend selecionados, 201 testes frontend, os dois builds e o smoke em desktop/mobile com auditoria Axe sem violações. A suíte backend completa teve 161 testes e manteve três falhas e três erros preexistentes ligados ao estado da base local; a integração nova utiliza dados sintéticos isolados por transação e passou.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaCnpjResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaCnpjService.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaCnpjServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaCnpjServiceJpaIntegrationTest.java`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaController.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaDetalheResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjService.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/config/ApiExceptionHandlerTest.java`
+- `frontend/src/app/core/api/busca-api.ts`
+- `frontend/src/app/shared/models/busca.model.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.html`
+- `frontend/src/app/features/historico/historico-detalhe-page.scss`
+- `frontend/src/app/features/historico/historico-detalhe-page.spec.ts`
+- `API.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `refinamento-cnpj.md`

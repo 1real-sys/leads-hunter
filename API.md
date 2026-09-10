@@ -318,6 +318,8 @@ Retorna um `BuscaDetalheResponse`. Os leads são ordenados por `scoreNaBusca` de
       "nome": "Padaria Central",
       "categoria": "PADARIA",
       "enderecoFormatado": "Rua Sete, 100",
+      "cnpj": "12345678000190",
+      "razaoSocial": "Padaria Central LTDA",
       "telefone": "(27) 99999-0000",
       "whatsappUrl": "https://wa.me/5527999990000",
       "scoreNaBusca": 55,
@@ -330,7 +332,7 @@ Retorna um `BuscaDetalheResponse`. Os leads são ordenados por `scoreNaBusca` de
 }
 ```
 
-Uma busca existente sem vínculos retorna `leads: []`. `whatsappUrl` é `null` quando não existe telefone normalizado brasileiro válido.
+Uma busca existente sem vínculos retorna `leads: []`. `whatsappUrl` é `null` quando não existe telefone normalizado brasileiro válido. `cnpj` e `razaoSocial` refletem os valores atuais do `Lead`, com os 14 dígitos da unidade e o nome empresarial quando houver correspondência segura; ficam `null` quando ela não existir.
 
 ### Status HTTP
 
@@ -354,6 +356,25 @@ Controller
 → consulta os vínculos e os leads associados
 → combina scoring histórico com dados comerciais atuais
 → retorna `BuscaDetalheResponse`.
+
+## POST /api/buscas/{id}/cnpj
+
+Tenta identificar localmente o CNPJ dos leads vinculados à busca por `BuscaLead` que possuem `cnpj = null`. Leads já preenchidos são ignorados, mesmo que sua competência seja antiga. A ação não chama Google, Receita ou outras APIs, não cria uma busca e não possui novo rate limit. Endpoint público no estágio atual do MVP, sem autenticação.
+
+O parâmetro `id` deve ser convertível para `Long`; não há request body nem query params. Busca inexistente retorna `404` com `BUSCA_NAO_ENCONTRADA`; ID não numérico retorna `400`. Busca existente, inclusive vazia, retorna `200`:
+
+```json
+{
+  "totalLeads": 10,
+  "ignoradosJaComCnpj": 3,
+  "encontrados": 5,
+  "semCorrespondencia": 2
+}
+```
+
+`totalLeads` conta os vínculos persistidos, não o total bruto capturado pela Google. As outras três contagens somam esse total. Sem município/endereço suficiente, sem candidato confiável ou com ambiguidade, o lead permanece sem CNPJ. Quando há correspondência, a transação persiste CNPJ, razão social, data da correspondência, competência e confiança. Dados comerciais e snapshots permanecem intactos. Repetir a ação ignora os leads anteriormente preenchidos. Falhas inesperadas usam o tratamento padrão de erro `500` da API.
+
+Após o POST, consulte `GET /api/buscas/{id}` para obter os dados atuais. O botão **Buscar CNPJ**, à direita de **Voltar ao histórico**, faz essa atualização automaticamente e mostra o resumo. CNPJ e razão social também ficam disponíveis nos demais contratos de lead e exportações.
 
 # Leads
 

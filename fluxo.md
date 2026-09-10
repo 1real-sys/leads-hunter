@@ -1,6 +1,6 @@
 # Fluxo do Leads Hunter
 
-Este documento descreve o fluxo real do projeto no estado atual. O MVP, a melhoria FE-100, os refinamentos de IDHM e blacklist de nomes e as sprints CNPJ-00 a CNPJ-03 estão concluídos e validados.
+Este documento descreve o fluxo real do projeto no estado atual. O MVP, a melhoria FE-100, os refinamentos de IDHM e blacklist de nomes e as sprints CNPJ-00 a CNPJ-07 estão concluídos e validados nos respectivos escopos.
 
 ## Visão geral
 
@@ -184,7 +184,7 @@ Depois da geografia e antes do scoring, um lead ainda sem CNPJ passa pelo `CnpjS
 
 Por fim, cria um `BuscaLead` para relacionar a nova busca ao lead e registra nele o score e a temperatura daquela execução. Em seguida, converte os leads persistidos em `BuscaResponse`. Todo o processo ocorre na mesma transação; um resultado sem `googlePlaceId` interrompe e reverte a operação.
 
-Nas consultas do histórico, `listarHistorico` lê as buscas já ordenadas por `criadoEm` decrescente. `buscarHistoricoPorId` combina o resumo persistido em `Busca` com os vínculos de `BuscaLead`. O detalhe usa `scoreNaBusca` e `temperaturaNaBusca` para preservar o retrato daquela execução, enquanto status, observações e último contato refletem o estado comercial atual do `Lead`. Essas operações usam transações somente de leitura e não acionam cache nem Google Places.
+Nas consultas do histórico, `listarHistorico` lê as buscas já ordenadas por `criadoEm` decrescente. `buscarHistoricoPorId` combina o resumo persistido em `Busca` com os vínculos de `BuscaLead`. O detalhe usa `scoreNaBusca` e `temperaturaNaBusca` para preservar o retrato daquela execução, enquanto CNPJ, status, observações e último contato refletem o estado atual do `Lead`. Essas operações usam transações somente de leitura e não acionam cache nem Google Places.
 
 ### 4. `BuscaCacheKey.java` e `BuscaPlacesCache.java`
 
@@ -235,7 +235,7 @@ Representa o resultado interno da integração. Cada `PlaceResult` contém `goog
 
 ### 10. `Busca.java` e `BuscaRepository.java`
 
-`Busca` representa o histórico da pesquisa. O repository persiste no MySQL o endereço-base, coordenadas, raio, categorias pesquisadas, total encontrado e data de criação. O schema inicial é criado pela V1, a geografia do lead pela V2, os bloqueios pela V3, o endereço estruturado/CNPJ pela V4 e a proveniência/confiança pela V5, sempre com Flyway e `ddl-auto: validate`. A migration repetível `R__carregar_subset_cnpj.sql` é um placeholder sem dados até ser substituída pela saída revisada do ingestor mensal.
+`Busca` representa o histórico da pesquisa. O repository persiste no MySQL o endereço-base, coordenadas, raio, categorias pesquisadas, total encontrado e data de criação. O schema inicial é criado pela V1, a geografia do lead pela V2, os bloqueios pela V3, o endereço estruturado/CNPJ pela V4 e a proveniência/confiança pela V5, sempre com Flyway e `ddl-auto: validate`. O conteúdo versionado da migration repetível `R__carregar_subset_cnpj.sql` é um placeholder; o recorte mensal volumoso é gerado e carregado localmente, mas não deve ser commitado.
 
 ### 11. `TelefoneNormalizer.java` e `WhatsAppLinkGenerator.java`
 
@@ -285,7 +285,7 @@ Representam e persistem o relacionamento N:N. Assim, uma busca pode encontrar v�
 
 ### 17. `BuscaResumoResponse.java` e `BuscaDetalheResponse.java`
 
-São os contratos públicos do histórico. O resumo contém os parâmetros, total e data da busca. O detalhe acrescenta os leads vinculados, o link manual de WhatsApp, o score e a temperatura daquela execução, além dos campos comerciais atuais. As categorias persistidas como texto são novamente apresentadas como valores de `CategoriaNegocio`.
+São os contratos públicos do histórico. O resumo contém os parâmetros, total e data da busca. O detalhe acrescenta os leads vinculados, o CNPJ atual, o link manual de WhatsApp, o score e a temperatura daquela execução, além dos campos comerciais atuais. As categorias persistidas como texto são novamente apresentadas como valores de `CategoriaNegocio`.
 
 ### 18. `ExportController.java` e `ExportService.java`
 
@@ -336,8 +336,10 @@ src/test/java/dev/jlm/leadshunter/
 - Conversão de categorias do domínio para tipos da Google.
 - Mapeamento da resposta externa para `PlacesSearchResponse`.
 - Captura e persistência de CEP, logradouro, número e bairro a partir de `addressComponents`.
-- Ferramenta offline reproduzível em `tools/cnpj/`, com manifesto, checksums, filtros de município/atividade e saídas determinísticas JSON/SQL com proveniência no cabeçalho.
-- Tabelas locais de empresa e estabelecimento preparadas para a migration Flyway repetível; o arquivo versionado permanece sem dados até a ingestão mensal oficial.
+- Ferramenta offline reproduzível em `tools/cnpj/`, com manifesto, checksums, expansão de UFs ou municípios pontuais, filtros de atividade e saídas determinísticas JSON/SQL com proveniência no cabeçalho.
+- Catálogo IBGE dedicado e versionado com os 5.570 municípios, reproduzível a partir da fonte geográfica do projeto.
+- Ingestão CNPJ em streaming, com descarte antecipado, seleção somente das empresas necessárias, paralelismo limitado e modo `--no-json`.
+- Tabelas locais de empresa e estabelecimento preparadas para carga SQL mensal; o conteúdo volumoso vive no banco local e permanece fora dos commits.
 - Correspondência de CNPJ por município, endereço e nome, com limite de candidatos, limiar e rejeição de ambiguidades.
 - Persistência da competência e confiança da correspondência, com revalidação quando a base municipal muda.
 - Persistência do resumo da busca e de `totalEncontrados`.
@@ -391,7 +393,7 @@ src/test/java/dev/jlm/leadshunter/
 - Validação da preservação comercial e do snapshot de score/temperatura em buscas repetidas.
 - Validação da restrição única de `googlePlaceId` diretamente no banco.
 - Testes de resposta completa, vazia e endereço estruturado do `PlacesResponseMapper`.
-- Testes do ingestor CNPJ para parser Latin-1, normalização, filtros, determinismo, proveniência, metadados seguros e checksums.
+- Testes do ingestor CNPJ para parser Latin-1, normalização, filtros, determinismo, proveniência, metadados seguros, checksums, expansão/união de UFs, divergências nominais, `--no-json` e limites de workers.
 - Testes do `CnpjService` para unidade correta, rede em cidades distintas, ambiguidade, baixa confiança, fallback sem CEP, limite de candidatos e consulta da competência municipal.
 - Testes do `BuscaService` para preservar competência atual, revalidar carga nova e limpar correspondência não confirmada.
 - Teste JPA do recorte CNPJ e do fluxo de captura para Vitória/ES e Vila Velha/ES.
@@ -404,7 +406,7 @@ src/test/java/dev/jlm/leadshunter/
 - Testes da atualização comercial e da validação de `AtualizarLeadRequest`.
 - Testes de geração e rejeição do link manual do WhatsApp.
 - Testes do histórico para ordenação, conversão de categorias, snapshot de scoring e busca inexistente.
-- Testes HTTP de listagem, detalhe e resposta 404 dos endpoints de histórico.
+- Testes HTTP de listagem, detalhe com CNPJ atual e resposta 404 dos endpoints de histórico.
 - Testes HTTP do `POST /api/buscas`, incluindo resposta `201` e rejeição de payload inválido.
 - Testes HTTP do `LeadController` para filtros, consulta, atualização parcial, 404 e validações.
 - Testes HTTP do contrato de erro para cota excedida, indisponibilidade, resposta inválida e recurso inexistente.
@@ -540,9 +542,19 @@ A sprint **CNPJ-03** está concluída. `LeadResponse`, inclusive dentro de `Pagi
 
 A sprint **CNPJ-04** encerrou o refinamento com validação integrada e documentação. A suíte backend passou com 154 testes e o pacote executável foi gerado; a suíte frontend passou com 197 testes e o build de produção terminou sem warnings. A revisão integrada das unidades conhecidas usa as fixtures transacionais (exclusivas de teste) e confirma a resolução de CNPJ por unidade — Vitória/ES e Vila Velha/ES casam com CNPJs distintos e Curitiba/PR com o seu — sem consultar a Receita em runtime. A migration `R__carregar_subset_cnpj.sql` segue como placeholder vazio: os CNPJs só passam a ser resolvidos contra dados reais depois que esse arquivo for substituído pela saída revisada do `tools/cnpj` na ingestão mensal da competência RFB. `fluxo.md`, `HISTORICO_IMPLEMENTACOES.md`, `API.md` e `refinamento-cnpj.md` foram sincronizados com o estado final.
 
+A sprint **CNPJ-05** está concluída no escopo. O detalhe de `GET /api/buscas/{id}` expõe o CNPJ atual de cada lead, e a tela Histórico o mostra formatado logo abaixo do endereço ou apresenta "CNPJ não encontrado" quando o valor é nulo, inválido ou foi omitido por uma resposta antiga. Passaram os 18 testes backend diretamente afetados, os 8 testes da página, a suíte frontend completa com 198 testes e os dois builds. A suíte backend completa executou 154 testes, mas permanece com três falhas e três erros alheios à sprint: dados residuais no MySQL local colidem com fixtures transacionais, e a carga CNPJ local populada faz testes antigos que pressupõem o placeholder vazio receberem candidatos adicionais.
+
+A sprint **CNPJ-06** está concluída. O manifesto aceita `ufs` e/ou `municipiosInteresse`; a expansão usa `tools/cnpj/municipios-ibge.csv`, catálogo dedicado de 5.570 municípios, e o ES resulta nos 78 códigos IBGE esperados. A reconciliação com os nomes municipais da Receita usa a chave normalizada de UF e nome e falha diante de divergências. O ingestor abre cada ZIP como stream, descarta cedo estabelecimentos fora do alvo, guarda somente as empresas necessárias e escreve saídas atomicamente em lotes; `--no-json` evita o intermediário opcional. O modo automático usa até 8 processos, limitado pelos lotes, e `--workers 1` preserva uma opção de menor memória.
+
+O smoke real das 21 fontes locais RFB `2026-08-08`, no Ryzen 7 5700X com Python 3.14.7, processou os 78 municípios do ES, 589.690 empresas e 608.030 estabelecimentos. Com 8 workers concluiu em 113,21 s e teve pico RSS agregado de 1.541,53 MiB; com 1 worker foram 245,21 s e 1.011,41 MiB. Ambos produziram o mesmo SQL de 168.526.384 bytes e SHA-256 `da5caa912ecb5c3322d57a4cc9246548d0c9e942da424c0c5488b25d2aa6251a`. Os 13 testes Python e a compilação dos quatro scripts passaram. A sprint não alterou backend nem contratos; Java 25 continua sendo o runtime da aplicação, enquanto esse pipeline otimizado é executado em Python.
+
+A sprint **CNPJ-07** está concluída no escopo. O botão **Buscar CNPJ**, ao lado de **Voltar ao histórico**, chama `POST /api/buscas/{id}/cnpj`. O `BuscaCnpjService` valida a busca e tenta corresponder somente seus leads com CNPJ nulo, usando a base local e persistindo os cinco campos da correspondência na mesma transação. O preenchimento é compartilhado com a captura, cuja revalidação por competência continua intacta. Leads já preenchidos são ignorados; dados comerciais, scoring e snapshots são preservados. O resumo informa total, ignorados, encontrados e sem correspondência. A tela bloqueia cliques repetidos, mostra carregamento/resultado/erro e recarrega o detalhe; o contrato histórico passou a incluir também a razão social atual, exibida quando presente.
+
+A validação de CNPJ-07 passou com 41 testes backend selecionados (incluindo integração JPA com fixture sintética transacional isolada), 201 testes frontend e os dois builds. O smoke no Firefox com API controlada confirmou a atualização de CNPJ/razão social em 1440 × 1000 e 390 × 844, sem overflow ou violações Axe WCAG A/AA. A suíte backend completa executou 161 testes: 155 passaram, com as mesmas três falhas e três erros preexistentes de blacklist/fixtures diante da carga local; os novos testes passaram. Não houve chamada externa, migration nova ou alteração na base mensal.
+
 ### Próximo passo
 
-Os sprints **FE-00** a **FE-17**, a melhoria **FE-100**, a manutenção do WhatsApp, **IDHM-00** a **IDHM-05**, **BL-00** a **BL-04** e **CNPJ-00** a **CNPJ-04** estão concluídos e validados. Não há sprint pendente no refinamento de CNPJ. O uso do IDHM e do CNPJ no `ScoringService`, a limpeza retroativa de leads bloqueados e o enriquecimento retroativo de CNPJ permanecem fora das entregas atuais.
+Os sprints **FE-00** a **FE-17**, a melhoria **FE-100**, a manutenção do WhatsApp, **IDHM-00** a **IDHM-05**, **BL-00** a **BL-04** e **CNPJ-00** a **CNPJ-07** estão concluídos e validados nos respectivos escopos. O refinamento CNPJ não possui outro item pendente planejado. A normalização do estado do banco local e a adequação das fixtures à carga CNPJ populada continuam pendentes para que a suíte backend integrada volte a passar integralmente. O uso do IDHM e do CNPJ no `ScoringService` e a limpeza retroativa de leads bloqueados permanecem fora das entregas atuais.
 
 ## Padrão de boilerplate com Lombok
 
