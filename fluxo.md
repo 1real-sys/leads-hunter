@@ -552,9 +552,21 @@ A sprint **CNPJ-07** está concluída no escopo. O botão **Buscar CNPJ**, ao la
 
 A validação de CNPJ-07 passou com 41 testes backend selecionados (incluindo integração JPA com fixture sintética transacional isolada), 201 testes frontend e os dois builds. O smoke no Firefox com API controlada confirmou a atualização de CNPJ/razão social em 1440 × 1000 e 390 × 844, sem overflow ou violações Axe WCAG A/AA. A suíte backend completa executou 161 testes: 155 passaram, com as mesmas três falhas e três erros preexistentes de blacklist/fixtures diante da carga local; os novos testes passaram. Não houve chamada externa, migration nova ou alteração na base mensal.
 
+### Dark mode
+
+As etapas **DM-01.1 a DM-01.5** estão concluídas. O frontend possui os modos `Sistema`, `Claro` e `Escuro`, com preferência persistida no navegador, resolução reativa de `prefers-color-scheme`, aplicação por `data-theme`/`color-scheme` e bootstrap anterior ao Angular para evitar a troca tardia da paleta. O seletor nativo e rotulado fica no shell e preserva os breakpoints existentes.
+
+Os tokens semânticos claros foram consolidados e ganharam uma paleta escura verde-petróleo. Shell, Busca, Kanban, Histórico, detalhe histórico, Bloqueios, rota inexistente, controles e estados existentes consomem a troca global sem duplicação das folhas de componentes. A implementação não adicionou dependências nem alterou backend, contratos HTTP ou comportamento funcional.
+
+A suíte frontend passou com 211 testes e o build de produção terminou sem warnings. A revisão em Firefox percorreu as seis rotas em claro e escuro, a 1440 × 1000 e 390 × 844, totalizando 24 combinações sem overflow horizontal ou violações Axe WCAG A/AA; também foram conferidos os breakpoints de 1024, 768, 641 e 640 px e a opção `Sistema` sob preferência escura.
+
+A **DM-01.6** permanece pendente: tiles, controles, popup, legenda, círculo e polígonos internos do Leaflet ainda não receberam tratamento específico de tema. A paleta geográfica do IDHM foi preservada até essa etapa. O smoke E2E completo deve ser repetido no fechamento da sprint.
+
 ### Próximo passo
 
-Os sprints **FE-00** a **FE-17**, a melhoria **FE-100**, a manutenção do WhatsApp, **IDHM-00** a **IDHM-05**, **BL-00** a **BL-04** e **CNPJ-00** a **CNPJ-07** estão concluídos e validados nos respectivos escopos. O refinamento CNPJ não possui outro item pendente planejado. A normalização do estado do banco local e a adequação das fixtures à carga CNPJ populada continuam pendentes para que a suíte backend integrada volte a passar integralmente. O uso do IDHM e do CNPJ no `ScoringService` e a limpeza retroativa de leads bloqueados permanecem fora das entregas atuais.
+Implementar a **DM-01.6**, adaptando somente o conteúdo interno do Leaflet e a camada IDHM sem trocar o provedor de tiles, recriar o mapa ou disparar novas consultas geográficas. Depois, executar o smoke E2E e repetir a matriz visual/Axe dos estados do mapa para fechar a sprint DM-01.
+
+Os sprints **FE-00** a **FE-17**, a melhoria **FE-100**, a manutenção do WhatsApp, **IDHM-00** a **IDHM-05**, **BL-00** a **BL-04** e **CNPJ-00** a **CNPJ-07** continuam concluídos e validados nos respectivos escopos. A normalização do estado do banco local e a adequação das fixtures à carga CNPJ populada continuam pendentes para que a suíte backend integrada volte a passar integralmente. O uso do IDHM e do CNPJ no `ScoringService` e a limpeza retroativa de leads bloqueados permanecem fora das entregas atuais.
 
 ## Padrão de boilerplate com Lombok
 

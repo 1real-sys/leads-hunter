@@ -1561,3 +1561,37 @@ Passaram 41 testes backend selecionados, 201 testes frontend, os dois builds e o
 - `fluxo.md`
 - `HISTORICO_IMPLEMENTACOES.md`
 - `refinamento-cnpj.md`
+
+---
+
+## 57. Dark mode global da aplicação — 10/09/2026
+
+Foram concluídas as etapas DM-01.1 a DM-01.5 do dark mode. O frontend passou a oferecer as preferências Sistema, Claro e Escuro no shell, persistir a escolha no navegador, acompanhar a preferência do sistema durante a sessão e aplicar o tema antes do bootstrap Angular. A paleta escura verde-petróleo usa os tokens semânticos existentes e cobre as superfícies, controles e estados das telas sem duplicar folhas de componentes ou alterar o layout.
+
+O núcleo de tema foi implementado com Signals e fallback seguro para indisponibilidade de storage ou `matchMedia`. A suíte frontend passou com 211 testes, o build de produção terminou sem warnings e a inspeção das seis rotas em claro/escuro, desktop/mobile, não encontrou overflow ou violações Axe WCAG A/AA. O tratamento interno do Leaflet e da camada IDHM permaneceu reservado para a DM-01.6.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/core/theme/tema.model.ts`
+- `frontend/src/app/core/theme/tema-store.ts`
+- `frontend/src/app/core/theme/tema-store.spec.ts`
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `darkmode.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `frontend/src/index.html`
+- `frontend/src/styles.scss`
+- `frontend/src/app/app.ts`
+- `frontend/src/app/app.html`
+- `frontend/src/app/app.scss`
+- `frontend/src/app/app.spec.ts`
+- `frontend/src/app/features/busca/busca-form.scss`
+- `frontend/src/app/features/kanban/exportacao-leads.scss`
+- `frontend/src/app/features/kanban/kanban-column.scss`
+- `frontend/src/app/features/kanban/lead-card.scss`
+- `frontend/src/app/features/kanban/lead-detalhe.scss`

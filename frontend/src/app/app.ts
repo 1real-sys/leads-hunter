@@ -1,5 +1,7 @@
-import { Component, ElementRef, viewChild } from '@angular/core';
+import { Component, ElementRef, inject, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { TEMA_OPCOES, isTemaPreferido } from './core/theme/tema.model';
+import { TemaStore } from './core/theme/tema-store';
 
 @Component({
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
@@ -10,6 +12,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 export class App {
   private readonly mainContent = viewChild<ElementRef<HTMLElement>>('mainContent');
 
+  protected readonly tema = inject(TemaStore);
+  protected readonly temaOpcoes = TEMA_OPCOES;
   protected readonly navigationItems = [
     { label: 'Busca', path: '/busca', description: 'Encontrar leads', exact: true },
     { label: 'Kanban', path: '/kanban', description: 'Acompanhar oportunidades', exact: true },
@@ -29,5 +33,13 @@ export class App {
 
   protected focarConteudo(): void {
     this.mainContent()?.nativeElement.focus();
+  }
+
+  protected alterarTema(event: Event): void {
+    const preferencia = (event.currentTarget as HTMLSelectElement).value;
+
+    if (isTemaPreferido(preferencia)) {
+      this.tema.definirPreferencia(preferencia);
+    }
   }
 }

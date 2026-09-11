@@ -82,7 +82,7 @@
 }
 
 .busca-form input[aria-invalid='true'] {
-  border-color: #b42318;
+  border-color: var(--danger-ink);
 }
 
 .busca-form__coordinates-grid,

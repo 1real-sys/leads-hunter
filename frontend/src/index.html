@@ -1,14 +1,51 @@
 <!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <title>Leads Hunter</title>
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Leads Hunter — encontre e organize oportunidades comerciais locais.">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-</head>
-<body>
-  <app-root></app-root>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>Leads Hunter</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="Leads Hunter — encontre e organize oportunidades comerciais locais."
+    />
+    <script>
+      (() => {
+        const storageKey = 'leads-hunter-theme';
+        let preference = 'system';
+
+        try {
+          const savedPreference = window.localStorage.getItem(storageKey);
+          if (
+            savedPreference === 'light' ||
+            savedPreference === 'dark' ||
+            savedPreference === 'system'
+          ) {
+            preference = savedPreference;
+          }
+        } catch {
+          // A preferência do sistema continua disponível quando o storage está bloqueado.
+        }
+
+        let resolvedTheme = preference;
+        if (resolvedTheme === 'system') {
+          try {
+            resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+          } catch {
+            resolvedTheme = 'light';
+          }
+        }
+
+        document.documentElement.dataset.theme = resolvedTheme;
+        document.documentElement.style.colorScheme = resolvedTheme;
+      })();
+    </script>
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
 </html>

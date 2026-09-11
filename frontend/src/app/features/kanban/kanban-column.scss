@@ -75,7 +75,7 @@
 .kanban-column__lead.cdk-drag-preview {
   box-sizing: border-box;
   opacity: 0.94;
-  box-shadow: 0 0.45rem 1rem rgb(19 54 49 / 18%);
+  box-shadow: 0 0.45rem 1rem var(--shadow-drag);
 }
 
 .kanban-column__lead.cdk-drag-placeholder {

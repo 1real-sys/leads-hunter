@@ -29,6 +29,17 @@
         }
       </ul>
     </nav>
+
+    <div class="theme-preference">
+      <label for="theme-preference">Tema</label>
+      <select id="theme-preference" [value]="tema.preferencia()" (change)="alterarTema($event)">
+        @for (opcao of temaOpcoes; track opcao.value) {
+          <option [value]="opcao.value" [selected]="tema.preferencia() === opcao.value">
+            {{ opcao.label }}
+          </option>
+        }
+      </select>
+    </div>
   </aside>
 
   <main #mainContent id="main-content" class="app-content" tabindex="-1">
