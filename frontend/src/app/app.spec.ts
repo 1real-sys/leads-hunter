@@ -138,4 +138,19 @@ describe('App', () => {
     expect(activeLink?.querySelector('span')?.textContent?.trim()).toBe('Histórico');
     expect(activeLink?.getAttribute('aria-current')).toBe('page');
   });
+
+  it('preserva o skip link e move o foco para o conteúdo após navegar', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const skipLink = compiled.querySelector<HTMLAnchorElement>('.skip-link');
+    const main = compiled.querySelector<HTMLElement>('#main-content');
+
+    await router.navigateByUrl('/kanban');
+    await fixture.whenStable();
+
+    expect(skipLink?.getAttribute('href')).toBe('#main-content');
+    expect(document.activeElement).toBe(main);
+  });
 });

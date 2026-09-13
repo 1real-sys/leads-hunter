@@ -9,6 +9,14 @@
   --border-strong: rgb(232 242 240 / 28%);
   --focus-ring: #c4b5fd;
   --ink: #e8f2f0;
+  --map-municipality-border: #d9e7e4;
+  --map-municipality-border-highlight: #071b18;
+  --map-overlay-border: rgb(232 242 240 / 28%);
+  --map-overlay-shadow: rgb(0 0 0 / 32%);
+  --map-overlay-surface: rgb(23 37 34 / 94%);
+  --map-overlay-surface-strong: rgb(23 37 34 / 97%);
+  --map-search-radius: #58b8a9;
+  --map-tile-filter: brightness(0.62) saturate(0.65) contrast(1.08);
   --muted: #afc3bf;
   --on-accent: #071b18;
   --selection: #245c54;
@@ -48,6 +56,14 @@
   --border-strong: rgb(23 51 47 / 20%);
   --focus-ring: #6d28d9;
   --ink: #17332f;
+  --map-municipality-border: #ffffff;
+  --map-municipality-border-highlight: #17332f;
+  --map-overlay-border: rgb(23 51 47 / 22%);
+  --map-overlay-shadow: rgb(23 51 47 / 14%);
+  --map-overlay-surface: rgb(255 255 255 / 94%);
+  --map-overlay-surface-strong: rgb(255 255 255 / 96%);
+  --map-search-radius: #176b61;
+  --map-tile-filter: none;
   --muted: #5a706c;
   --on-accent: #ffffff;
   --selection: #cce9e1;
@@ -179,6 +195,70 @@ button:disabled {
 }
 
 a {
+  color: var(--accent-strong);
+}
+
+.leaflet-container {
+  background: var(--surface-subtle);
+  color: var(--ink);
+  font-family: var(--font-family-base);
+}
+
+.leaflet-tile-pane {
+  filter: var(--map-tile-filter);
+}
+
+.leaflet-bar {
+  border: 0 !important;
+  box-shadow: 0 0.2rem 0.6rem var(--map-overlay-shadow) !important;
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  border-bottom-color: var(--map-overlay-border);
+  background: var(--map-overlay-surface-strong);
+  color: var(--ink);
+}
+
+.leaflet-bar a:hover,
+.leaflet-bar a:focus-visible {
+  background: var(--surface-subtle);
+  color: var(--accent-strong);
+}
+
+.leaflet-bar a.leaflet-disabled,
+.leaflet-bar a.leaflet-disabled:hover {
+  background: var(--map-overlay-surface);
+  color: var(--muted);
+}
+
+.leaflet-control-attribution {
+  background: var(--map-overlay-surface-strong) !important;
+  color: var(--muted);
+}
+
+.leaflet-control-attribution a {
+  color: var(--accent-strong);
+}
+
+.leaflet-popup-content-wrapper {
+  border: 1px solid var(--map-overlay-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0.25rem 0.9rem var(--map-overlay-shadow);
+}
+
+.leaflet-popup-tip {
+  background: var(--surface);
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: var(--muted);
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus-visible {
   color: var(--accent-strong);
 }
 

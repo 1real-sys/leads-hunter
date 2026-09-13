@@ -1,6 +1,6 @@
 # Sprint DM-01 — Dark mode do frontend
 
-**Status:** EM IMPLEMENTAÇÃO — DM-01.1 A DM-01.5 CONCLUÍDAS
+**Status:** CONCLUÍDA — DM-01.1 A DM-01.8 IMPLEMENTADAS E VALIDADAS
 
 **Escopo:** somente frontend Angular 22
 
@@ -22,7 +22,7 @@ A escolha será preservada no navegador e aplicada antes da primeira renderizaç
 - Estado local implementado prioritariamente com Signals.
 - Serviços singleton novos podem usar o decorator `@Service()` disponível no Angular 22 instalado.
 - SCSS global e encapsulamento padrão por componente.
-- A maior parte da interface já consome tokens CSS definidos em `frontend/src/styles.scss`.
+- A maior parte da interface já consome tokens CSS definidos em `../frontend/src/styles.scss`.
 - O mecanismo global de tema usa Signals, `prefers-color-scheme`, persistência local e um seletor no shell.
 - O shell principal está em `app.ts`, `app.html` e `app.scss`.
 - O Leaflet cria parte do DOM fora dos templates Angular e possui cores próprias em SCSS e em `mapa-busca.ts`.
@@ -30,10 +30,10 @@ A escolha será preservada no navegador e aplicada antes da primeira renderizaç
 
 ## Progresso desta entrega
 
-- **Concluído:** DM-01.1, DM-01.2, DM-01.3, DM-01.4 e DM-01.5.
-- **Pendente:** DM-01.6, com o tratamento interno dos tiles, controles, popup, legenda, círculo e polígonos do Leaflet.
-- **Validação executada:** 211 testes frontend, build de produção sem warnings e auditoria visual/Axe em 24 combinações de rota, tema e viewport, sem overflow horizontal ou violações WCAG A/AA.
-- **Decisão de escopo:** a paleta geográfica de IDHM e os estilos internos do Leaflet foram preservados para a DM-01.6, sem implementação antecipada.
+- **Concluído:** DM-01.1 a DM-01.8.
+- **Validação executada:** 215 testes frontend, build de produção sem warnings, smoke E2E com 27 requisições mockadas e 96 auditorias visuais/Axe, sem overflow horizontal ou violações WCAG A/AA.
+- **Evidência visual:** 24 screenshots cobrem as seis rotas em claro e escuro, desktop e mobile.
+- **Decisão preservada:** o OpenStreetMap e a paleta geográfica do IDHM foram mantidos; somente apresentação e superfícies receberam tratamento de tema.
 
 ## Princípios visuais obrigatórios
 
@@ -200,9 +200,9 @@ Valores literais já identificados para migração:
 
 Arquivos previstos:
 
-- `frontend/src/app/core/theme/tema.model.ts`;
-- `frontend/src/app/core/theme/tema-store.ts`;
-- `frontend/src/app/core/theme/tema-store.spec.ts`.
+- `../frontend/src/app/core/theme/tema.model.ts`;
+- `../frontend/src/app/core/theme/tema-store.ts`;
+- `../frontend/src/app/core/theme/tema-store.spec.ts`.
 
 Tarefas:
 
@@ -221,8 +221,8 @@ Tarefas:
 
 Arquivos previstos:
 
-- `frontend/src/index.html`;
-- possivelmente um utilitário pequeno e testável em `frontend/src/app/core/theme/`, caso evite duplicação de resolução.
+- `../frontend/src/index.html`;
+- possivelmente um utilitário pequeno e testável em `../frontend/src/app/core/theme`, caso evite duplicação de resolução.
 
 Tarefas:
 
@@ -242,10 +242,10 @@ Critério específico: recarregar diretamente `/busca`, `/kanban`, `/historico`,
 
 Arquivos previstos:
 
-- `frontend/src/app/app.ts`;
-- `frontend/src/app/app.html`;
-- `frontend/src/app/app.scss`;
-- `frontend/src/app/app.spec.ts`.
+- `../frontend/src/app/app.ts`;
+- `../frontend/src/app/app.html`;
+- `../frontend/src/app/app.scss`;
+- `../frontend/src/app/app.spec.ts`.
 
 Tarefas:
 
@@ -307,7 +307,7 @@ Tarefas:
 - scrollbar onde o navegador respeitar `color-scheme`;
 - seleção de texto.
 
-### DM-01.6 — Adaptar Leaflet e a camada IDHM — PENDENTE
+### DM-01.6 — Adaptar Leaflet e a camada IDHM — CONCLUÍDA
 
 **Objetivo:** evitar um mapa excessivamente claro dentro da interface escura sem perder leitura cartográfica.
 
@@ -325,7 +325,7 @@ Tarefas:
 - confirmar que troca de tema não recria a instância do mapa nem dispara chamadas geográficas;
 - confirmar que círculo, marker, polígonos e popups continuam acima dos tiles e operáveis por teclado.
 
-### DM-01.7 — Testes automatizados
+### DM-01.7 — Testes automatizados — CONCLUÍDA
 
 #### Testes do núcleo de tema
 
@@ -354,7 +354,7 @@ Tarefas:
 - incluir teste de que a troca de tema não recria o mapa nem faz novo request de GeoJSON;
 - evitar testes frágeis que comparem toda a folha de estilos ou snapshots extensos.
 
-### DM-01.8 — Validação visual, responsiva e acessível
+### DM-01.8 — Validação visual, responsiva e acessível — CONCLUÍDA
 
 Executar a matriz abaixo em **tema claro e escuro**:
 
@@ -386,27 +386,27 @@ Validações obrigatórias:
 
 ### Criados
 
-- `frontend/src/app/core/theme/tema.model.ts`
-- `frontend/src/app/core/theme/tema-store.ts`
-- `frontend/src/app/core/theme/tema-store.spec.ts`
+- `../frontend/src/app/core/theme/tema.model.ts`
+- `../frontend/src/app/core/theme/tema-store.ts`
+- `../frontend/src/app/core/theme/tema-store.spec.ts`
 
 ### Modificados diretamente
 
-- `frontend/src/index.html`
-- `frontend/src/styles.scss`
-- `frontend/src/app/app.ts`
-- `frontend/src/app/app.html`
-- `frontend/src/app/app.scss`
-- `frontend/src/app/app.spec.ts`
-- `frontend/src/app/features/busca/mapa-busca.ts`
-- `frontend/src/app/features/busca/mapa-busca.scss`
-- `frontend/src/app/features/busca/mapa-busca.spec.ts`
+- `../frontend/src/index.html`
+- `../frontend/src/styles.scss`
+- `../frontend/src/app/app.ts`
+- `../frontend/src/app/app.html`
+- `../frontend/src/app/app.scss`
+- `../frontend/src/app/app.spec.ts`
+- `../frontend/src/app/features/busca/mapa-busca.ts`
+- `../frontend/src/app/features/busca/mapa-busca.scss`
+- `../frontend/src/app/features/busca/mapa-busca.spec.ts`
 - arquivos SCSS de Busca, Kanban, Histórico e Bloqueios que ainda possuam cor literal ou estado sem token semântico.
 
 ### Modificados após a implementação
 
-- `fluxo.md`, registrando o estado real e as validações executadas;
-- `HISTORICO_IMPLEMENTACOES.md`, com uma única entrada da feature;
+- `../fluxo.md`, registrando o estado real e as validações executadas;
+- `../HISTORICO_IMPLEMENTACOES.md`, com uma única entrada da feature;
 - este `darkmode.md`, mudando o status apenas quando todos os critérios aplicáveis estiverem atendidos.
 
 A lista é uma previsão. O relatório final da futura implementação deverá registrar somente os arquivos realmente alterados.
@@ -417,43 +417,35 @@ A lista é uma previsão. O relatório final da futura implementação deverá r
 - [x] A preferência escolhida persiste após reload e navegação direta.
 - [x] `Sistema` acompanha `prefers-color-scheme` durante a sessão.
 - [x] O tema correto é aplicado antes da primeira renderização útil.
-- [ ] Todas as superfícies e textos usam tokens semânticos, sem duplicação completa de SCSS por tema.
+- [x] Todas as superfícies e textos usam tokens semânticos, sem duplicação completa de SCSS por tema.
 - [x] Inputs, selects, textareas, checkboxes e sliders permanecem legíveis e operáveis.
 - [x] Busca, Kanban, Histórico, detalhe, Bloqueios e página inexistente têm suas superfícies da aplicação adaptadas ao tema escuro.
 - [x] Estados loading, empty, success, warning, error, hover, focus, active e disabled estão cobertos pelos tokens semânticos.
 - [x] Drawer, backdrop, drag-and-drop e paginação do Kanban não sofreram regressão na suíte frontend.
-- [ ] Leaflet, controles, popup, legenda, círculo e camada IDHM estão coerentes com o tema.
-- [ ] A troca de tema não recria o mapa nem provoca request HTTP.
+- [x] Leaflet, controles, popup, legenda, círculo e camada IDHM estão coerentes com o tema.
+- [x] A troca de tema não recria o mapa nem provoca request HTTP.
 - [x] A paleta IDHM continua semanticamente igual e identificada também por texto.
 - [x] Nenhuma dependência foi adicionada.
 - [x] Nenhum endpoint, DTO ou código backend foi alterado.
 - [x] A suíte frontend passa integralmente.
 - [x] O build de produção termina sem erro e respeita os budgets existentes.
-- [ ] O smoke E2E passa sem regressão do fluxo do MVP.
+- [x] O smoke E2E passa sem regressão do fluxo do MVP.
 - [x] Axe não encontra violações WCAG A/AA nas seis rotas auditadas, nos dois temas e viewports.
 - [x] A revisão visual das rotas auditadas não encontra overflow ou contraste insuficiente.
 - [x] A revisão anti-slop não encontra decoração gratuita, excesso de superfícies, glow, neon ou hierarquia artificial.
 
 ## Validações
 
-Executadas nesta entrega:
+Executadas no fechamento:
 
 ```bash
 cd frontend
 npm test -- --watch=false
 npm run build
+E2E_BASE_URL=<servidor-estatico-local> E2E_API_MODE=mock node scripts/mvp-flow-smoke.mjs
 ```
 
-A auditoria em Firefox cobriu Busca, Kanban, Histórico, detalhe histórico, Bloqueios e rota inexistente em `1440 × 1000` e `390 × 844`, nos temas claro e escuro. Também foram conferidos os breakpoints de 1024, 768, 641 e 640 px, além da resolução automática de `Sistema` com preferência escura do navegador.
-
-Permanecem para o fechamento da sprint completa:
-
-```bash
-cd frontend
-npm run e2e:smoke
-```
-
-Depois da DM-01.6, repetir a inspeção visual/Axe com os estados internos do mapa, incluindo controles, popup, legenda e camada IDHM.
+A auditoria em Firefox cobriu Busca, Kanban, Histórico, detalhe histórico, Bloqueios e rota inexistente em `1440 × 1000` e `390 × 844`, nos temas claro e escuro. Foram executadas 96 auditorias de estados reais, incluindo mapa, tiles, controles, popup, legenda, IDHM, carregamento, resultado, vazio, erro, drawer, paginação, CNPJ, cadastro e remoção. As 24 combinações principais também tiveram screenshot. Os breakpoints de 1024, 768, 641 e 640 px e a resolução automática de `Sistema` foram conferidos na etapa anterior e preservados pela suíte.
 
 ## Fora do escopo
 
@@ -488,7 +480,7 @@ Depois da DM-01.6, repetir a inspeção visual/Axe com os estados internos do ma
 
 ## Definição de pronto
 
-A sprint só poderá mudar de **EM IMPLEMENTAÇÃO** para **CONCLUÍDA** quando:
+A sprint permanece **CONCLUÍDA** porque:
 
 1. o comportamento `Sistema/Claro/Escuro` estiver implementado e persistido;
 2. todas as rotas e estados aplicáveis estiverem adaptados;
@@ -497,5 +489,5 @@ A sprint só poderá mudar de **EM IMPLEMENTAÇÃO** para **CONCLUÍDA** quando:
 5. Axe e a revisão responsiva tiverem sido executados nos dois temas;
 6. falhas causadas pela feature tiverem sido corrigidas e validadas novamente;
 7. nenhuma dependência, backend ou funcionalidade fora do escopo tiver sido adicionada;
-8. `fluxo.md`, `HISTORICO_IMPLEMENTACOES.md` e este documento refletirem o estado real;
+8. `../fluxo.md`, `../HISTORICO_IMPLEMENTACOES.md` e este documento refletirem o estado real;
 9. o relatório final listar resultados reais, sem declarar validação não executada.

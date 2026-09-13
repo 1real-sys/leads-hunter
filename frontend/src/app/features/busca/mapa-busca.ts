@@ -25,6 +25,8 @@ import type {
 import { Subscription } from 'rxjs';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
 import { GeografiaApi } from '../../core/api/geografia-api';
+import type { TemaResolvido } from '../../core/theme/tema.model';
+import { TemaStore } from '../../core/theme/tema-store';
 import {
   BboxGeografico,
   MunicipioGeoJsonProperties,
@@ -49,6 +51,18 @@ interface CelulaViewport {
   readonly chave: string;
   readonly bbox: BboxGeografico;
 }
+
+interface CoresTemaMapa {
+  readonly bordaMunicipio: string;
+  readonly bordaMunicipioDestaque: string;
+  readonly raioBusca: string;
+}
+
+const CORES_TEMA_MAPA_FALLBACK: CoresTemaMapa = {
+  bordaMunicipio: 'currentColor',
+  bordaMunicipioDestaque: 'currentColor',
+  raioBusca: 'currentColor',
+};
 
 const MARKER_ICON = icon({
   iconRetinaUrl: 'assets/leaflet/marker-icon-2x.png',
@@ -79,6 +93,7 @@ export class MapaBusca {
 
   private readonly destroyRef = inject(DestroyRef);
   private readonly geografiaApi = inject(GeografiaApi);
+  private readonly tema = inject(TemaStore);
   private readonly mapContainer = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
 
   private mapInstance: LeafletMap | null = null;
@@ -91,6 +106,8 @@ export class MapaBusca {
   private chavePendente: string | null = null;
   private chaveRenderizada: string | null = null;
   private requestSequence = 0;
+  private coresTemaMapa = CORES_TEMA_MAPA_FALLBACK;
+  private temaMapaAplicado: TemaResolvido | null = null;
 
   private readonly handleMapClick = (event: LeafletMouseEvent): void => {
     this.selectPoint(event.latlng);
@@ -113,6 +130,13 @@ export class MapaBusca {
       mixedReadWrite: () => {
         const point = this.pontoCentral();
         const radiusKm = this.raioKm();
+        const temaResolvido = this.tema.temaResolvido();
+
+        if (this.mapInstance && temaResolvido !== this.temaMapaAplicado) {
+          this.atualizarCoresTemaMapa();
+          this.aplicarCoresTemaMapa();
+          this.temaMapaAplicado = temaResolvido;
+        }
 
         if (!pontoMapaValido(point) || !Number.isFinite(radiusKm) || radiusKm <= 0) {
           return;
@@ -121,7 +145,9 @@ export class MapaBusca {
         const radiusInMeters = raioKmParaMetros(radiusKm);
 
         if (!this.mapInstance) {
+          this.atualizarCoresTemaMapa();
           this.initializeMap(point, radiusInMeters);
+          this.temaMapaAplicado = temaResolvido;
           return;
         }
 
@@ -179,8 +205,8 @@ export class MapaBusca {
 
     this.radiusCircle = circle(center, {
       className: 'mapa-busca__radius',
-      color: '#176b61',
-      fillColor: '#176b61',
+      color: this.coresTemaMapa.raioBusca,
+      fillColor: this.coresTemaMapa.raioBusca,
       fillOpacity: 0.12,
       radius: radiusInMeters,
       weight: 2,
@@ -375,7 +401,9 @@ export class MapaBusca {
   private estiloMunicipio(idhm: number | null, destaque = false): PathOptions {
     return {
       pane: IDHM_PANE,
-      color: destaque ? '#17332f' : '#ffffff',
+      color: destaque
+        ? this.coresTemaMapa.bordaMunicipioDestaque
+        : this.coresTemaMapa.bordaMunicipio,
       fillColor: classificarIdhm(idhm).cor,
       fillOpacity: destaque ? 0.78 : 0.58,
       opacity: 0.9,
@@ -448,6 +476,37 @@ export class MapaBusca {
     }
 
     return popup;
+  }
+
+  private atualizarCoresTemaMapa(): void {
+    const styles = getComputedStyle(this.mapContainer().nativeElement);
+    this.coresTemaMapa = {
+      bordaMunicipio: this.lerTokenCss(styles, '--map-municipality-border'),
+      bordaMunicipioDestaque: this.lerTokenCss(styles, '--map-municipality-border-highlight'),
+      raioBusca: this.lerTokenCss(styles, '--map-search-radius'),
+    };
+  }
+
+  private lerTokenCss(styles: CSSStyleDeclaration, token: string): string {
+    return styles.getPropertyValue(token).trim() || 'currentColor';
+  }
+
+  private aplicarCoresTemaMapa(): void {
+    this.radiusCircle?.setStyle({
+      color: this.coresTemaMapa.raioBusca,
+      fillColor: this.coresTemaMapa.raioBusca,
+    });
+    this.idhmLayer?.eachLayer((layer) => {
+      const path = layer as Path & {
+        feature?: { properties?: MunicipioGeoJsonProperties };
+      };
+      const properties = path.feature?.properties;
+
+      if (properties) {
+        path.setStyle(this.estiloMunicipio(properties.idhm));
+      }
+    });
+    this.radiusCircle?.bringToFront();
   }
 
   private desativarCamadaIdhm(): void {

@@ -554,13 +554,13 @@ A validação de CNPJ-07 passou com 41 testes backend selecionados (incluindo in
 
 ### Dark mode
 
-As etapas **DM-01.1 a DM-01.5** estão concluídas. O frontend possui os modos `Sistema`, `Claro` e `Escuro`, com preferência persistida no navegador, resolução reativa de `prefers-color-scheme`, aplicação por `data-theme`/`color-scheme` e bootstrap anterior ao Angular para evitar a troca tardia da paleta. O seletor nativo e rotulado fica no shell e preserva os breakpoints existentes.
+A sprint **DM-01**, da DM-01.1 à DM-01.8, está concluída. O frontend possui os modos `Sistema`, `Claro` e `Escuro`, com preferência persistida no navegador, resolução reativa de `prefers-color-scheme`, aplicação por `data-theme`/`color-scheme` e bootstrap anterior ao Angular para evitar a troca tardia da paleta. O seletor nativo e rotulado fica no shell e preserva os breakpoints existentes.
 
 Os tokens semânticos claros foram consolidados e ganharam uma paleta escura verde-petróleo. Shell, Busca, Kanban, Histórico, detalhe histórico, Bloqueios, rota inexistente, controles e estados existentes consomem a troca global sem duplicação das folhas de componentes. A implementação não adicionou dependências nem alterou backend, contratos HTTP ou comportamento funcional.
 
-A suíte frontend passou com 211 testes e o build de produção terminou sem warnings. A revisão em Firefox percorreu as seis rotas em claro e escuro, a 1440 × 1000 e 390 × 844, totalizando 24 combinações sem overflow horizontal ou violações Axe WCAG A/AA; também foram conferidos os breakpoints de 1024, 768, 641 e 640 px e a opção `Sistema` sob preferência escura.
+A DM-01.6 aplica tratamento tonal moderado somente ao pane de tiles no tema escuro e tematiza zoom, atribuição, popup, legenda e feedback. Círculo e bordas municipais leem tokens CSS e são atualizados na instância existente ao trocar o tema; mapa, tile layer e GeoJSON não são recriados, e nenhuma nova consulta geográfica é disparada. A paleta do IDHM permanece idêntica por representar dados.
 
-A **DM-01.6** permanece pendente: tiles, controles, popup, legenda, círculo e polígonos internos do Leaflet ainda não receberam tratamento específico de tema. A paleta geográfica do IDHM foi preservada até essa etapa. O smoke E2E completo deve ser repetido no fechamento da sprint.
+A suíte frontend passou com 215 testes e o build de produção terminou sem warnings. O smoke E2E passou no Firefox, em modo mock, com 27 requisições. A matriz final executou 96 auditorias de estados e gerou 24 screenshots das seis rotas em claro/escuro, a 1440 × 1000 e 390 × 844, sem overflow horizontal ou violações Axe WCAG A/AA.
 
 ### Pesquisa inteligente de site e Instagram
 
@@ -576,11 +576,11 @@ Os 57 testes unitários direcionados da pesquisa e orquestração passaram, assi
 
 ### Próximo passo
 
-Implementar a **DM-01.6**, adaptando somente o conteúdo interno do Leaflet e a camada IDHM sem trocar o provedor de tiles, recriar o mapa ou disparar novas consultas geográficas. Depois, executar o smoke E2E e repetir a matriz visual/Axe dos estados do mapa para fechar a sprint DM-01.
+Os sprints **FE-00** a **FE-17**, a melhoria **FE-100**, a manutenção do WhatsApp, **IDHM-00** a **IDHM-05**, **BL-00** a **BL-04**, **CNPJ-00** a **CNPJ-07** e **DM-01** estão concluídos e validados nos respectivos escopos. Não há outra etapa de dark mode pendente.
 
 O próximo passo da pesquisa inteligente é a **INFO-01.4**: persistir a execução e seu progresso, executar o lote localmente em segundo plano e impedir duas execuções ativas para a mesma busca. A disponibilidade da pesquisa pública permanece condicionada ao Google aceitar o IP do servidor; os controles conservadores reduzem carga, mas não garantem que buscas automatizadas sejam aceitas. Bloqueio ou captcha continuam sendo falhas técnicas e não produzem ausência conclusiva nem alteram observações.
 
-Os sprints **FE-00** a **FE-17**, a melhoria **FE-100**, a manutenção do WhatsApp, **IDHM-00** a **IDHM-05**, **BL-00** a **BL-04** e **CNPJ-00** a **CNPJ-07** continuam concluídos e validados nos respectivos escopos. A normalização do estado do banco local e a adequação das fixtures à carga CNPJ populada continuam pendentes para que a suíte backend integrada volte a passar integralmente. O uso do IDHM e do CNPJ no `ScoringService` e a limpeza retroativa de leads bloqueados permanecem fora das entregas atuais.
+A normalização do estado do banco local e a adequação das fixtures à carga CNPJ populada continuam pendentes para que a suíte backend integrada volte a passar integralmente. O uso do IDHM e do CNPJ no `ScoringService` e a limpeza retroativa de leads bloqueados permanecem fora das entregas atuais.
 
 ## Padrão de boilerplate com Lombok
 

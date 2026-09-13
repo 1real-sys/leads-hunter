@@ -1581,7 +1581,7 @@ O núcleo de tema foi implementado com Signals e fallback seguro para indisponib
 **Modificados:**
 
 - `HISTORICO_IMPLEMENTACOES.md`
-- `darkmode.md`
+- `features-pos-mvp/darkmode.md`
 - `fluxo.md`
 - `tecnologias.md`
 - `frontend/src/index.html`
@@ -1595,6 +1595,31 @@ O núcleo de tema foi implementado com Signals e fallback seguro para indisponib
 - `frontend/src/app/features/kanban/kanban-column.scss`
 - `frontend/src/app/features/kanban/lead-card.scss`
 - `frontend/src/app/features/kanban/lead-detalhe.scss`
+
+---
+
+## 58. Fechamento do dark mode no mapa e validação — 10/09/2026
+
+Foram concluídas as etapas DM-01.6 a DM-01.8. No tema escuro, somente o pane de tiles do OpenStreetMap recebe um tratamento tonal moderado; marcador, círculo, polígonos e overlays permanecem fora do filtro. Zoom, atribuição, popup, legenda e feedback passaram a usar as superfícies semânticas da aplicação, enquanto a paleta geográfica do IDHM foi preservada.
+
+O círculo e as bordas municipais passaram a ler tokens CSS. Ao trocar o tema, esses estilos são reaplicados às camadas Leaflet existentes sem recriar mapa, tiles ou GeoJSON e sem fazer nova consulta geográfica. Os testes do núcleo de tema e do shell também foram completados para os dois temas, preferência do sistema e foco após navegação.
+
+A suíte frontend passou com 215 testes e o build de produção terminou sem warnings. O smoke E2E passou em modo mock com 27 requisições. A validação visual executou 96 auditorias de estado e 24 screenshots em claro/escuro, desktop/mobile, sem overflow horizontal ou violações Axe WCAG A/AA.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `HISTORICO_IMPLEMENTACOES.md`
+- `features-pos-mvp/darkmode.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `frontend/src/styles.scss`
+- `frontend/src/app/app.spec.ts`
+- `frontend/src/app/core/theme/tema-store.spec.ts`
+- `frontend/src/app/features/busca/mapa-busca.scss`
+- `frontend/src/app/features/busca/mapa-busca.spec.ts`
+- `frontend/src/app/features/busca/mapa-busca.ts`
 
 ---
 

@@ -174,7 +174,7 @@ O frontend é uma SPA sem SSR, sem biblioteca global de estado e sem framework v
 - Layout responsivo para desktop e mobile.
 - Navegação lateral e áreas de trabalho independentes.
 - Temas `Sistema`, `Claro` e `Escuro`, com Signals, persistência em `localStorage`, acompanhamento de `prefers-color-scheme` e aplicação antecipada no bootstrap.
-- Paleta escura por tokens semânticos nas superfícies da aplicação; o tratamento interno do Leaflet permanece planejado na DM-01.6.
+- Paleta escura por tokens semânticos, incluindo tratamento tonal dos tiles, controles, popup, legenda, círculo e camada IDHM do Leaflet.
 - Kanban com rolagem horizontal localizada e rolagem vertical por coluna.
 - Drag-and-drop com atualização otimista, confirmação da API e rollback em erro.
 - Alternativa por teclado para mover cards entre etapas.
@@ -368,7 +368,7 @@ Para manter o modelo local com segurança, a configuração deve voltar a usar `
 ## Estado atual e pendências conhecidas
 
 - O MVP, o frontend FE-00 a FE-17, a melhoria FE-100, IDHM, blacklist e CNPJ-00 a CNPJ-07 estão documentados como concluídos em seus respectivos escopos.
-- O dark mode está concluído da DM-01.1 à DM-01.5; a DM-01.6 ainda precisa adaptar os elementos internos do Leaflet e fechar o smoke E2E da sprint.
+- O dark mode está concluído da DM-01.1 à DM-01.8, incluindo Leaflet, testes, smoke E2E e auditoria visual/acessível nos dois temas e viewports.
 - A migration repetível de CNPJ no Git continua vazia por desenho; é preciso gerar e revisar uma carga mensal para uso com dados reais.
 - A suíte completa do backend precisa ter suas fixtures isoladas da carga CNPJ local para voltar a passar integralmente em uma máquina com a base populada.
 - A configuração sensível local precisa voltar a variáveis de ambiente antes de qualquer commit ou compartilhamento.

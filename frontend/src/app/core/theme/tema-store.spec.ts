@@ -83,26 +83,35 @@ describe('TemaStore', () => {
     document.documentElement.style.colorScheme = '';
   });
 
-  it('usa o tema do sistema quando não existe preferência salva', () => {
-    instalarMediaQuery(true);
+  it.each([
+    { sistemaEscuro: false, esperado: 'light' },
+    { sistemaEscuro: true, esperado: 'dark' },
+  ] as const)(
+    'usa o tema $esperado do sistema quando não existe preferência salva',
+    ({ sistemaEscuro, esperado }) => {
+      instalarMediaQuery(sistemaEscuro);
 
-    const store = TestBed.inject(TemaStore);
+      const store = TestBed.inject(TemaStore);
 
-    expect(store.preferencia()).toBe('system');
-    expect(store.temaResolvido()).toBe('dark');
-    expect(document.documentElement.dataset['theme']).toBe('dark');
-    expect(document.documentElement.style.colorScheme).toBe('dark');
-  });
+      expect(store.preferencia()).toBe('system');
+      expect(store.temaResolvido()).toBe(esperado);
+      expect(document.documentElement.dataset['theme']).toBe(esperado);
+      expect(document.documentElement.style.colorScheme).toBe(esperado);
+    },
+  );
 
-  it('restaura uma preferência explícita salva', () => {
-    instalarMediaQuery(false);
-    storage.setItem(TEMA_STORAGE_KEY, 'dark');
+  it.each(['light', 'dark'] as const)(
+    'restaura a preferência explícita %s salva',
+    (preferencia) => {
+      instalarMediaQuery(preferencia === 'light');
+      storage.setItem(TEMA_STORAGE_KEY, preferencia);
 
-    const store = TestBed.inject(TemaStore);
+      const store = TestBed.inject(TemaStore);
 
-    expect(store.preferencia()).toBe('dark');
-    expect(store.temaResolvido()).toBe('dark');
-  });
+      expect(store.preferencia()).toBe(preferencia);
+      expect(store.temaResolvido()).toBe(preferencia);
+    },
+  );
 
   it('ignora uma preferência salva desconhecida', () => {
     instalarMediaQuery(false);

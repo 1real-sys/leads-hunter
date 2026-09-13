@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_ROUTES } from '../../core/api/api-routes';
+import { TemaStore } from '../../core/theme/tema-store';
 import { MunicipiosGeoJsonResponse } from '../../shared/models/geografia.model';
 import { MapaBusca } from './mapa-busca';
 import { PontoMapa } from './mapa.model';
@@ -91,6 +92,7 @@ const leaflet = vi.hoisted(() => {
     bringToFront: vi.fn(() => circleInstance),
     setLatLng: vi.fn(() => circleInstance),
     setRadius: vi.fn(() => circleInstance),
+    setStyle: vi.fn(() => circleInstance),
   };
 
   const tileLayerInstance = { addTo: vi.fn(() => tileLayerInstance) };
@@ -420,9 +422,9 @@ describe('MapaBusca', () => {
     expect(feedback.textContent).toContain(
       'Aproxime o mapa para visualizar a camada de IDHM nesta região.',
     );
-    expect(fixture.nativeElement.querySelector('.mapa-busca__idhm-status')?.textContent).not.toContain(
-      'municípios carregados',
-    );
+    expect(
+      fixture.nativeElement.querySelector('.mapa-busca__idhm-status')?.textContent,
+    ).not.toContain('municípios carregados');
   });
 
   it('emite coordenadas válidas e atualiza as camadas ao clicar no mapa', async () => {
@@ -457,6 +459,35 @@ describe('MapaBusca', () => {
 
     expect(leaflet.circleInstance.setRadius).toHaveBeenLastCalledWith(8_000);
     expect(leaflet.map).toHaveBeenCalledTimes(1);
+  });
+
+  it('reaplica os tokens ao trocar o tema sem recriar mapa, GeoJSON ou request', async () => {
+    const { fixture } = await enableIdhm();
+    expectMunicipiosRequest('-49.5,-25.5,-49.25,-25.25').flush(MUNICIPIOS);
+    await fixture.whenStable();
+    const canvas = fixture.nativeElement.querySelector('.mapa-busca__canvas') as HTMLElement;
+    canvas.style.setProperty('--map-search-radius', '#58b8a9');
+    canvas.style.setProperty('--map-municipality-border', '#d9e7e4');
+    canvas.style.setProperty('--map-municipality-border-highlight', '#071b18');
+    leaflet.circleInstance.setStyle.mockClear();
+    leaflet.circleInstance.bringToFront.mockClear();
+    leaflet.featureLayers.forEach((layer) => layer.setStyle.mockClear());
+
+    TestBed.inject(TemaStore).definirPreferencia('dark');
+    await fixture.whenStable();
+
+    expect(leaflet.circleInstance.setStyle).toHaveBeenCalledWith({
+      color: '#58b8a9',
+      fillColor: '#58b8a9',
+    });
+    expect(leaflet.featureLayers[0].setStyle).toHaveBeenCalledWith(
+      expect.objectContaining({ color: '#d9e7e4' }),
+    );
+    expect(leaflet.circleInstance.bringToFront).toHaveBeenCalledOnce();
+    expect(leaflet.map).toHaveBeenCalledTimes(1);
+    expect(leaflet.tileLayer).toHaveBeenCalledTimes(1);
+    expect(leaflet.geoJSON).toHaveBeenCalledTimes(1);
+    httpTesting.expectNone(API_ROUTES.geografiaMunicipios);
   });
 
   it('mantém as últimas camadas válidas enquanto o formulário contém valor inválido', async () => {
