@@ -12,6 +12,7 @@ O Leads Hunter é uma aplicação web local e single-user para prospecção de e
 | Frontend | Angular 22.1.4 + TypeScript 6.0.3 | Implementado |
 | Banco | MySQL + Flyway | Implementado para execução local |
 | Integração externa | Google Places API (New) | Implementada no backend |
+| Pesquisa web pública | Playwright Java 1.62.0 + Chromium headless + jsoup 1.23.2 | INFO-01.1 a INFO-01.3 implementadas; execução persistente e fluxo HTTP/UI ainda pendentes |
 | Mapa | Leaflet 1.9.4 + OpenStreetMap | Implementado |
 | Cache | Caffeine em memória | Implementado |
 | Rate limiting | Bucket4j 8.10.1 em memória | Implementado para chamadas à Google |
@@ -70,6 +71,8 @@ Não foi encontrada configuração ativa de virtual threads. Embora essa tecnolo
 | Caffeine | Cache local das respostas recentes da Google Places |
 | Bucket4j 8.10.1 | Limite local de chamadas externas |
 | Apache POI 5.5.1 | Geração de arquivos Excel `.xlsx` |
+| Playwright Java 1.62.0 | Renderização isolada da página pública do Google Search, sem API ou chave de pesquisa |
+| jsoup 1.23.2 | Extração de URL, título e resumo do HTML renderizado em DTOs internos |
 | Jackson | Serialização JSON e leitura do dataset geográfico |
 | Lombok | Geração seletiva de getters, setters, construtores e logger |
 | Spring Boot DevTools | Recarga e apoio ao desenvolvimento local |

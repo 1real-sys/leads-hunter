@@ -1595,3 +1595,121 @@ O núcleo de tema foi implementado com Signals e fallback seguro para indisponib
 - `frontend/src/app/features/kanban/kanban-column.scss`
 - `frontend/src/app/features/kanban/lead-card.scss`
 - `frontend/src/app/features/kanban/lead-detalhe.scss`
+
+---
+
+## 59. Cliente headless da pesquisa inteligente — 12/09/2026
+
+Foi concluída a INFO-01.1, que prepara a captura futura de site próprio e Instagram sem API de pesquisa, chave ou cota. O backend agora monta consultas separadas com nome, categoria e localização e renderiza somente a página pública do Google Search em Chromium headless. Uma instância do navegador é reutilizada em thread dedicada, enquanto cada consulta recebe contexto isolado, fila limitada, intervalo mínimo, timeout, limite de resposta e bloqueio de recursos pesados.
+
+O HTML renderizado é convertido em DTOs internos de URL, título e resumo. Captcha, tráfego incomum, timeout, indisponibilidade, ausência real e mudança inesperada de estrutura possuem resultados técnicos distintos e não expõem a página bruta. O navegador não abre candidatos e restringe navegação e recursos aos hosts necessários do Google. Fixtures locais validam extração e falhas sem depender da internet; o smoke real iniciou o Chromium, mas o Google bloqueou o IP atual por tráfego incomum, situação reconhecida com segurança e sem tentativa de evasão.
+
+Os 10 testes isolados da INFO-01.1 passaram. O smoke real opt-in também passou ao validar o contrato de bloqueio seguro observado, e o pacote executável foi gerado. A suíte backend completa executou 172 testes: 165 passaram, um smoke opt-in foi ignorado e permaneceram as mesmas três falhas e três erros preexistentes ligados à blacklist e à carga CNPJ da base local; nenhum teste novo falhou.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClient.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PlaywrightGooglePesquisaNavigator.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaHtmlParser.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebRequest.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebResponse.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GoogleResultadoWeb.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/TipoPesquisaWeb.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaPagina.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebNavigator.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebException.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebBloqueadaException.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebFormatoInvalidoException.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebIndisponivelException.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebOcupadaException.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebTimeoutException.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaHtmlParserTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClientTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebLiveTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PlaywrightGooglePesquisaNavigatorTest.java`
+- `src/test/resources/pesquisa/google-resultados.html`
+- `src/test/resources/pesquisa/google-sem-resultados.html`
+- `src/test/resources/pesquisa/google-captcha.html`
+- `src/test/resources/pesquisa/google-formato-alterado.html`
+
+**Modificados:**
+
+- `pom.xml`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 60. Classificação precisa de Instagram e site próprio — 12/09/2026
+
+Foi concluída a INFO-01.2. Para cada lead, o novo serviço executa uma consulta voltada ao Instagram e outra ao site próprio e classifica somente os resultados já presentes na página do Google, sem abrir perfis ou sites candidatos. Os dados do lead são copiados para um snapshot imutável com nome, categoria, localização, endereço, telefone, CNPJ, razão social e `googlePlaceId`.
+
+Perfis do Instagram são reduzidos ao formato canônico e posts, reels, stories, áreas internas e links com segmentos extras são recusados. Sites removem caminho, rastreamento e fragmento e rejeitam redes sociais, mapas, diretórios, agregadores, marketplaces, avaliações e delivery. Hosts locais/IPs, credenciais e portas não padrão também são descartados. A correspondência usa uma pontuação determinística, exige nome forte, evidência independente, limiar mínimo e distância segura do segundo candidato; homônimos sem confirmação, filiais conflitantes, empate e CNPJ divergente produzem ausência.
+
+Os 42 testes direcionados da pesquisa passaram, incluindo os 32 casos adicionados nesta etapa, e o teste de contexto Spring passou com o MySQL local. O pacote executável foi gerado. A suíte backend completa executou 204 testes: 197 passaram, um smoke opt-in foi ignorado e permaneceram as mesmas três falhas e três erros preexistentes de blacklist e carga CNPJ local; nenhum teste da pesquisa falhou.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaGateway.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaLeadDados.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaInformacoesWebResultado.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/UrlCandidatoCanonicalizer.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/UrlCandidatoCanonicalizerTest.java`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClient.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClientTest.java`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 61. Orquestração e persistência da pesquisa inteligente — 12/09/2026
+
+Foi concluída a INFO-01.3. A pesquisa agora carrega somente os leads vinculados à busca informada, ignora aqueles cujo bloco automático já contém Instagram e site válidos e processa os demais sequencialmente. A chamada à internet ocorre fora de transação; cada resultado conclusivo é relido e persistido em uma transação curta exclusiva, sem alterar status, último contato, CNPJ, score, temperatura ou snapshots históricos.
+
+As observações passaram a ter um formatador determinístico que preserva byte a byte o texto comercial fora dos delimitadores, consolida links válidos de resultados parciais, remove blocos automáticos duplicados e grava a frase definida somente em ausência conclusiva. Falhas técnicas não alteram o lead. O resumo separa processados, ignorados, presença de cada link, ausência e falhas.
+
+Para reduzir a agressividade sobre o IP, a fila padrão do navegador foi limitada a um item e o intervalo entre navegações passou a 15 segundos. CAPTCHA ou bloqueio encerram imediatamente os acessos restantes do lote e ativam cooldown local de uma hora; três falhas técnicas consecutivas também interrompem novas consultas. Não foram adicionados retry automático, proxy, rotação de IP, disfarce do navegador ou resolução de CAPTCHA.
+
+Passaram 57 testes unitários direcionados e dois testes de integração JPA. O pacote executável foi gerado. A suíte completa executou 221 testes: 214 passaram, um smoke opt-in foi ignorado e permaneceram as três falhas e três erros preexistentes da blacklist e das fixtures CNPJ locais; nenhum teste da pesquisa inteligente falhou.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesLead.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesPersistencia.java`
+- `src/main/java/dev/jlm/leadshunter/busca/JpaBuscaInformacoesPersistencia.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaInformacoesGateway.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/FormatadorObservacoesPesquisa.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaInformacoesServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaInformacoesServiceJpaIntegrationTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/FormatadorObservacoesPesquisaTest.java`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClient.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PlaywrightGooglePesquisaNavigator.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/UrlCandidatoCanonicalizer.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClientTest.java`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `HISTORICO_IMPLEMENTACOES.md`
