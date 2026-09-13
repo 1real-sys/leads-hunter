@@ -11,7 +11,7 @@ Guardar no Lead o CNPJ e a razão social quando houver correspondência confiáv
 - **Não existe API pública gratuita de busca reversa "nome → CNPJ".** ReceitaWS, BrasilAPI, CNPJ.ws, CNPJá e OpenCNPJ consultam **por CNPJ** (exigem o número). Elas não resolvem o problema do lead.
 - Caminho gratuito real: **espelho local dos Dados Abertos do CNPJ (Receita Federal)** + correspondência reversa offline.
 - A base da Receita separa **Empresas** (razão social, chave = 8 primeiros dígitos) de **Estabelecimentos** (cada unidade = CNPJ completo de 14 dígitos com logradouro, número, bairro, CEP, município IBGE, nome fantasia, situação). É isso que permite casar a **unidade**, não a rede.
-- A base é **mensal** e grande; guardamos somente um subset indexado (municípios/UF de interesse, estabelecimentos ativos). Requer reingestão periódica (manual, como `tools/idhm/`).
+- A base é **mensal** e grande; guardamos somente um subset indexado (municípios/UF de interesse, estabelecimentos ativos). Requer reingestão periódica (manual, como `../tools/idhm`).
 - Correspondência é **best effort**: sem candidato confiável ou com ambiguidade, o lead fica **sem CNPJ** (nunca inventar).
 - Precisão da unidade depende do **endereço estruturado** (CEP/rua/número) vindo do Google (`addressComponents`), não de heurística sobre texto.
 
@@ -26,7 +26,7 @@ Guardar no Lead o CNPJ e a razão social quando houver correspondência confiáv
 
 ## Arquitetura alvo
 
-- **Dados**: ferramenta `tools/cnpj/` (como `tools/idhm/`) que baixa/consome os arquivos de Empresas e Estabelecimentos da Receita, filtra municípios de interesse e grava o subset normalizado.
+- **Dados**: ferramenta `../tools/cnpj` (como `../tools/idhm`) que baixa/consome os arquivos de Empresas e Estabelecimentos da Receita, filtra municípios de interesse e grava o subset normalizado.
 - **Backend**
   - Tabelas locais `cnpj_empresa` (cnpj base 8, razão social) e `cnpj_estabelecimento` (cnpj 14, nome fantasia, logradouro/número/bairro/CEP, município IBGE, UF, situação, situação cadastral, data da base), alimentadas pela ingestão.
   - Campos de endereço estruturado no `Lead` (cep, logradouro, número, bairro) capturados do Google, além de competência e confiança da correspondência CNPJ.
@@ -38,10 +38,10 @@ Guardar no Lead o CNPJ e a razão social quando houver correspondência confiáv
 
 **Nenhum custo financeiro adicional.** O Google Places já cobra por requisição — adicionar `addressComponents` ao field mask não muda o valor nem a quantidade de chamadas. A base de CNPJ da Receita Federal é pública e gratuita, e a correspondência roda localmente, sem API paga, captcha ou serviço externo em runtime.
 
-O único trabalho recorrente é a **ingestão mensal manual** da base, feita por você (idealmente uma vez por mês, quando a Receita publica a atualização). O procedimento completo, formato do manifesto e limites de segurança estão em `tools/cnpj/README.md`:
+O único trabalho recorrente é a **ingestão mensal manual** da base, feita por você (idealmente uma vez por mês, quando a Receita publica a atualização). O procedimento completo, formato do manifesto e limites de segurança estão em `../tools/cnpj/README.md`:
 
 1. **Baixar** a base mensal dos Dados Abertos do CNPJ no portal da Receita Federal (gov.br → Dados Abertos → CNPJ) — arquivos de **Empresas** e **Estabelecimentos**.
-2. **Colocar** os arquivos no diretório de fontes esperado pelo ingestor (ex.: `tools/cnpj/sources/`).
+2. **Colocar** os arquivos no diretório de fontes esperado pelo ingestor (ex.: `../tools/cnpj/sources`).
 3. **Executar a ingestão** com `python3 tools/cnpj/gerar_dataset.py --manifest <manifesto> --source-dir tools/cnpj/sources --output-sql /tmp/cnpj-subset.sql --no-json --workers 0` — o script valida origem/checksum, expande as UFs e gera o subset normalizado.
 4. **Carregar/atualizar** as tabelas locais `cnpj_empresa` e `cnpj_estabelecimento` importando o SQL revisado no banco local; a carga mensal volumosa não deve ser commitada.
 5. **Incluir regiões novas**, se necessário: adicione a sigla em `ufs` para uma UF completa ou código/nome/UF em `municipiosInteresse` para uma cidade pontual; as duas formas compõem uma união.
@@ -58,7 +58,7 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 **Objetivo:** obter e indexar, local e reproduzivelmente, o subset de CNPJ dos municípios de interesse.
 
 **Entregáveis:**
-- `tools/cnpj/` com `README.md` (fontes, layout, licença, procedência) e script de ingestão reproduzível (download/fontes fixas + checksum, como `tools/idhm/`).
+- `../tools/cnpj` com `README.md` (fontes, layout, licença, procedência) e script de ingestão reproduzível (download/fontes fixas + checksum, como `../tools/idhm`).
 - Leitura dos arquivos **Empresas** e **Estabelecimentos** (encoding/layout oficiais), filtro por municípios de interesse (ex.: IBGE de Vitória/ES, Vila Velha/ES, Curitiba/PR) e estabelecimentos ativos.
 - Normalização (sem acento/minúsculas) de fantasia, razão social, logradouro e bairro; CEP só dígitos.
 - Saída determinística (ordenada) consumida pelo backend; teste do parser e da normalização.
@@ -104,7 +104,7 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 
 **Observações da revisão — análise e resolução:**
 
-- **Procede parcialmente — proveniência da antiga carga.** Os três CNPJs não eram sintéticos: as páginas oficiais do Coco Bambu publicam os mesmos números. Porém, o arquivo não havia sido gerado pelo snapshot RFB declarado e não podia ser tratado como subset mensal. Os registros foram removidos do runtime e movidos para `src/test/resources/cnpj/fixtures.sql`; `R__carregar_subset_cnpj.sql` agora é um placeholder explícito até ser regenerado com a competência oficial completa. O SQL produzido pela ferramenta registra competência, URLs e checksums no cabeçalho.
+- **Procede parcialmente — proveniência da antiga carga.** Os três CNPJs não eram sintéticos: as páginas oficiais do Coco Bambu publicam os mesmos números. Porém, o arquivo não havia sido gerado pelo snapshot RFB declarado e não podia ser tratado como subset mensal. Os registros foram removidos do runtime e movidos para `../src/test/resources/cnpj/fixtures.sql`; `R__carregar_subset_cnpj.sql` agora é um placeholder explícito até ser regenerado com a competência oficial completa. O SQL produzido pela ferramenta registra competência, URLs e checksums no cabeçalho.
 - **Procede — risco de permanência sem revalidação.** A V5 adiciona `cnpj_data_base`, remove os antigos registros bootstrap e limpa enriquecimentos que apontavam para eles. Em novas correspondências, o lead recebe a competência escolhida; quando a base ativa daquele município muda, `BuscaService` tenta corresponder novamente e limpa o CNPJ anterior se a nova competência não o confirmar.
 - **Aplicada — confiança da correspondência.** A pontuação aprovada passa a ser persistida em `cnpj_confianca` com quatro casas decimais e restrição entre 0 e 1. O campo permanece interno nesta etapa e só deverá entrar nos contratos caso uma decisão de produto o exija em CNPJ-03.
 
@@ -117,7 +117,7 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 **Entregáveis:**
 - `LeadResponse`/`PaginaLeadsResponse` com `cnpj` e `razaoSocial`; exportação CSV/XLSX com colunas CNPJ e Razão Social.
 - Frontend: campos opcionais no modelo; exibição no drawer (CNPJ formatado e razão social) quando presentes, com rotulagem neutra quando ausente.
-- `API.md` atualizado.
+- `../API.md` atualizado.
 
 **Critérios de aceite:**
 - Contratos e exportações refletem os novos campos; UI omite com neutralidade quando nulos.
@@ -132,12 +132,12 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 **Entregáveis:**
 - Backend `./mvnw test` e build; frontend `npm test` e `npm run build`.
 - Revisão ponta a ponta com leads conhecidos (Vitória/ES e Curitiba/PR) verificando CNPJ/razão social corretos da unidade.
-- Atualizar: `fluxo.md`, `HISTORICO_IMPLEMENTACOES.md`, `API.md` e este arquivo.
+- Atualizar: `../fluxo.md`, `../HISTORICO_IMPLEMENTACOES.md`, `../API.md` e este arquivo.
 
 **Critérios de aceite:**
 - Suítes e builds passam; documentação fiel ao comportamento real.
 
-**Resultado:** o backend passou com 154 testes e gerou o pacote executável; o frontend passou com 197 testes e build de produção sem warnings. A revisão integrada das unidades conhecidas usa as fixtures transacionais (exclusivas de teste) e confirma a resolução por unidade — Vitória/ES e Vila Velha/ES casam com CNPJs distintos e Curitiba/PR com o seu — sem chamadas à Receita em runtime. `fluxo.md`, `HISTORICO_IMPLEMENTACOES.md` (entrada 53), `API.md` e este arquivo foram sincronizados. A migration `R__carregar_subset_cnpj.sql` permanece como placeholder vazio: a resolução real de CNPJ passa a valer depois que esse arquivo for substituído pela saída revisada do `tools/cnpj` na ingestão mensal da competência RFB (passo a passo em "Custo e manutenção mensal").
+**Resultado:** o backend passou com 154 testes e gerou o pacote executável; o frontend passou com 197 testes e build de produção sem warnings. A revisão integrada das unidades conhecidas usa as fixtures transacionais (exclusivas de teste) e confirma a resolução por unidade — Vitória/ES e Vila Velha/ES casam com CNPJs distintos e Curitiba/PR com o seu — sem chamadas à Receita em runtime. `../fluxo.md`, `../HISTORICO_IMPLEMENTACOES.md` (entrada 53), `../API.md` e este arquivo foram sincronizados. A migration `R__carregar_subset_cnpj.sql` permanece como placeholder vazio: a resolução real de CNPJ passa a valer depois que esse arquivo for substituído pela saída revisada do `../tools/cnpj` na ingestão mensal da competência RFB (passo a passo em "Custo e manutenção mensal").
 
 ### CNPJ-05 — Exibir CNPJ no detalhe do histórico
 
@@ -146,14 +146,14 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 **Objetivo:** ao abrir uma busca no **Histórico**, exibir o CNPJ de cada estabelecimento logo **abaixo do endereço**, na coluna "Estabelecimento" do detalhe. Quando o CNPJ estiver `null` no banco, mostrar **"CNPJ não encontrado"**; quando existir, exibi-lo normalmente (formatado `00.000.000/0000-00`).
 
 **Contexto anterior (antes desta sprint):**
-- O detalhe do histórico (`frontend/src/app/features/historico/historico-detalhe-page.html`) renderizava por lead nome, categoria e `enderecoFormatado` na coluna "Estabelecimento".
+- O detalhe do histórico (`../frontend/src/app/features/historico/historico-detalhe-page.html`) renderizava por lead nome, categoria e `enderecoFormatado` na coluna "Estabelecimento".
 - O contrato desse endpoint ainda não expunha CNPJ: `BuscaDetalheResponse.LeadHistoricoResponse` (Java) não tinha `cnpj`, `BuscaService.toLeadHistoricoResponse` não o preenchia e `LeadHistoricoResponse` (TS, `busca.model.ts`) tampouco tinha o campo.
 - O `cnpj` deveria refletir o estado **atual** do `Lead` (não um snapshot da execução), como já acontecia com status/observações/último contato no histórico.
 
 **Entregáveis:**
 - Backend: adicionar `cnpj` em `BuscaDetalheResponse.LeadHistoricoResponse` e preencher em `BuscaService.toLeadHistoricoResponse` com `lead.getCnpj()`; atualizar construtores/assertions de testes que montam esse record.
 - Frontend: `cnpj?: string | null` em `LeadHistoricoResponse` (TS); na página de detalhe do histórico, linha abaixo do endereço com o CNPJ formatado quando presente e **"CNPJ não encontrado"** quando ausente/nulo, usando o util `formatarCnpj` já existente (`shared/utils/cnpj.ts`).
-- `API.md`: exemplo do detalhe de busca com o novo campo; notas de docs (`fluxo.md`, `HISTORICO_IMPLEMENTACOES.md` e este arquivo).
+- `../API.md`: exemplo do detalhe de busca com o novo campo; notas de docs (`../fluxo.md`, `../HISTORICO_IMPLEMENTACOES.md` e este arquivo).
 
 **Critérios de aceite:**
 - Lead do histórico com CNPJ persistido exibe o CNPJ formatado abaixo do endereço.
@@ -163,7 +163,7 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 
 **Resultado:** `GET /api/buscas/{id}` passou a expor o CNPJ atual do lead, e o detalhe do Histórico o apresenta abaixo do endereço com formatação ou fallback neutro. Os 18 testes backend diretamente afetados e os 8 testes da página passaram; a suíte frontend passou com 198 testes, e os builds backend e frontend concluíram sem warnings da aplicação. A suíte backend completa executou 154 testes, mas terminou com três falhas e três erros preexistentes, causados por dados persistidos no MySQL local e pela carga CNPJ local já populada enquanto testes de integração ainda esperam o placeholder vazio.
 
-### CNPJ-06 — Ingestão por UF inteira, rápida e leve (`tools/cnpj`)
+### CNPJ-06 — Ingestão por UF inteira, rápida e leve (`../tools/cnpj`)
 
 **Status: CONCLUÍDA E VALIDADA em 08/09/2026.**
 
@@ -171,7 +171,7 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 
 **Especificação funcional:**
 - Manifesto passa a aceitar também `"ufs": ["ES"]` (uma ou mais UFs), mantendo `municipiosInteresse` para recortes pontuais; pelo menos uma das duas formas; se ambas, é a união. Validação de UF com 2 letras.
-- Expansão de UF → municípios usando o mapeamento IBGE (código + nome + UF) já presente no projeto. **Decisão de independência:** gerar e versionar um CSV pequeno e dedicado (`tools/cnpj/municipios-ibge.csv`, 5.570 linhas, derivado de `src/main/resources/geo/municipios-idhm.json`) em vez de acoplar o tool ao artefato da feature IDHM; o CSV vira a fonte única de expansão.
+- Expansão de UF → municípios usando o mapeamento IBGE (código + nome + UF) já presente no projeto. **Decisão de independência:** gerar e versionar um CSV pequeno e dedicado (`../tools/cnpj/municipios-ibge.csv`, 5.570 linhas, derivado de `../src/main/resources/geo/municipios-idhm.json`) em vez de acoplar o tool ao artefato da feature IDHM; o CSV vira a fonte única de expansão.
 - Casar os nomes da Receita (`Municipios.zip`) com o mapeamento IBGE pela chave normalizada `(uf, nome sem acento)`; se algum município da UF não casar, falhar listando os divergentes para ajuste, nunca silenciar.
 
 **Otimizações (rápido e leve):**
@@ -183,7 +183,7 @@ O único trabalho recorrente é a **ingestão mensal manual** da base, feita por
 - **Artefatos leves:** flag `--no-json` para gerar só o SQL (evitar o JSON intermediário de dezenas de MB quando não for necessário); SQL em lotes e determinístico; documentar que a base carregada vive no banco e **não** é commitada mensalmente (o `R__` local de dezenas de MB fica fora do Git — ver política de artefatos).
 
 **Entregáveis:**
-- CSV `tools/cnpj/municipios-ibge.csv` + gerador/verificação (ou documento de origem) — leve, commitado.
+- CSV `../tools/cnpj/municipios-ibge.csv` + gerador/verificação (ou documento de origem) — leve, commitado.
 - Suporte a `ufs` no manifesto, expansão e filtro por UF no `gerar_dataset.py`; `README` atualizado com o fluxo mensal por UF.
 - Otimizações de hot path acima + micro-benchmark/smoke de carga com o recorte ES real registrando **tempo e pico de memória (RSS)**.
 - Testes Python: expansão de UF (ES → 78 municípios com IBGE correto), compatibilidade com `municipiosInteresse`, determinismo, UF inválida/inexistente, município sem registros e erro de nome divergente.
@@ -220,7 +220,7 @@ No Ryzen 7 5700X, com Python 3.14.7 e as 21 fontes locais completas de `2026-08-
   - **Refactor pequeno:** extrair o preenchimento confiável do lead em método reutilizado pela captura (`BuscaService`) e pelo novo serviço, sem mudar o comportamento atual (revalidação por mudança de base permanece como está).
 - Frontend: botão **"Buscar CNPJ"** no header do detalhe, ao lado de "Voltar ao histórico"; estados de carregando/sucesso/erro; ao concluir com sucesso, recarregar o detalhe para exibir os CNPJs encontrados (via CNPJ-05). Desabilitar enquanto roda.
 - Testes: serviço (ignora preenchido, encontra, sem correspondência, busca inexistente), controller HTTP (`200` resumo / `404`), integração com uma busca contendo lead sem CNPJ (resolve) e lead já preenchido (ignorado); spec da página (botão presente ao lado do voltar, chamada e estados).
-- Docs: `API.md` (endpoint + exemplo de resposta), `fluxo.md`, `HISTORICO_IMPLEMENTACOES.md` e este arquivo.
+- Docs: `../API.md` (endpoint + exemplo de resposta), `../fluxo.md`, `../HISTORICO_IMPLEMENTACOES.md` e este arquivo.
 
 **Critérios de aceite:**
 - Ao clicar em "Buscar CNPJ" numa busca com leads sem CNPJ (e base carregada para o município), os leads correspondidos passam a exibir CNPJ/razão social no detalhe após recarregar.

@@ -36,10 +36,10 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 ## Arquitetura alvo
 
 - Novo pacote `dev.jlm.leadshunter.geo` (ou `municipio`) no backend, com:
-  - carregador do dataset `src/main/resources/geo/municipios-idhm.json` (malha simplificada + IDHM + envelope bbox por município);
+  - carregador do dataset `../src/main/resources/geo/municipios-idhm.json` (malha simplificada + IDHM + envelope bbox por município);
   - `MunicipioService`: point-in-polygon offline com pré-filtro por bbox;
   - controller `GET /api/geografia/municipios?bbox=...` devolvendo GeoJSON FeatureCollection (código IBGE, nome, UF, idhm, referência e polígono) para a camada do mapa.
-- Dataset estático commitado no repositório (funciona offline e em testes); script de geração em `tools/idhm/` com procedência/licenças registradas.
+- Dataset estático commitado no repositório (funciona offline e em testes); script de geração em `../tools/idhm` com procedência/licenças registradas.
 - Frontend: util de classificação/cor de IDHM testável; camada Leaflet sob demanda com throttle no `moveend` e cache por célula do viewport.
 
 ---
@@ -53,8 +53,8 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 **Objetivo:** produzir e congelar o dataset base, reproduzível e licenciado.
 
 **Entregáveis:**
-- Script one-off em `tools/idhm/` que: baixa/consome IDHM 2010 por município (código IBGE, nome, UF, valor) e a malha municipal simplificada; faz o join por código IBGE; calcula envelope (bbox) e simplifica a geometria; grava `src/main/resources/geo/municipios-idhm.json`.
-- Arquivo de procedência e licenças junto ao script (`tools/idhm/README.md`).
+- Script one-off em `../tools/idhm` que: baixa/consome IDHM 2010 por município (código IBGE, nome, UF, valor) e a malha municipal simplificada; faz o join por código IBGE; calcula envelope (bbox) e simplifica a geometria; grava `../src/main/resources/geo/municipios-idhm.json`.
+- Arquivo de procedência e licenças junto ao script (`../tools/idhm/README.md`).
 - Checagem de licença das fontes de geometria; se não atender, fallback para simplificação própria da malha oficial IBGE.
 
 **Critérios de aceite:**
@@ -64,7 +64,7 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 
 **Fora de escopo:** qualquer ingestão automática em runtime (sem download no boot).
 
-**Resultado:** o gerador reproduzível em `tools/idhm/` combina os 5.571 registros do Atlas Cidade com as 5.570 geometrias municipais retornadas pela API oficial do IBGE. O artefato congelado contém 5.570 municípios, ocupa 3.709.696 bytes e possui SHA-256 `8c9ce54dff5eec54e7401ba2392e4305145edc4acb02c21388425393c6b56286`. Boa Esperança do Norte/MT (`5101837`) é a única diferença conhecida: não possui geometria na malha consumida nem IDHM 2010. As validações estrutural, de reprodutibilidade e point-in-polygon de Vitória/ES e Curitiba/PR passaram. Nenhuma carga ou chamada externa foi adicionada ao runtime da aplicação.
+**Resultado:** o gerador reproduzível em `../tools/idhm` combina os 5.571 registros do Atlas Cidade com as 5.570 geometrias municipais retornadas pela API oficial do IBGE. O artefato congelado contém 5.570 municípios, ocupa 3.709.696 bytes e possui SHA-256 `8c9ce54dff5eec54e7401ba2392e4305145edc4acb02c21388425393c6b56286`. Boa Esperança do Norte/MT (`5101837`) é a única diferença conhecida: não possui geometria na malha consumida nem IDHM 2010. As validações estrutural, de reprodutibilidade e point-in-polygon de Vitória/ES e Curitiba/PR passaram. Nenhuma carga ou chamada externa foi adicionada ao runtime da aplicação.
 
 ### IDHM-01 — Backend: modelo e enriquecimento do Lead
 
@@ -108,7 +108,7 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
   - valida 4 doubles finitos em ordem correta (senão `400` no padrão `ApiExceptionHandler`/`ApiErrorResponse`);
   - filtra municípios cujo envelope intersecta o bbox;
   - responde GeoJSON FeatureCollection com propriedades `codigoIbge`, `nome`, `uf`, `idhm`, `idhmReferencia` e `Geometry` simplificada.
-- `API.md` atualizado (endpoints e campos novos).
+- `../API.md` atualizado (endpoints e campos novos).
 
 **Critérios de aceite:**
 - `GET /api/leads`, `GET /api/leads/{id}` e exportações retornam/exportam os novos campos.
@@ -120,7 +120,7 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 **Resolução da revisão:**
 
 - **Teto de trabalho — válido e corrigido:** cada bbox pode retornar até 1.500 municípios. O serviço lê no máximo 1.501 candidatos e rejeita a consulta com `400 REQUISICAO_INVALIDA` antes de construir as geometrias quando o teto é excedido.
-- **Interseção geométrica exata — não adotada:** o entregável define explicitamente filtro pela interseção dos envelopes. O Leaflet desenha a geometria correta e o novo teto limita o pior payload; adicionar segmento × retângulo seria uma regra distinta, mais complexa e sem ganho visual. O trade-off ficou explícito em `API.md` e `fluxo.md`.
+- **Interseção geométrica exata — não adotada:** o entregável define explicitamente filtro pela interseção dos envelopes. O Leaflet desenha a geometria correta e o novo teto limita o pior payload; adicionar segmento × retângulo seria uma regra distinta, mais complexa e sem ganho visual. O trade-off ficou explícito em `../API.md` e `../fluxo.md`.
 - **MultiPolygon — válido e corrigido:** Sítio d'Abadia/GO (`5220702`) fixa em teste o tipo `MultiPolygon`, seus dois polígonos e os quatro níveis de coordenadas GeoJSON.
 - **Teste isolado do parser — válido e corrigido:** cobre espaços, limites geográficos, formato, componentes extras/ausentes, `NaN`, infinitos, inversão, área zero e estouro do tamanho máximo.
 - **Tipagem da geometria — válido e corrigido:** `PolygonGeometry` e `MultiPolygonGeometry` possuem coordenadas tipadas separadamente; `Geometry.coordinates` deixou de ser `Object`. `idhmReferencia` passou de `short` para `Short` no DTO público.
@@ -195,7 +195,7 @@ Planejamento detalhado em sprints para a feature de **IDHM**. As sprints **IDHM-
 - Backend: `./mvnw test` (se o ambiente continuar exigindo o javaagent do Byte Buddy para Java 25, usar o mesmo `-DargLine` documentado no fluxo) e build.
 - Frontend: `npm test` e `npm run build`.
 - Revisão manual ponta a ponta (busca com lead em Vitória/ES e Curitiba/PR; badge, drawer, exportação e camada no mapa).
-- Atualizar: `fluxo.md`, `HISTORICO_IMPLEMENTACOES.md`, `API.md` e este `refinamento.md` (estado real por sprint).
+- Atualizar: `../fluxo.md`, `../HISTORICO_IMPLEMENTACOES.md`, `../API.md` e este `refinamento.md` (estado real por sprint).
 
 **Critérios de aceite:**
 - Suítes backend e frontend passam; build sem warnings.

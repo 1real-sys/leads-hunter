@@ -106,7 +106,7 @@ Permitir que o usuário cadastre, pelo **frontend**, nomes/trechos de estabeleci
 
 ### BL-04 — Validação integrada e documentação
 
-**Status: CONCLUÍDO.** A suíte backend passou com 140 testes e gerou o JAR executável; a suíte frontend passou com 189 testes e build de produção. O fluxo HTTP integrado e o smoke de navegador cadastraram `Supermercados BH`, mantiveram apenas o alvo permitido, informaram um bloqueado e removeram o termo. A auditoria da nova rota não encontrou violações WCAG A/AA nem overflow em desktop ou mobile. `API.md`, `fluxo.md`, `HISTORICO_IMPLEMENTACOES.md` e este arquivo foram sincronizados; `refinamento.md` permaneceu inalterado.
+**Status: CONCLUÍDO.** A suíte backend passou com 140 testes e gerou o JAR executável; a suíte frontend passou com 189 testes e build de produção. O fluxo HTTP integrado e o smoke de navegador cadastraram `Supermercados BH`, mantiveram apenas o alvo permitido, informaram um bloqueado e removeram o termo. A auditoria da nova rota não encontrou violações WCAG A/AA nem overflow em desktop ou mobile. `../API.md`, `../fluxo.md`, `../HISTORICO_IMPLEMENTACOES.md` e este arquivo foram sincronizados; `refinamento.md` permaneceu inalterado.
 
 **Objetivo:** fechar com validações e registros.
 
@@ -114,7 +114,7 @@ Permitir que o usuário cadastre, pelo **frontend**, nomes/trechos de estabeleci
 - Backend: `./mvnw test` e build.
 - Frontend: `npm test` e `npm run build`.
 - Revisão ponta a ponta com "Supermercados BH" cadastrado.
-- Atualizar: `API.md`, `fluxo.md`, `HISTORICO_IMPLEMENTACOES.md` e este arquivo (estado por sprint). `refinamento.md` (IDHM) não é alterado.
+- Atualizar: `../API.md`, `../fluxo.md`, `../HISTORICO_IMPLEMENTACOES.md` e este arquivo (estado por sprint). `refinamento.md` (IDHM) não é alterado.
 
 **Critérios de aceite:**
 - Suítes backend/frontend e builds passam; documentação fiel ao comportamento real.
