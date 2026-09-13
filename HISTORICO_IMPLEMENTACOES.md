@@ -1057,7 +1057,7 @@ Foram adicionados testes de integração e um smoke E2E controlado para validar 
 
 ## 39. WhatsApp visível no card do Kanban — 05/09/2026
 
-O card de cada lead no Kanban passou a exibir o canal WhatsApp junto do telefone: o rótulo "WhatsApp" e o link manual "Abrir WhatsApp" aparecem ao lado direito do telefone sempre que o backend entrega `whatsappUrl` no `LeadResponse`. Antes, esse link só era visível no drawer de detalhes aberto ao clicar no nome do lead. Leads sem `whatsappUrl` continuam mostrando apenas o telefone, sem texto de indisponibilidade no card, e o drawer mantém o comportamento atual. O escopo anterior de `refinamento.md`, sobre validação de presença do número no WhatsApp via provedor oficial, foi descartado por decisão de produto; o documento passou a descrever esta feature. A mudança é exclusivamente de frontend e a suíte passou com 152 testes.
+O card de cada lead no Kanban passou a exibir o canal WhatsApp junto do telefone: o rótulo "WhatsApp" e o link manual "Abrir WhatsApp" aparecem ao lado direito do telefone sempre que o backend entrega `whatsappUrl` no `LeadResponse`. Antes, esse link só era visível no drawer de detalhes aberto ao clicar no nome do lead. Leads sem `whatsappUrl` continuam mostrando apenas o telefone, sem texto de indisponibilidade no card, e o drawer mantém o comportamento atual. O escopo anterior de `features-pos-mvp/refinamento.md`, sobre validação de presença do número no WhatsApp via provedor oficial, foi descartado por decisão de produto; o documento passou a descrever esta feature. A mudança é exclusivamente de frontend e a suíte passou com 152 testes.
 
 ### Arquivos envolvidos
 
@@ -1067,7 +1067,7 @@ Nenhum.
 
 **Modificados:**
 
-- `refinamento.md`
+- `features-pos-mvp/refinamento.md`
 - `frontend/src/app/features/kanban/lead-card.html`
 - `frontend/src/app/features/kanban/lead-card.scss`
 - `frontend/src/app/features/kanban/lead-card.spec.ts`
@@ -1094,7 +1094,7 @@ O processo registra procedência, licenças e checksums, não exige chave de API
 
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento.md`
+- `features-pos-mvp/refinamento.md`
 
 ---
 
@@ -1121,7 +1121,7 @@ Foi criada a migration V2 com as novas colunas e índices. Também foi disponibi
 
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento.md`
+- `features-pos-mvp/refinamento.md`
 - `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
 - `src/main/java/dev/jlm/leadshunter/lead/Lead.java`
 - `src/main/java/dev/jlm/leadshunter/lead/LeadRepository.java`
@@ -1156,7 +1156,7 @@ Na revisão final, o endpoint recebeu um teto de 1.500 municípios por resposta 
 - `API.md`
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento.md`
+- `features-pos-mvp/refinamento.md`
 - `src/main/java/dev/jlm/leadshunter/config/ApiExceptionHandler.java`
 - `src/main/java/dev/jlm/leadshunter/exportacao/ExportService.java`
 - `src/main/java/dev/jlm/leadshunter/geo/MunicipioDataset.java`
@@ -1186,7 +1186,7 @@ Também foi criado um util compartilhado com a classificação PNUD, as cores da
 
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento.md`
+- `features-pos-mvp/refinamento.md`
 - `frontend/src/app/features/kanban/lead-card.html`
 - `frontend/src/app/features/kanban/lead-card.scss`
 - `frontend/src/app/features/kanban/lead-card.spec.ts`
@@ -1216,7 +1216,7 @@ O carregamento consulta o endpoint geográfico somente quando a camada está ati
 
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento.md`
+- `features-pos-mvp/refinamento.md`
 - `frontend/src/app/core/api/api-routes.ts`
 - `frontend/src/app/features/busca/mapa-busca.html`
 - `frontend/src/app/features/busca/mapa-busca.scss`
@@ -1239,7 +1239,7 @@ A documentação passou a registrar o estado final das seis sprints, o uso exclu
 - `API.md`
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento.md`
+- `features-pos-mvp/refinamento.md`
 
 ---
 
@@ -1253,7 +1253,7 @@ O badge de IDHM do card do Kanban passou a expor a classificação de forma sem�
 
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento.md`
+- `features-pos-mvp/refinamento.md`
 - `frontend/src/app/features/kanban/lead-card.html`
 - `frontend/src/app/features/kanban/lead-card.scss`
 - `frontend/src/app/features/kanban/lead-card.spec.ts`
@@ -1270,7 +1270,7 @@ A camada coroplética passou a orientar o usuário quando o viewport é amplo de
 
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento.md`
+- `features-pos-mvp/refinamento.md`
 - `frontend/src/app/features/busca/mapa-busca.html`
 - `frontend/src/app/features/busca/mapa-busca.scss`
 - `frontend/src/app/features/busca/mapa-busca.spec.ts`
@@ -1288,7 +1288,7 @@ A configuração local deixou de conter valores sensíveis em texto puro. A senh
 
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento.md`
+- `features-pos-mvp/refinamento.md`
 - `src/main/resources/application.yml`
 
 ---
@@ -1332,7 +1332,7 @@ O fechamento incluiu testes de serviço, controller, persistência, interface e 
 - `API.md`
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento-blacklist-nomes.md`
+- `features-pos-mvp/refinamento-blacklist-nomes.md`
 - `src/main/java/dev/jlm/leadshunter/busca/BuscaResponse.java`
 - `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
 - `src/main/java/dev/jlm/leadshunter/config/ApiExceptionHandler.java`
@@ -1382,7 +1382,7 @@ A carga inicial e os testes confirmam CNPJs distintos para unidades da mesma red
 - `.gitignore`
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento-cnpj.md`
+- `features-pos-mvp/refinamento-cnpj.md`
 - `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
 - `src/main/java/dev/jlm/leadshunter/integracao/places/PlacesApiClient.java`
 - `src/main/java/dev/jlm/leadshunter/integracao/places/PlacesResponseMapper.java`
@@ -1414,7 +1414,7 @@ O SQL gerado pelo ingestor agora inclui competência, URLs e checksums no cabeç
 
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento-cnpj.md`
+- `features-pos-mvp/refinamento-cnpj.md`
 - `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
 - `src/main/java/dev/jlm/leadshunter/cnpj/CnpjEstabelecimentoRepository.java`
 - `src/main/java/dev/jlm/leadshunter/cnpj/CnpjService.java`
@@ -1448,7 +1448,7 @@ As exportações CSV e XLSX ganharam colunas para os dois dados. Valores ausente
 - `API.md`
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento-cnpj.md`
+- `features-pos-mvp/refinamento-cnpj.md`
 - `src/main/java/dev/jlm/leadshunter/exportacao/ExportService.java`
 - `src/main/java/dev/jlm/leadshunter/lead/LeadResponse.java`
 - `src/test/java/dev/jlm/leadshunter/exportacao/ExportServiceTest.java`
@@ -1465,7 +1465,7 @@ As exportações CSV e XLSX ganharam colunas para os dois dados. Valores ausente
 
 ## 53. Fechamento integrado do refinamento CNPJ — 08/09/2026
 
-O refinamento de CNPJ foi encerrado com validação integrada e documentação. A suíte backend passou com 154 testes e o pacote executável foi gerado; a suíte frontend passou com 197 testes e o build de produção terminou sem warnings. A revisão integrada das unidades conhecidas (exclusiva de teste) confirma que Vitória/ES e Vila Velha/ES resolvem CNPJs distintos e Curitiba/PR o seu, sem consulta à Receita em runtime. A migration repetível `R__carregar_subset_cnpj.sql` segue como placeholder vazio até ser substituída pela ingestão mensal revisada; `fluxo.md` e `refinamento-cnpj.md` registraram o estado final das sprints CNPJ-00 a CNPJ-04.
+O refinamento de CNPJ foi encerrado com validação integrada e documentação. A suíte backend passou com 154 testes e o pacote executável foi gerado; a suíte frontend passou com 197 testes e o build de produção terminou sem warnings. A revisão integrada das unidades conhecidas (exclusiva de teste) confirma que Vitória/ES e Vila Velha/ES resolvem CNPJs distintos e Curitiba/PR o seu, sem consulta à Receita em runtime. A migration repetível `R__carregar_subset_cnpj.sql` segue como placeholder vazio até ser substituída pela ingestão mensal revisada; `fluxo.md` e `features-pos-mvp/refinamento-cnpj.md` registraram o estado final das sprints CNPJ-00 a CNPJ-04.
 
 ### Arquivos envolvidos
 
@@ -1473,7 +1473,7 @@ O refinamento de CNPJ foi encerrado com validação integrada e documentação. 
 
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento-cnpj.md`
+- `features-pos-mvp/refinamento-cnpj.md`
 
 ---
 
@@ -1488,7 +1488,7 @@ O detalhe de uma busca histórica passou a incluir o CNPJ atual de cada lead. Na
 - `API.md`
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento-cnpj.md`
+- `features-pos-mvp/refinamento-cnpj.md`
 - `src/main/java/dev/jlm/leadshunter/busca/BuscaDetalheResponse.java`
 - `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
 - `src/test/java/dev/jlm/leadshunter/busca/BuscaControllerTest.java`
@@ -1518,7 +1518,7 @@ O processamento foi otimizado para descartar cedo os estabelecimentos fora do al
 
 - `HISTORICO_IMPLEMENTACOES.md`
 - `fluxo.md`
-- `refinamento-cnpj.md`
+- `features-pos-mvp/refinamento-cnpj.md`
 - `tools/cnpj/README.md`
 - `tools/cnpj/gerar_dataset.py`
 - `tools/cnpj/test_gerar_dataset.py`
@@ -1560,7 +1560,7 @@ Passaram 41 testes backend selecionados, 201 testes frontend, os dois builds e o
 - `API.md`
 - `fluxo.md`
 - `HISTORICO_IMPLEMENTACOES.md`
-- `refinamento-cnpj.md`
+- `features-pos-mvp/refinamento-cnpj.md`
 
 ---
 
@@ -1734,6 +1734,342 @@ Passaram 57 testes unitários direcionados e dois testes de integração JPA. O 
 - `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PlaywrightGooglePesquisaNavigator.java`
 - `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/UrlCandidatoCanonicalizer.java`
 - `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClientTest.java`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 62. Execução persistente e API da pesquisa inteligente — 12/09/2026
+
+Foram implementadas a INFO-01.4 e, após sua validação, a INFO-01.5. A pesquisa agora possui execução persistida relacionada à busca, com estados, datas, progresso, contadores e erro seguro. Uma trava na busca e uma restrição única no MySQL impedem duas execuções ativas para o mesmo histórico, devolvendo a execução existente aos pedidos concorrentes.
+
+O worker local processa um lote por vez e aceita apenas mais um aguardando, com limite padrão de 150 leads. A tarefa é enviada somente após confirmar a transação de criação; rollback libera a reserva. Cada resultado do lead e o progresso são gravados atomicamente em uma transação curta, sem acesso à internet dentro dela. No reinício da instância local, execuções incompletas são marcadas como interrompidas, preservando os resultados já salvos e permitindo nova tentativa manual.
+
+O POST de informações retorna 202 sem aguardar o lote; o GET recupera a execução ativa ou mais recente, inclusive falhas parciais e totais. Foram definidos retorno 204 para busca sem execução, 404 para busca inexistente, 400 para ID inválido e 429 para capacidade ou volume excedidos. As mensagens persistidas são predefinidas e não expõem HTML, credenciais ou exceções internas. Não houve alteração de frontend, acesso real ao Google, nova dependência ou mudança nos controles de intervalo/cooldown existentes.
+
+A INFO-01.4 passou em 22 testes direcionados e na geração do pacote antes do início da INFO-01.5. A validação final passou em 64 testes direcionados, incluindo um fluxo HTTP/JPA com worker real e fonte externa simulada. A suíte completa executou 258 testes: 251 passaram, um smoke opt-in foi ignorado e permaneceram as três falhas e três erros preexistentes de blacklist/CNPJ da base local. O pacote final foi gerado e o contexto iniciou com Flyway/schema V6 e Hibernate em validate.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/resources/db/migration/V6__criar_pesquisa_informacoes_execucao.sql`
+- `src/main/java/dev/jlm/leadshunter/busca/PesquisaInformacoesExecucao.java`
+- `src/main/java/dev/jlm/leadshunter/busca/PesquisaInformacoesStatus.java`
+- `src/main/java/dev/jlm/leadshunter/busca/PesquisaInformacoesErro.java`
+- `src/main/java/dev/jlm/leadshunter/busca/PesquisaInformacoesExecucaoRepository.java`
+- `src/main/java/dev/jlm/leadshunter/busca/PesquisaInformacoesExecucaoPersistencia.java`
+- `src/main/java/dev/jlm/leadshunter/busca/PesquisaInformacoesExecucaoResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/PesquisaInformacoesLimiteException.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesExecucaoService.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesProgresso.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesWorker.java`
+- `src/test/java/dev/jlm/leadshunter/busca/PesquisaInformacoesExecucaoJpaIntegrationTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaInformacoesWorkerTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaInformacoesControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/PesquisaInformacoesHttpIntegrationTest.java`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesService.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaRepository.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaLeadRepository.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaController.java`
+- `src/main/java/dev/jlm/leadshunter/config/ApiExceptionHandler.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/config/ApiExceptionHandlerTest.java`
+- `API.md`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 63. Acompanhamento da pesquisa inteligente no Histórico — 13/09/2026
+
+A INFO-01.6 adicionou o botão `Buscar informações` imediatamente após `Buscar CNPJ` no detalhe histórico, reutilizando os controles e os temas existentes. O contrato de início e consulta foi centralizado em `BuscaApi`, com resposta tipada no modelo compartilhado.
+
+Um store de Signals por tela controla início, progresso e conclusão, bloqueia cliques duplicados e consulta o servidor cinco segundos após cada resposta, sem sobreposição. Sair da rota ou trocar o identificador cancela apenas o acompanhamento local; retornar restaura a execução persistida. Falhas de comunicação exigem retomar o GET antes de liberar uma nova pesquisa, sem repetir POST automaticamente. Conclusão, falhas parciais e erro total possuem mensagens acessíveis e preservam o detalhe; a atualização final recarrega observações sem ocultar resultados, com recuperação manual se a recarga falhar.
+
+As observações preservam texto manual e quebras de linha. Somente URLs HTTP/HTTPS válidas, rotuladas dentro de blocos automáticos completos, viram links em nova aba com `noopener noreferrer`, sem interpretar HTML ou contornar a segurança do Angular. O parser é calculado somente quando os dados do detalhe mudam.
+
+Passaram 239 testes frontend, o build de produção sem warnings e o smoke de regressão com 28 requisições simuladas. Um novo smoke reproduz os estados da ação no Firefox e passou em 24 auditorias claro/escuro, desktop/mobile, sem overflow ou violações Axe WCAG A/AA. O Firefox foi executado fora do sandbox após falha de navegação no ambiente restrito. Não foram alterados backend, limites de acesso externo ou dependências; nenhuma pesquisa real no Google foi disparada nesta entrega. O fechamento integrado continua na INFO-01.7.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `frontend/src/app/features/historico/pesquisa-informacoes-store.ts`
+- `frontend/src/app/features/historico/pesquisa-informacoes-store.spec.ts`
+- `frontend/src/app/shared/utils/observacoes-pesquisa.ts`
+- `frontend/src/app/shared/utils/observacoes-pesquisa.spec.ts`
+- `frontend/scripts/pesquisa-informacoes-smoke.mts`
+
+**Modificados:**
+
+- `frontend/src/app/core/api/api-routes.ts`
+- `frontend/src/app/core/api/busca-api.ts`
+- `frontend/src/app/shared/models/busca.model.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.html`
+- `frontend/src/app/features/historico/historico-detalhe-page.scss`
+- `frontend/src/app/features/historico/historico-detalhe-page.spec.ts`
+- `frontend/scripts/mvp-flow-smoke.mjs`
+- `frontend/package.json`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 64. Validação integrada da pesquisa inteligente — 13/09/2026
+
+A INFO-01.7 ganhou um E2E opt-in que carrega o build Angular em Chromium e percorre o botão, servidor HTTP real, worker, parser/classificador e MySQL. A navegação do Google é substituída por fixtures HTML, permitindo comprovar o fluxo completo sem acessar APIs externas ou consumir cota. O teste verifica ambos os links, somente Instagram, somente site, ausência conclusiva, bloqueio, lead completo ignorado e isolamento entre históricos. Também confirma preservação das observações manuais, status, contato e scores, links seguros, cancelamento do polling ao sair e restauração ao retornar/recarregar. Os dados temporários são removidos exclusivamente pelos IDs criados pelo teste, após o worker terminar.
+
+O smoke público existente passou a usar fila, intervalo e cooldown conservadores e a emitir um diagnóstico seguro para distinguir resultados de bloqueio. Uma única consulta real foi bloqueada pelo Google, sem retry ou tentativa de evasão. O teste passou por reconhecer esse bloqueio; captura e precisão reais permanecem não validadas. Por isso a INFO-01.7 foi registrada como parcial e a sprint não recebeu status concluído.
+
+O E2E integrado passou. O pacote backend foi gerado com 104 testes direcionados aprovados; a suíte completa executou 259 testes, com 251 aprovados, três falhas e três erros preexistentes de CNPJ/blacklist e dois opt-in executados separadamente. Passaram os 35 testes frontend direcionados, os 239 testes completos, o build Angular sem warnings, o smoke de regressão com 28 requisições e 24 auditorias claro/escuro, desktop/mobile, sem overflow ou violações Axe WCAG A/AA. A documentação registra os comandos reproduzíveis e diferencia o sucesso simulado do aceite real pendente. Não houve mudança no comportamento de produção, nas dependências ou no schema.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaInformacoesE2eTest.java`
+- `src/test/resources/pesquisa/google-e2e-resultado.html`
+
+**Modificados:**
+
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebLiveTest.java`
+- `API.md`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 65. Fontes alternativas e isolamento dos testes da pesquisa inteligente — 13/09/2026
+
+Após autorização do usuário, a pesquisa passou a priorizar Google e tentar DuckDuckGo e Brave, nessa ordem, somente quando a fonte anterior apresenta falha técnica. Resultados válidos, inclusive vazios, não disparam fallback. O classificador conservador existente continua responsável por aceitar Instagram e site próprio, sem API paga, consumo de cota ou acesso aos sites/perfis candidatos.
+
+O navegador compartilhado mantém o intervalo global mínimo de 15 segundos também entre fontes diferentes. Bloqueios suspendem a fonte por uma hora; outras falhas técnicas, por cinco minutos. Fila ocupada não multiplica consultas. Hosts e páginas de entrada são fixos, desafios são interrompidos e os parsers das alternativas rejeitam formatos desconhecidos. Quando todas as fontes falham, as observações são preservadas e a execução informa indisponibilidade. O tempo de espera pelo navegador passou a considerar o intervalo conservador sem consumir o orçamento de navegação.
+
+As seis ocorrências preexistentes de CNPJ/blacklist na suíte completa foram resolvidas por isolamento do banco, sem mudar expectativas dos testes ou limpar dados reais. Um inicializador exclusivo do classpath de testes cria um catálogo MySQL aleatório por servidor/usuário na JVM, aplica Flyway, mantém Hibernate em validate e remove somente esse catálogo no encerramento normal. Sem permissão para criar o banco temporário, os testes falham sem recorrer à base da aplicação. O inicializador e seu registro não entram no JAR de produção.
+
+Passaram os 17 testes direcionados e os dois E2Es integrados: Google principal e fallback ao Brave com Google/DuckDuckGo bloqueados em simulação. O pacote completo passou com 269 testes, sendo 266 aprovados e três opt-in não habilitados. Um novo smoke público exige efetivamente ao menos um link classificado. Na execução controlada às 12:29, Google, DuckDuckGo e Brave bloquearam uma tentativa cada, com intervalo entre acessos; o teste terminou com erro de indisponibilidade e não houve novas consultas. A INFO-01.7 permanece parcial apenas quanto à comprovação de captura e precisão reais. Não houve alteração de UI, dependências ou migrations nesta rodada.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/FontePesquisaWeb.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaAlternativaHtmlParser.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebFallbackClient.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebFallbackClientTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaFallbackWebLiveTest.java`
+- `src/test/java/dev/jlm/leadshunter/support/IsolatedTestDatabaseInitializer.java`
+- `src/test/java/dev/jlm/leadshunter/support/IsolatedTestDatabaseInitializerTest.java`
+- `src/test/resources/META-INF/spring.factories`
+- `src/test/resources/pesquisa/duckduckgo-resultados.html`
+- `src/test/resources/pesquisa/brave-resultados.html`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClient.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PlaywrightGooglePesquisaNavigator.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaInformacoesE2eTest.java`
+- `API.md`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 66. Integração com a API do Brave Search na pesquisa inteligente — 13/09/2026
+
+Como Google, DuckDuckGo e Brave bloquearam o acesso automatizado por navegador, a pesquisa de site e Instagram passou a usar a API oficial do Brave Search como fonte principal. A mudança foi aprovada pelo usuário e elimina a dependência de Chromium e scraping para o caminho normal.
+
+`BravePesquisaApiClient` consulta `https://api.search.brave.com/res/v1/web/search` com `java.net.http.HttpClient`, timeout, `Accept: application/json`, o token `X-Subscription-Token` e leitura limitada do corpo. A resposta JSON é convertida em `GoogleResultadoWeb` (URL, título e resumo, com HTML removido por jsoup) e entregue ao classificador conservador existente, que continua decidindo Instagram e site próprio. Erros são mapeados para os mesmos tipos já usados pela feature: `429` vira bloqueio; `401/403/5xx`, indisponível; JSON inválido, formato inválido; timeout, timeout.
+
+`PesquisaWebGateway`, marcado como `@Primary`, escolhe a fonte ativa: a API do Brave quando `BRAVE_SEARCH_API_KEY` está configurada; o scraping `Google → DuckDuckGo → Brave` somente quando `PESQUISA_SCRAPING_HABILITADO=true`; e, sem nenhuma das duas, indisponibilidade segura, sem alterar observações. O Playwright permanece no projeto, porém desativado por padrão. As mensagens de erro passaram a ser neutras quanto ao provedor.
+
+A configuração foi adicionada em `application.yml` com a chave vinda de variável de ambiente e limites de timeout, resultados e resposta. Não houve dependência nova nem alteração de schema. Com o crédito gratuito do Brave (US$ 5/mês, ≈ 1.000 requisições) e as 2 consultas por lead mantidas, a cobertura é de cerca de 500 leads/mês.
+
+A suíte backend passou com 281 testes, zero falhas/erros e três opt-in não habilitados, incluindo os novos testes unitários do cliente Brave e do seletor de fonte. A verificação com a API real não foi executada por depender de uma chave que ainda será criada.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/BravePesquisaApiClient.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebGateway.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/BravePesquisaApiClientTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebGatewayTest.java`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebBloqueadaException.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebTimeoutException.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebIndisponivelException.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebFormatoInvalidoException.java`
+- `src/main/java/dev/jlm/leadshunter/busca/PesquisaInformacoesErro.java`
+- `src/main/resources/application.yml`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaInformacoesE2eTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaHtmlParserTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClientTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebLiveTest.java`
+- `API.md`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 67. Bing como fonte de scraping e correções no navegador da pesquisa — 13/09/2026
+
+Como o usuário preferiu não cadastrar cartão para a API do Brave, o Bing foi avaliado e integrado como fonte principal do scraping, sem chave. Um smoke controlado mostrou que o Bing responde `200` com resultados orgânicos, enquanto o Mojeek responde `403`. A API do Brave permanece disponível como opção quando `BRAVE_SEARCH_API_KEY` existir.
+
+`FontePesquisaWeb.BING` foi adicionado como primeira fonte; o parser agora seleciona `li.b_algo`, usa `h2 a` para título/link e decodifica o redirecionador `bing.com/ck/a?...&u=a1<base64url>` em URL real. A ordem do fallback passou a ser Bing → Google → DuckDuckGo → Brave. O `PesquisaWebGateway` escolhe o Brave quando há chave e, caso contrário, usa o scraping.
+
+Dois defeitos reais do navegador foram corrigidos durante a integração: URLs inválidas de sub-recursos do Bing quebravam `URI.create` no route handler e a exceção era tratada como formato inválido; e a leitura de `content()` podia falhar quando a página ainda navegava, passando a ter retry limitado. A espera por conteúdo também passou a reconhecer os seletores do Bing.
+
+A validação real, porém, não comprovou a captura: o Bing respondeu de forma geoviesada (resultados de Porto Seguro/BA para consultas de Sorocaba/SP), devolveu resultados ruidosos para nomes de estabelecimento e fechou a página sob consultas repetidas. O classificador conservador rejeitou os candidatos, como esperado. O smoke opt-in de captura do Bing foi removido por não ser confiável. A suíte completa passou com 284 testes, zero falhas/erros e quatro opt-in não habilitados, incluindo testes de parser do Bing e de ordem do fallback.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/test/resources/pesquisa/bing-resultados.html`
+- `src/test/resources/pesquisa/bing-sem-resultados.html`
+- `src/test/resources/pesquisa/bing-captcha.html`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaFontesCandidatasLiveTest.java`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/FontePesquisaWeb.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaAlternativaHtmlParser.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PlaywrightGooglePesquisaNavigator.java`
+- `src/main/resources/application.yml`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebFallbackClientTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaInformacoesE2eTest.java`
+- `API.md`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 68. Decisão final da fonte de pesquisa: Brave e scraping desativado — 13/09/2026
+
+O Bing foi medido em leads reais, somente leitura, e não se mostrou viável. Em seis leads de Castelo/ES, a captura foi de zero Instagram e zero site. O Bing devolveu resultados genéricos e idênticos para as consultas de Instagram e site, ignorando nome do estabelecimento, município e o operador `site:`. Não se trata de falha do parser nem do classificador: o buscador degrada a resposta para o cliente headless.
+
+Com isso, a API oficial do Brave Search passou a ser a fonte efetiva e `pesquisa-inteligente.scraping.habilitado` voltou ao padrão `false`. Sem `BRAVE_SEARCH_API_KEY`, a pesquisa responde indisponibilidade de forma rápida, em vez de executar consultas lentas que não retornam resultado. O código do Bing e o fallback Bing → Google → DuckDuckGo → Brave permanecem no projeto, desativados, para eventual reavaliação futura.
+
+As correções do navegador feitas durante a investigação foram mantidas: proteção contra URLs inválidas de sub-recursos e retry limitado na leitura do conteúdo durante navegação. Um diagnóstico opt-in somente leitura (`PesquisaBingLeadsReaisLiveTest`) foi adicionado para medir cobertura em leads reais sem persistir nada.
+
+A suíte completa passou com 285 testes, zero falhas/erros e cinco opt-in não habilitados. A comprovação da captura real continua pendente de configurar a chave do Brave.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaBingLeadsReaisLiveTest.java`
+
+**Modificados:**
+
+- `src/main/resources/application.yml`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `API.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 69. Validação real do Brave e consulta própria da API — 13/09/2026
+
+Com a chave do Brave configurada, a API respondeu corretamente, mas a consulta herdada do Google (aspas e operador `site:`) retornava zero resultados. O `BravePesquisaApiClient` passou a montar sua própria consulta, sem operadores do Google: `nome município UF` e `nome município UF instagram`. Também foi corrigido o parâmetro `search_lang`, que precisa ser `pt-br`; com `pt` a API devolvia `422` e o cliente classificava como indisponível.
+
+Na leitura de seis leads reais de Castelo/ES, a captura passou de zero para **dois Instagram e zero site**. A estratégia de consulta melhorou a cobertura, mas expôs falsos positivos: diretórios como `guiaja.net` e `supermercado.net.br` eram aceitos como site próprio porque o título continha o nome exato e o município. Para corrigir, o `ClassificadorUrlService` passou a exigir, para site próprio, que o domínio contenha algum token distintivo do nome do estabelecimento. Com isso os diretórios foram rejeitados.
+
+As duas capturas de Instagram são de nomes genéricos e a associação ainda precisa ser conferida; nomes muito genéricos seguem como principal risco de falso positivo. Foi adicionado um diagnóstico opt-in somente leitura (`PesquisaBraveLeadsReaisLiveTest`) para medir a captura em leads reais sem persistir nada. A suíte completa passou com 287 testes, zero falhas/erros e seis opt-in não habilitados.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaBraveLeadsReaisLiveTest.java`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/BravePesquisaApiClient.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlService.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/BravePesquisaApiClientTest.java`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 70. Cobertura e precisão da pesquisa inteligente com o Brave — 13/09/2026
+
+O usuário relatou que o lead "Supermercado Michel" (Castelo/ES) não era capturado, embora o Instagram `@supermercadomichel` exista e uma busca manual pelo nome o encontre. O trecho do resultado não trazia a cidade, e o classificador exigia o token distintivo como palavra separada, o que não reconhecia o handle concatenado.
+
+Três ajustes foram feitos. O `ClassificadorUrlService` passou a reconhecer handles e domínios concatenados, verificando se o identificador contém o token distintivo como subcadeia. Foi adicionado um conflito de localização: quando o trecho cita uma UF diferente da do lead, ou a UF do lead sem o município/bairro, o candidato não é corroborado apenas por nome e identificador, o que rejeita sites de outra cidade sem derrubar homônimos válidos. E o `PesquisaWebInternaService` passou a fazer uma segunda consulta de Instagram sem o município quando a primeira não encontra perfil aceitável.
+
+No lead real, o resultado passou a capturar `instagram.com/supermercadomichel` e o site de Curitiba foi rejeitado. A consulta extra só ocorre quando não há Instagram aceitável, mas pode aumentar o consumo do crédito mensal em lotes grandes. A suíte completa passou com 290 testes, zero falhas/erros e seis opt-in não habilitados. A associação de Instagram capturado em nomes genéricos ainda precisa ser conferida caso a caso.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaService.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaServiceTest.java`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 71. Refinamento da identidade dos candidatos na Brave Search API — 13/09/2026
+
+A pesquisa de informações passou a exigir confirmação independente do estabelecimento, evitando aceitar site ou Instagram apenas por nome e identificador semelhantes. O classificador conserva a pontuação existente, mas exige localização ou identificador forte, veta conflitos explícitos de município/UF, CNPJ e DDD e não usa query strings, bairro genérico ou nome de rua como comprovação de município. Telefone nacional/internacional e CNPJ são comparados em ocorrências completas, sem juntar números espalhados no texto. Sites precisam de relação entre nome e domínio-base inclusive para nomes genéricos; subdomínio de diretório não comprova site próprio. Perfis abreviados exigem identificador externo forte.
+
+O cliente Brave solicita até cinco trechos adicionais da mesma URL, limitados e sem HTML, e desativa correção ortográfica e operadores para preservar os nomes comerciais. Resposta fora do contrato deixa de poder virar ausência conclusiva. O serviço aproveita resultados de qualquer consulta para os dois tipos de link e mantém todos os candidatos ao avaliar a terceira consulta, impedindo que repetições ocultem homônimos ou conflitos. Não houve aumento do máximo de três consultas por lead, acesso aos sites/perfis, mudança de dependências, UI ou schema.
+
+O diagnóstico opt-in passou a espaçar cada chamada, falhar em erro técnico, ler o banco em modo somente leitura e salvar amostras temporárias sem credenciais para replay offline. Foram 40 chamadas reais: seis leads antes/depois, Michel e uma confirmação diagnóstica por telefone. Os trechos adicionais mostraram Viamão/RS para o site antes associado ao Oliveira de Castelo/ES e DDD 41 no perfil @supermercadomichel, enquanto o lead tem DDD 28. Essas associações foram recusadas; nenhuma URL dos sete leads teve confirmação suficiente nessa amostra. A consulta pelo telefone não trouxe evidência nova e não foi adicionada ao fluxo automático. Não houve alteração retroativa das observações.
+
+A suíte e o pacote passaram com 333 testes, 327 aprovados e seis opt-in não habilitados. Os dois cenários E2E de HTML simulado passaram após explicitar Brave real desativado e ajustar a expectativa de 12 para 14 navegações, contemplando as consultas condicionais já existentes. O fluxo de tela, HTTP, worker e persistência continuou validado sem consumo externo. A precisão geral e a cobertura não foram estimadas a partir dessa pequena amostra; o aceite amplo da INFO-01.7 continua parcial.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlPrecisaoTest.java`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/BravePesquisaApiClient.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/UrlCandidatoCanonicalizer.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/BravePesquisaApiClientTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaBraveLeadsReaisLiveTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaInformacoesE2eTest.java`
+- `API.md`
 - `features-pos-mvp/pesquisa-inteligente.md`
 - `fluxo.md`
 - `tecnologias.md`

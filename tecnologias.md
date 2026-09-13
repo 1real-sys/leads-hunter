@@ -12,7 +12,7 @@ O Leads Hunter é uma aplicação web local e single-user para prospecção de e
 | Frontend | Angular 22.1.4 + TypeScript 6.0.3 | Implementado |
 | Banco | MySQL + Flyway | Implementado para execução local |
 | Integração externa | Google Places API (New) | Implementada no backend |
-| Pesquisa web pública | Playwright Java 1.62.0 + Chromium headless + jsoup 1.23.2 | INFO-01.1 a INFO-01.3 implementadas; execução persistente e fluxo HTTP/UI ainda pendentes |
+| Pesquisa web pública | API oficial do Brave Search + `java.net.http.HttpClient`; scraping Playwright Java 1.62.0 + Chromium headless + jsoup 1.23.2 (desativado por padrão) | Fonte via `BRAVE_SEARCH_API_KEY`; Bing testado em leads reais e descartado por ignorar a consulta |
 | Mapa | Leaflet 1.9.4 + OpenStreetMap | Implementado |
 | Cache | Caffeine em memória | Implementado |
 | Rate limiting | Bucket4j 8.10.1 em memória | Implementado para chamadas à Google |
@@ -71,8 +71,9 @@ Não foi encontrada configuração ativa de virtual threads. Embora essa tecnolo
 | Caffeine | Cache local das respostas recentes da Google Places |
 | Bucket4j 8.10.1 | Limite local de chamadas externas |
 | Apache POI 5.5.1 | Geração de arquivos Excel `.xlsx` |
-| Playwright Java 1.62.0 | Renderização isolada da página pública do Google Search, sem API ou chave de pesquisa |
-| jsoup 1.23.2 | Extração de URL, título e resumo do HTML renderizado em DTOs internos |
+| API do Brave Search | Fonte da pesquisa de site/Instagram, via JSON e chave em variável de ambiente; consulta própria (`nome município UF`) e `search_lang=pt-br` |
+| Playwright Java 1.62.0 | Renderização isolada de páginas públicas no fallback de scraping, desativado por padrão |
+| jsoup 1.23.2 | Extração de URL, título e resumo do HTML renderizado e limpeza de HTML no JSON do Brave |
 | Jackson | Serialização JSON e leitura do dataset geográfico |
 | Lombok | Geração seletiva de getters, setters, construtores e logger |
 | Spring Boot DevTools | Recarga e apoio ao desenvolvimento local |
@@ -103,6 +104,8 @@ A arquitetura segue o fluxo Controller → Service → Repository/integração. 
 | `GET /api/buscas` | Listar o histórico |
 | `GET /api/buscas/{id}` | Consultar uma busca anterior |
 | `POST /api/buscas/{id}/cnpj` | Reprocessar CNPJ dos leads ainda sem correspondência |
+| `POST /api/buscas/{id}/informacoes` | Iniciar a pesquisa inteligente em segundo plano e retornar 202 |
+| `GET /api/buscas/{id}/informacoes` | Recuperar estado, progresso e resumo da execução ativa/mais recente |
 | `GET /api/leads` | Listar e filtrar leads |
 | `GET /api/leads/pagina` | Paginar uma etapa do Kanban |
 | `GET /api/leads/{id}` | Consultar um lead |
@@ -131,11 +134,12 @@ A arquitetura segue o fluxo Controller → Service → Repository/integração. 
 - `busca`: parâmetros, totais e data de cada pesquisa.
 - `leads`: estabelecimento deduplicado, classificação, dados comerciais, geografia e CNPJ.
 - `busca_lead`: associação N:N com score, temperatura e instante daquela busca.
+- `pesquisa_informacoes_execucao`: execução da pesquisa inteligente, estado, datas, progresso, resumo e erro seguro; no máximo uma execução ativa por busca.
 - `nome_bloqueado`: termos da blacklist e sua forma normalizada única.
 - `cnpj_empresa`: CNPJ básico, razão social e competência da base.
 - `cnpj_estabelecimento`: unidade de 14 dígitos, endereço, município, situação cadastral e competência.
 
-Existem migrations versionadas de `V1` a `V5` e uma migration repetível para a carga CNPJ. A migration repetível versionada é apenas um placeholder seguro; a carga mensal volumosa real é gerada localmente e não deve ser commitada.
+Existem migrations versionadas de `V1` a `V6` e uma migration repetível para a carga CNPJ. A migration repetível versionada é apenas um placeholder seguro; a carga mensal volumosa real é gerada localmente e não deve ser commitada.
 
 ## Frontend
 
@@ -369,8 +373,10 @@ Para manter o modelo local com segurança, a configuração deve voltar a usar `
 
 - O MVP, o frontend FE-00 a FE-17, a melhoria FE-100, IDHM, blacklist e CNPJ-00 a CNPJ-07 estão documentados como concluídos em seus respectivos escopos.
 - O dark mode está concluído da DM-01.1 à DM-01.8, incluindo Leaflet, testes, smoke E2E e auditoria visual/acessível nos dois temas e viewports.
+- INFO-01.1 a INFO-01.6 estão concluídas com navegador headless, classificação conservadora, execução persistida (migration V6), endpoints REST e botão no Histórico. O worker usa uma thread e uma posição de espera, despacho após commit, limite padrão de 150 leads e progresso atômico com cada resultado. Reinício marca execuções ativas como interrompidas; o modelo pressupõe uma instância local. O frontend usa Signals por tela, polling cinco segundos após cada resposta, restauração por GET e links seguros nas observações. A INFO-01.7 adicionou fallback Google → DuckDuckGo → Brave em falha técnica, parsers isolados e dois E2Es com Angular/HTTP/worker/MySQL reais e HTML simulado, aprovados. O navegador mantém intervalo global de 15 segundos, pausa de uma hora por fonte bloqueada e cinco minutos após outra falha técnica, sem evasão. A suíte completa e o pacote passaram com 266 testes aprovados e três opt-in; o banco temporário por JVM resolveu a interferência da base CNPJ/blacklist e não entra no JAR de produção. Sem novas dependências. Em 13/09/2026, a API oficial do Brave Search passou a ser a fonte efetiva, consumida por `java.net.http.HttpClient` com `BRAVE_SEARCH_API_KEY`, timeout e leitura limitada. O scraping Bing → Google → DuckDuckGo → Brave foi testado e desativado por padrão: o Bing respondeu de forma genérica e ignorou a consulta em leads reais. Dois defeitos do navegador foram corrigidos (URI inválida de sub-recursos e leitura durante navegação). A suíte completa passou com 285 testes, zero falhas/erros e cinco opt-in não habilitados. A captura real ainda depende de configurar a chave do Brave.
 - A migration repetível de CNPJ no Git continua vazia por desenho; é preciso gerar e revisar uma carga mensal para uso com dados reais.
-- A suíte completa do backend precisa ter suas fixtures isoladas da carga CNPJ local para voltar a passar integralmente em uma máquina com a base populada.
+- Atualização da pesquisa Brave: a chave está configurada e a API foi exercitada. O refinamento solicita trechos extras limitados da mesma URL e desativa correção ortográfica/operadores. A classificação exige identidade corroborada, rejeita conflitos locais/CNPJ/DDD e reutiliza os candidatos entre consultas, mantendo o limite de três por lead. Foram 40 chamadas de diagnóstico sem escrita nos leads; a amostra não confirmou URLs com segurança e identificou associações anteriores indevidas ou insuficientes. Não há aumento de dependências nem acesso aos perfis/sites candidatos.
+- O isolamento do banco já está implementado com catálogo MySQL temporário. A suíte e o pacote passaram com 333 testes, 327 aprovados e seis opt-in, sem falhas/erros.
 - A configuração sensível local precisa voltar a variáveis de ambiente antes de qualquer commit ou compartilhamento.
 - Não existe infraestrutura de produção; o sistema deve ser tratado como ferramenta local e projeto de portfólio.
 

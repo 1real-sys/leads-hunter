@@ -12,6 +12,7 @@ Esta documentação descreve somente a API REST existente no backend atual.
 - **Paginação:** `GET /api/leads/pagina` possui paginação por status para o Kanban. As demais listagens e exportações continuam processando todos os registros que correspondem aos filtros.
 - **Rate limiting:** existe apenas sobre chamadas externas reais à Google Places feitas durante `POST /api/buscas`. Por padrão, o bucket em memória permite 10 chamadas e repõe essa capacidade gradualmente em 60 segundos. Um resultado atendido pelo cache não consome o limite. Os demais endpoints não possuem rate limiting próprio.
 - **Cache de buscas:** o resultado externo da Google é mantido em memória por 30 minutos, com até 100 entradas por padrão. A chave considera latitude e longitude arredondadas para quatro casas decimais, raio e categorias distintas ordenadas; `enderecoBase` não participa da chave. Mesmo em cache hit, uma nova busca e seus vínculos com leads são persistidos.
+- **Pesquisa inteligente:** tem worker próprio, uma execução em processamento e uma aguardando, limite padrão de 150 leads e bloqueio de duplicatas por busca. A fonte é a API oficial do Brave Search (`BRAVE_SEARCH_API_KEY`). O scraping Bing → Google → DuckDuckGo → Brave permanece no código, desativado por padrão. Sem chave, a pesquisa retorna indisponível. Não consome API da Google nem Places.
 
 ## Formato padrão dos erros
 
@@ -47,6 +48,7 @@ Os códigos atualmente previstos são:
 | `LEAD_NAO_ENCONTRADO` | 404 | O ID de lead não existe. |
 | `BLOQUEIO_NAO_ENCONTRADO` | 404 | O ID de bloqueio não existe. |
 | `GOOGLE_PLACES_RATE_LIMIT` | 429 | O limite local temporário de chamadas externas foi atingido. |
+| `PESQUISA_LIMITE_EXCEDIDO` | 429 | Worker indisponível/ocupado ou busca acima do limite configurado de leads. Nenhuma nova execução é criada. |
 | `GOOGLE_PLACES_QUOTA_EXCEEDED` | 429 | A Google informou que a cota externa foi excedida. |
 | `GOOGLE_PLACES_INVALID_RESPONSE` | 502 | A resposta externa não pôde ser interpretada com segurança. |
 | `GOOGLE_PLACES_REQUEST_REJECTED` | 502 | A Google rejeitou a consulta com outro erro HTTP 4xx. |
@@ -101,6 +103,87 @@ Cadastra um termo e retorna o registro persistido com `201 Created`.
 Remove o termo identificado pelo ID e retorna `204 No Content`. O bloqueio deixa de valer nas próximas buscas; leads que já existem permanecem inalterados. Um ID inexistente retorna `404 BLOQUEIO_NAO_ENCONTRADO`, e um valor que não pode ser convertido para `Long` retorna `400 REQUISICAO_INVALIDA`.
 
 # Buscas
+
+## POST /api/buscas/{id}/informacoes
+
+Inicia manualmente a pesquisa de Instagram e site próprio somente dos leads vinculados à busca. Recebe ID positivo no caminho, sem body. Retorna `202 Accepted`, `Cache-Control: no-store`, `Location: /api/buscas/{id}/informacoes` e o DTO da execução persistida, sem aguardar o acesso à internet.
+
+```json
+{
+  "id": 42,
+  "buscaId": 10,
+  "status": "PENDENTE",
+  "criadoEm": "2026-09-12T14:00:00",
+  "iniciadoEm": null,
+  "atualizadoEm": "2026-09-12T14:00:00",
+  "terminadoEm": null,
+  "totalLeads": 25,
+  "progresso": 0,
+  "processados": 0,
+  "ignoradosJaCompletos": 0,
+  "comInstagram": 0,
+  "comSite": 0,
+  "comAmbos": 0,
+  "semInformacoes": 0,
+  "falhas": 0,
+  "erroCodigo": null,
+  "erroMensagem": null
+}
+```
+
+Pedidos concorrentes para a mesma busca retornam a execução ativa com `202`, sem criar outra varredura. Quando ela termina, um novo POST pode criar nova execução. Leads cujo bloco automático já contenha os dois links válidos são ignorados. Observações manuais são preservadas; falha técnica não equivale a ausência de resultado.
+
+O executor admite uma execução em processamento e uma em espera. O limite padrão é de 150 leads vinculados à busca, ajustável por `pesquisa-inteligente.execucao.max-leads` entre 1 e 1000. Acima do limite ou sem capacidade local, retorna `429 PESQUISA_LIMITE_EXCEDIDO`; o pedido não cria registro nem é reenfileirado automaticamente. A execução ativa da mesma busca é retornada mesmo quando todas as vagas estão ocupadas.
+
+## GET /api/buscas/{id}/informacoes
+
+Retorna `200 OK` com o mesmo DTO, escolhendo a execução ativa ou, na ausência dela, a mais recente por ID. Uma busca existente sem execução retorna `204 No Content`. As respostas usam `Cache-Control: no-store`. A consulta não inicia pesquisa nem acessa a fonte externa.
+
+`progresso` é a quantidade de leads contabilizados: `processados + ignoradosJaCompletos + falhas`, não um percentual. `processados` conta resultados conclusivos, inclusive ausência; `comInstagram` e `comSite` incluem os casos com ambos. Os contadores de links se referem aos leads processados, não aos ignorados. Após bloqueio/circuito aberto, leads restantes sem os dois links são contabilizados como falhas sem novo acesso externo.
+
+Estados:
+
+| Estado | Significado |
+| --- | --- |
+| `PENDENTE` | Registro confirmado, aguardando o worker local. |
+| `EM_ANDAMENTO` | Progresso persistido após cada lead. |
+| `CONCLUIDA` | Todos contabilizados sem falhas, inclusive busca vazia. |
+| `CONCLUIDA_COM_FALHAS` | Há falhas e ao menos um resultado conclusivo ou lead já completo. |
+| `FALHA` | Falha total, erro inesperado ou interrupção da aplicação. Pode preservar progresso parcial. |
+
+O GET de uma execução com falha continua retornando `200`: a consulta ao recurso funcionou; a falha do trabalho aparece em `status`, `erroCodigo` e `erroMensagem`. Não é possível alterar retroativamente o HTTP `202` após o worker iniciar.
+
+| `erroCodigo` persistido | Situação |
+| --- | --- |
+| `PESQUISA_BLOQUEADA` | Limite de requisições/bloqueio da fonte; interrompe novas consultas do lote. |
+| `PESQUISA_TIMEOUT` | Tempo limite excedido. |
+| `PESQUISA_FORMATO_INVALIDO` | Resposta de pesquisa não reconhecida. |
+| `PESQUISA_INDISPONIVEL` | Falha de rede ou indisponibilidade externa. |
+| `PESQUISA_OCUPADA` | Fila local indisponível ou rejeição no despacho. |
+| `PESQUISA_INTERROMPIDA` | Reinício/encerramento interrompeu o trabalho. |
+| `PESQUISA_ERRO_INTERNO` | Não foi possível concluir por falha interna. |
+
+O erro registrado é o último erro técnico identificado; mensagens são predefinidas, sem HTML, SQL, credenciais ou exceções internas. Resultados já confirmados permanecem salvos. No reinício, execuções pendentes/em andamento viram `FALHA/PESQUISA_INTERROMPIDA`; não são retomadas automaticamente. Esse mecanismo pressupõe uma única instância local da aplicação.
+
+Ambas as rotas retornam `404 BUSCA_NAO_ENCONTRADA` para busca inexistente; IDs não numéricos retornam `400 REQUISICAO_INVALIDA`, e IDs zero/negativos retornam `400 VALIDACAO_INVALIDA`. Falhas inesperadas ao atender o HTTP usam `500 ERRO_INTERNO`, conforme o contrato centralizado. A pesquisa não exige autenticação no estágio local atual do projeto.
+
+### Acompanhamento no Histórico e evidência integrada
+
+Ao abrir `/historico/:id`, o frontend consulta o estado persistido antes de liberar `Buscar informações`. Enquanto houver execução ativa, agenda o próximo GET cinco segundos após a resposta anterior, sem sobreposição, com timeout de 15 segundos por requisição. Sair da tela interrompe somente esse acompanhamento, não o worker. Reabrir recupera a execução ativa ou o último resultado.
+
+Erro de comunicação não significa que o POST falhou antes de iniciar o trabalho: a tela exige `Retomar acompanhamento` via GET, sem repetir automaticamente o POST. Conclusão recarrega o detalhe para exibir as observações persistidas; falhas parciais/totais e erro na recarga preservam os resultados já visíveis. URLs HTTP/HTTPS válidas e rotuladas dentro do bloco automático completo viram links em nova aba, sem interpretar HTML manual.
+
+Em 13/09/2026, `PesquisaInformacoesE2eTest` validou o botão Angular, HTTP real, worker, parser/classificador e MySQL juntos, simulando apenas a navegação externa com HTML local. Cobriu ambos os links, somente Instagram, somente site, ausência conclusiva, bloqueio, lead já completo, isolamento entre históricos e saída/retorno à rota. Não houve interação com `PlacesApiClient`.
+
+Após autorização, o fluxo passou a tentar Google → DuckDuckGo → Brave. Somente bloqueio, timeout, indisponibilidade ou formato inválido acionam a próxima fonte. Resultado conclusivo vazio não dispara fallback, e fila local ocupada não multiplica trabalho. O mesmo classificador conservador valida os candidatos; nenhum perfil/site candidato é acessado. Se todas as fontes estiverem indisponíveis, o lead entra em falhas com `PESQUISA_INDISPONIVEL`, sem alterar suas observações nem gravar ausência conclusiva. Fontes em cooldown são puladas sem acesso à rede. Os códigos HTTP e o DTO não mudaram.
+
+Em 13/09/2026, a **API oficial do Brave Search** passou a ser a fonte efetiva. `BravePesquisaApiClient` chama `GET https://api.search.brave.com/res/v1/web/search` com `X-Subscription-Token`, `country=BR`, `search_lang=pt-br`, timeout e leitura limitada. São duas consultas iniciais (`nome município UF` e `nome município UF instagram`) e, apenas se necessário, uma terceira de Instagram sem município. Os candidatos de todas as consultas são aproveitados para ambos os tipos, preservando a análise de ambiguidades e conflitos. O cliente solicita até cinco trechos extras por URL e desativa correção ortográfica, operadores e decoração de texto. Nome/handle iguais não bastam: a aceitação exige localização independente ou identificador forte. Divergências explícitas de município/UF, CNPJ e DDD não podem ser ocultadas por repetições do resultado; DDD admite confirmação por CNPJ/Place ID. Domínio-base precisa ter relação com o nome, inclusive genérico. Não há navegação a candidatos nem mudanças nos DTOs REST.
+
+O scraping Bing → Google → DuckDuckGo → Brave permanece disponível apenas com `PESQUISA_SCRAPING_HABILITADO=true`. Sem chave e sem scraping, a execução retorna `PESQUISA_INDISPONIVEL`. Na API Brave: `429` → `PESQUISA_BLOQUEADA`; `401/403/5xx` → `PESQUISA_INDISPONIVEL`; JSON inválido ou fora do contrato → `PESQUISA_FORMATO_INVALIDO`; timeout → `PESQUISA_TIMEOUT`. Falha técnica preserva observações, sem gravar ausência conclusiva.
+
+O refinamento foi medido com 40 chamadas reais somente leitura, em sete leads e consultas controladas, além de replay local. As novas evidências revelaram endereço em Viamão/RS para um site antes associado a Castelo/ES e DDD divergente para um Instagram. Nenhuma URL da amostra foi suficientemente corroborada; não se trata de indisponibilidade da API nem prova de inexistência dos perfis. As observações antigas não foram corrigidas retroativamente. O pacote passou com 327 testes aprovados e seis opt-in não habilitados.
+
+Na verificação controlada de 13/09/2026 às 12:29, as três fontes bloquearam o acesso, com uma tentativa por fonte e sem retry. O novo smoke de captura real falhou corretamente: captura e precisão reais **não** foram comprovadas. A suíte automatizada e o pacote agora passam em MySQL temporário isolado; comandos e a pendência externa restante estão na INFO-01.7 de `features-pos-mvp/pesquisa-inteligente.md`.
 
 ## POST /api/buscas
 
