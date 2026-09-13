@@ -7,12 +7,26 @@ import {
   BuscaRequest,
   BuscaResponse,
   BuscaResumoResponse,
+  PesquisaInformacoesExecucaoResponse,
 } from '../../shared/models/busca.model';
 import { API_ROUTES } from './api-routes';
 
 @Service()
 export class BuscaApi {
   private readonly http = inject(HttpClient);
+
+  buscarInformacoes(id: number): Observable<PesquisaInformacoesExecucaoResponse> {
+    return this.http.post<PesquisaInformacoesExecucaoResponse>(
+      API_ROUTES.buscaInformacoes(id),
+      null,
+    );
+  }
+
+  consultarInformacoes(id: number): Observable<PesquisaInformacoesExecucaoResponse | null> {
+    return this.http.get<PesquisaInformacoesExecucaoResponse | null>(
+      API_ROUTES.buscaInformacoes(id),
+    );
+  }
 
   criar(request: BuscaRequest): Observable<BuscaResponse> {
     return this.http.post<BuscaResponse>(API_ROUTES.buscas, request);

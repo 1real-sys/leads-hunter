@@ -6,7 +6,10 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { API_ROUTES } from '../../core/api/api-routes';
 import { ApiErrorResponse } from '../../shared/models/api-error-response.model';
-import { BuscaDetalheResponse } from '../../shared/models/busca.model';
+import {
+  BuscaDetalheResponse,
+  PesquisaInformacoesExecucaoResponse,
+} from '../../shared/models/busca.model';
 import { HistoricoDetalhePage } from './historico-detalhe-page';
 
 const DETALHE: BuscaDetalheResponse = {
@@ -50,6 +53,32 @@ const DETALHE: BuscaDetalheResponse = {
   ],
 };
 
+const EXECUCAO: PesquisaInformacoesExecucaoResponse = {
+  id: 90,
+  buscaId: 42,
+  status: 'EM_ANDAMENTO',
+  criadoEm: '2026-09-13T01:00:00',
+  iniciadoEm: '2026-09-13T01:00:00',
+  atualizadoEm: '2026-09-13T01:00:00',
+  terminadoEm: null,
+  totalLeads: 2,
+  progresso: 0,
+  processados: 0,
+  ignoradosJaCompletos: 0,
+  comInstagram: 0,
+  comSite: 0,
+  comAmbos: 0,
+  semInformacoes: 0,
+  falhas: 0,
+  erroCodigo: null,
+  erroMensagem: null,
+};
+
+const OBSERVACOES =
+  'Retornar amanhã. <img src=x onerror=alert(1)>\nhttps://manual.example/\n\n' +
+  '--- Pesquisa inteligente ---\nInstagram:\nhttps://www.instagram.com/padaria\n\n' +
+  'Site próprio:\nhttps://padaria.example/\n--- Fim da pesquisa inteligente ---';
+
 describe('HistoricoDetalhePage', () => {
   let harness: RouterTestingHarness;
   let httpTesting: HttpTestingController;
@@ -66,7 +95,186 @@ describe('HistoricoDetalhePage', () => {
     harness = await RouterTestingHarness.create();
   });
 
-  afterEach(() => httpTesting.verify());
+  afterEach(() => {
+    // Os cenários anteriores à INFO-01.6 não têm pesquisa em andamento.
+    httpTesting.match(API_ROUTES.buscaInformacoes(42)).forEach((request) => {
+      expect(request.request.method).toBe('GET');
+      request.flush(null, { status: 204, statusText: 'No Content' });
+    });
+    httpTesting.verify();
+  });
+
+  function botaoInformacoes(): HTMLButtonElement {
+    return harness.routeNativeElement!.querySelector('[data-testid="buscar-informacoes"]')!;
+  }
+
+  it('posiciona Buscar informações após CNPJ, aguarda restauração e impede POST duplicado', async () => {
+    const page = await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    expect(botaoInformacoes().disabled).toBe(true);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    await harness.fixture.whenStable();
+    expect(botaoInformacoes().disabled).toBe(true);
+    httpTesting
+      .expectOne(API_ROUTES.buscaInformacoes(42))
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await harness.fixture.whenStable();
+    expect(
+      [...harness.routeNativeElement!.querySelectorAll('.historico-detalhe__actions > *')].map(
+        (elemento) => elemento.textContent?.trim(),
+      ),
+    ).toEqual(['Voltar ao histórico', 'Buscar CNPJ', 'Buscar informações']);
+    botaoInformacoes().click();
+    page['buscarInformacoes']();
+    await harness.fixture.whenStable();
+    expect(botaoInformacoes().disabled).toBe(true);
+    expect(botaoInformacoes().textContent).toContain('Buscando informações…');
+    const request = httpTesting.expectOne(API_ROUTES.buscaInformacoes(42));
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toBeNull();
+    request.flush({ ...EXECUCAO, status: 'PENDENTE' });
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.textContent).toContain('Aguardando a vez de pesquisar');
+    expect(harness.routeNativeElement?.querySelector('[role="status"]')?.textContent).toContain(
+      '0 de 2 leads',
+    );
+  });
+
+  it('restaura execução ativa ao abrir e atualiza observações ao concluir com falha parcial', async () => {
+    const page = await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    httpTesting.expectOne(API_ROUTES.buscaInformacoes(42)).flush({ ...EXECUCAO, progresso: 1 });
+    await harness.fixture.whenStable();
+    expect(botaoInformacoes().disabled).toBe(true);
+    expect(harness.routeNativeElement?.textContent).toContain('1 de 2 leads');
+    page['pesquisa'].retomar();
+    httpTesting.expectOne(API_ROUTES.buscaInformacoes(42)).flush({
+      ...EXECUCAO,
+      status: 'CONCLUIDA_COM_FALHAS',
+      progresso: 2,
+      processados: 1,
+      comInstagram: 1,
+      comSite: 1,
+      comAmbos: 1,
+      falhas: 1,
+    });
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush({
+      ...DETALHE,
+      leads: [{ ...DETALHE.leads[0], observacoes: OBSERVACOES }, DETALHE.leads[1]],
+    });
+    await harness.fixture.whenStable();
+    expect(botaoInformacoes().disabled).toBe(false);
+    expect(harness.routeNativeElement?.textContent).toContain('Busca de informações concluída');
+    expect(harness.routeNativeElement?.textContent).toContain(
+      '1 de 2 leads não puderam ser pesquisados',
+    );
+    expect(harness.routeNativeElement?.textContent).toContain('1 com ambos');
+    const observacoes = harness.routeNativeElement!.querySelector(
+      '.historico-detalhe__observacoes',
+    )!;
+    expect(observacoes.textContent).toBe(OBSERVACOES);
+    expect(observacoes.querySelectorAll('a')).toHaveLength(2);
+    expect(observacoes.querySelector('img')).toBeNull();
+    for (const link of observacoes.querySelectorAll('a')) {
+      expect(link.target).toBe('_blank');
+      expect(link.rel).toBe('noopener noreferrer');
+    }
+  });
+
+  it.each(['CONCLUIDA', 'FALHA'] as const)(
+    'restaura resultado %s ao voltar e permite nova tentativa',
+    async (status) => {
+      await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+      httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+      httpTesting.expectOne(API_ROUTES.buscaInformacoes(42)).flush({
+        ...EXECUCAO,
+        status,
+        progresso: 2,
+        falhas: status === 'FALHA' ? 2 : 0,
+        erroMensagem: status === 'FALHA' ? 'A execução foi interrompida.' : null,
+      });
+      httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+      await harness.fixture.whenStable();
+      expect(botaoInformacoes().disabled).toBe(false);
+      expect(harness.routeNativeElement?.textContent).toContain('Zeta Farmácia');
+      if (status === 'FALHA') {
+        expect(harness.routeNativeElement?.querySelector('[role="alert"]')?.textContent).toContain(
+          'A execução foi interrompida.',
+        );
+      } else {
+        expect(harness.routeNativeElement?.textContent).toContain('Busca de informações concluída');
+      }
+      botaoInformacoes().click();
+      httpTesting.expectOne(API_ROUTES.buscaInformacoes(42)).flush({ ...EXECUCAO, id: 91 });
+      await harness.fixture.whenStable();
+      expect(harness.routeNativeElement?.querySelector('[role="alert"]')).toBeNull();
+    },
+  );
+
+  it('falha ao restaurar mantém detalhe e oferece retomar antes de permitir nova pesquisa', async () => {
+    await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    httpTesting.expectOne(API_ROUTES.buscaInformacoes(42)).error(new ProgressEvent('error'));
+    await harness.fixture.whenStable();
+    expect(botaoInformacoes().disabled).toBe(true);
+    expect(harness.routeNativeElement?.textContent).toContain('Zeta Farmácia');
+    const retomar = [...harness.routeNativeElement!.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === 'Retomar acompanhamento',
+    )!;
+    retomar.click();
+    httpTesting.expectOne(API_ROUTES.buscaInformacoes(42)).flush(null);
+    await harness.fixture.whenStable();
+    expect(botaoInformacoes().disabled).toBe(false);
+    expect(harness.routeNativeElement?.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('falha ao atualizar resultado mantém tabela, informa erro e permite recarregar', async () => {
+    await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    httpTesting
+      .expectOne(API_ROUTES.buscaInformacoes(42))
+      .flush({ ...EXECUCAO, status: 'CONCLUIDA' });
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush({}, { status: 500, statusText: 'Error' });
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.querySelector('table')).not.toBeNull();
+    expect(harness.routeNativeElement?.textContent).toContain('Busca de informações concluída');
+    expect(harness.routeNativeElement?.querySelector('[role="alert"]')?.textContent).toContain(
+      'Não foi possível atualizar',
+    );
+    [...harness.routeNativeElement!.querySelectorAll('button')]
+      .find((button) => button.textContent?.trim() === 'Atualizar dados')!
+      .click();
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.querySelector('[role="alert"]')).toBeNull();
+    httpTesting.expectNone(API_ROUTES.buscaInformacoes(42));
+  });
+
+  it('troca de id na mesma rota cancela acompanhamento e não exibe dados da busca anterior', async () => {
+    await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    const consultaAntiga = httpTesting.expectOne(API_ROUTES.buscaInformacoes(42));
+    await harness.navigateByUrl('/historico/43', HistoricoDetalhePage);
+    expect(consultaAntiga.cancelled).toBe(true);
+    expect(harness.routeNativeElement?.textContent).not.toContain('Zeta Farmácia');
+    httpTesting.expectOne(API_ROUTES.busca(43)).flush({ ...DETALHE, id: 43 });
+    httpTesting.expectOne(API_ROUTES.buscaInformacoes(43)).flush(null);
+    await harness.fixture.whenStable();
+    expect(harness.routeNativeElement?.textContent).toContain('Busca #43');
+    expect(botaoInformacoes().disabled).toBe(false);
+  });
+
+  it('detalhe vazio ou inválido nunca permite iniciar pesquisa', async () => {
+    const page = await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush({ ...DETALHE, leads: [] });
+    httpTesting.expectOne(API_ROUTES.buscaInformacoes(42)).flush(null);
+    await harness.fixture.whenStable();
+    expect(botaoInformacoes().disabled).toBe(true);
+    page['buscarInformacoes']();
+    httpTesting.expectNone(API_ROUTES.buscaInformacoes(42));
+    await harness.navigateByUrl('/historico/invalido', HistoricoDetalhePage);
+    expect(botaoInformacoes().disabled).toBe(true);
+    httpTesting.expectNone(() => true);
+  });
 
   it('busca CNPJ pelo botão à direita do voltar, bloqueia duplicatas e recarrega os dados', async () => {
     const page = await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
@@ -88,7 +296,10 @@ describe('HistoricoDetalhePage', () => {
     expect(botao.disabled).toBe(true);
     httpTesting.expectOne(API_ROUTES.busca(42)).flush({
       ...DETALHE,
-      leads: [DETALHE.leads[0], { ...DETALHE.leads[1], cnpj: '43869215000156', razaoSocial: 'Empresa encontrada' }],
+      leads: [
+        DETALHE.leads[0],
+        { ...DETALHE.leads[1], cnpj: '43869215000156', razaoSocial: 'Empresa encontrada' },
+      ],
     });
     await harness.fixture.whenStable();
     expect(botao.disabled).toBe(false);
@@ -101,19 +312,29 @@ describe('HistoricoDetalhePage', () => {
     await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
     httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
     await harness.fixture.whenStable();
-    const botao = harness.routeNativeElement!.querySelector('.historico-detalhe__actions button') as HTMLButtonElement;
+    const botao = harness.routeNativeElement!.querySelector(
+      '.historico-detalhe__actions button',
+    ) as HTMLButtonElement;
     botao.click();
-    httpTesting.expectOne(`${API_ROUTES.busca(42)}/cnpj`).flush(
-      { mensagem: 'Não foi possível buscar CNPJ.' }, { status: 500, statusText: 'Internal Server Error' },
-    );
+    httpTesting
+      .expectOne(`${API_ROUTES.busca(42)}/cnpj`)
+      .flush(
+        { mensagem: 'Não foi possível buscar CNPJ.' },
+        { status: 500, statusText: 'Internal Server Error' },
+      );
     await harness.fixture.whenStable();
     expect(botao.disabled).toBe(false);
-    expect(harness.routeNativeElement!.querySelector('[role="alert"]')?.textContent).toContain('Ocorreu um erro interno. Tente novamente mais tarde.');
+    expect(harness.routeNativeElement!.querySelector('[role="alert"]')?.textContent).toContain(
+      'Ocorreu um erro interno. Tente novamente mais tarde.',
+    );
     expect(harness.routeNativeElement?.textContent).toContain('Zeta Farmácia');
     httpTesting.expectNone(API_ROUTES.busca(42));
     botao.click();
     httpTesting.expectOne(`${API_ROUTES.busca(42)}/cnpj`).flush({
-      totalLeads: 2, ignoradosJaComCnpj: 1, encontrados: 0, semCorrespondencia: 1,
+      totalLeads: 2,
+      ignoradosJaComCnpj: 1,
+      encontrados: 0,
+      semCorrespondencia: 1,
     });
     httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
     await harness.fixture.whenStable();
@@ -127,12 +348,17 @@ describe('HistoricoDetalhePage', () => {
     httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
     page['buscarCnpj']();
     httpTesting.expectOne(`${API_ROUTES.busca(42)}/cnpj`).flush({
-      totalLeads: 2, ignoradosJaComCnpj: 1, encontrados: 1, semCorrespondencia: 0,
+      totalLeads: 2,
+      ignoradosJaComCnpj: 1,
+      encontrados: 1,
+      semCorrespondencia: 0,
     });
     httpTesting.expectOne(API_ROUTES.busca(42)).flush({}, { status: 500, statusText: 'Error' });
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.textContent).toContain('Consulta concluída');
-    expect(harness.routeNativeElement?.textContent).toContain('Não foi possível carregar esta busca');
+    expect(harness.routeNativeElement?.textContent).toContain(
+      'Não foi possível carregar esta busca',
+    );
     expect(page['buscandoCnpj']()).toBe(false);
   });
 

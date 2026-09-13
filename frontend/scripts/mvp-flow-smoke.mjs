@@ -156,6 +156,11 @@ async function mockApi(route) {
     return;
   }
 
+  if (request.method() === 'GET' && url.pathname === `/api/buscas/${MOCK_STATE.busca.id}/informacoes`) {
+    await route.fulfill({ status: 204 });
+    return;
+  }
+
   if (request.method() === 'GET' && url.pathname === `/api/buscas/${MOCK_STATE.busca.id}`) {
     await responderJson(route, {
       ...MOCK_STATE.busca,

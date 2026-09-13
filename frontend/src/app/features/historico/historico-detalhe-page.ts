@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterRenderEffect,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -9,13 +10,15 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
 import { BuscaApi } from '../../core/api/busca-api';
 import { BuscaDetalheResponse } from '../../shared/models/busca.model';
 import { CategoriaNegocio, StatusFunil, Temperatura } from '../../shared/models/enums.model';
 import { formatarCnpj } from '../../shared/utils/cnpj';
+import { separarObservacoesPesquisa } from '../../shared/utils/observacoes-pesquisa';
+import { PesquisaInformacoesStore } from './pesquisa-informacoes-store';
 
 type EstadoDetalhe = 'loading' | 'success' | 'empty' | 'invalid' | 'not-found' | 'error';
 
@@ -46,6 +49,7 @@ const ROTULOS_TEMPERATURA: Readonly<Record<Temperatura, string>> = {
 
 @Component({
   imports: [RouterLink],
+  providers: [PesquisaInformacoesStore],
   selector: 'app-historico-detalhe-page',
   styleUrl: './historico-detalhe-page.scss',
   templateUrl: './historico-detalhe-page.html',
@@ -55,12 +59,24 @@ export class HistoricoDetalhePage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly buscaId = this.route.snapshot.paramMap.get('id') ?? '';
-  private readonly buscaIdNumerico = this.obterIdValido(this.buscaId);
+  protected readonly buscaId = signal('');
+  private buscaIdNumerico: number | null = null;
+  private carregamento?: Subscription;
+  private cnpjRequest?: Subscription;
+  private acompanhamentoIniciado = false;
+  protected readonly pesquisa = inject(PesquisaInformacoesStore);
+  protected readonly erroAtualizacao = signal<string | null>(null);
 
   protected readonly detalhe = signal<BuscaDetalheResponse | null>(null);
-  protected readonly estado = signal<EstadoDetalhe>(
-    this.buscaIdNumerico === null ? 'invalid' : 'loading',
+  protected readonly estado = signal<EstadoDetalhe>('loading');
+  protected readonly observacoes = computed(
+    () =>
+      new Map(
+        this.detalhe()?.leads.map((lead) => [
+          lead.id,
+          separarObservacoesPesquisa(lead.observacoes),
+        ]),
+      ),
   );
   protected readonly mensagemErro = signal<string | null>(null);
   protected readonly buscandoCnpj = signal(false);
@@ -75,28 +91,54 @@ export class HistoricoDetalhePage {
         feedback.nativeElement.focus();
       }
     });
-    if (this.buscaIdNumerico !== null) {
+    this.pesquisa.finalizada
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.carregar(true));
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.carregamento?.unsubscribe();
+      this.cnpjRequest?.unsubscribe();
+      this.pesquisa.limpar();
+      this.acompanhamentoIniciado = false;
+      this.buscaId.set(params.get('id') ?? '');
+      this.buscaIdNumerico = this.obterIdValido(this.buscaId());
+      this.detalhe.set(null);
+      this.mensagemCnpj.set(null);
+      this.erroCnpj.set(null);
+      this.erroAtualizacao.set(null);
+      this.estado.set(this.buscaIdNumerico === null ? 'invalid' : 'loading');
       this.carregar();
-    }
+    });
   }
 
-  protected carregar(): void {
+  protected carregar(silencioso = false): void {
     if (this.buscaIdNumerico === null) {
       return;
     }
 
-    this.estado.set('loading');
+    this.carregamento?.unsubscribe();
+    if (!silencioso) this.estado.set('loading');
     this.mensagemErro.set(null);
+    this.erroAtualizacao.set(null);
 
-    this.buscaApi
+    this.carregamento = this.buscaApi
       .buscarHistoricoPorId(this.buscaIdNumerico)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (detalhe) => {
           this.detalhe.set(detalhe);
           this.estado.set(detalhe.leads.length === 0 ? 'empty' : 'success');
+          if (!this.acompanhamentoIniciado) {
+            this.acompanhamentoIniciado = true;
+            this.pesquisa.acompanhar(detalhe.id);
+          }
         },
         error: (error: unknown) => {
+          if (silencioso) {
+            this.erroAtualizacao.set(
+              'Não foi possível atualizar os dados exibidos. ' + getApiErrorMessage(error),
+            );
+            return;
+          }
           if (error instanceof HttpErrorResponse && error.status === 404) {
             this.estado.set('not-found');
             return;
@@ -115,7 +157,8 @@ export class HistoricoDetalhePage {
     this.buscandoCnpj.set(true);
     this.mensagemCnpj.set(null);
     this.erroCnpj.set(null);
-    this.buscaApi.buscarCnpj(this.buscaIdNumerico)
+    this.cnpjRequest = this.buscaApi
+      .buscarCnpj(this.buscaIdNumerico)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.buscandoCnpj.set(false)),
@@ -124,13 +167,17 @@ export class HistoricoDetalhePage {
         next: (resumo) => {
           this.mensagemCnpj.set(
             `Consulta concluída: ${resumo.encontrados} encontrados, ` +
-            `${resumo.ignoradosJaComCnpj} já com CNPJ e ` +
-            `${resumo.semCorrespondencia} sem correspondência, de ${resumo.totalLeads} leads.`,
+              `${resumo.ignoradosJaComCnpj} já com CNPJ e ` +
+              `${resumo.semCorrespondencia} sem correspondência, de ${resumo.totalLeads} leads.`,
           );
           this.carregar();
         },
         error: (error: unknown) => this.erroCnpj.set(getApiErrorMessage(error)),
       });
+  }
+
+  protected buscarInformacoes(): void {
+    if (this.estado() === 'success') this.pesquisa.iniciar();
   }
 
   protected formatarDataLocal(data: string): string {

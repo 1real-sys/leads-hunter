@@ -7,7 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "e2e:smoke": "node scripts/mvp-flow-smoke.mjs"
+    "e2e:smoke": "node scripts/mvp-flow-smoke.mjs",
+    "e2e:informacoes": "node scripts/pesquisa-informacoes-smoke.mts"
   },
   "private": true,
   "packageManager": "npm@12.0.2",

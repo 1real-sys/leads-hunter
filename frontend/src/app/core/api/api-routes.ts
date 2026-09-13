@@ -5,6 +5,7 @@ export const API_ROUTES = {
   bloqueio: (id: number) => `${API_PREFIX}/bloqueios/${id}`,
   buscas: `${API_PREFIX}/buscas`,
   busca: (id: number) => `${API_PREFIX}/buscas/${id}`,
+  buscaInformacoes: (id: number) => `${API_PREFIX}/buscas/${id}/informacoes`,
   leads: `${API_PREFIX}/leads`,
   leadsPagina: `${API_PREFIX}/leads/pagina`,
   lead: (id: number) => `${API_PREFIX}/leads/${id}`,

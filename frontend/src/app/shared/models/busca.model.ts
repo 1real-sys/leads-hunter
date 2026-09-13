@@ -78,3 +78,27 @@ export interface BuscaCnpjResponse {
   encontrados: number;
   semCorrespondencia: number;
 }
+
+export type PesquisaInformacoesStatus =
+  'PENDENTE' | 'EM_ANDAMENTO' | 'CONCLUIDA' | 'CONCLUIDA_COM_FALHAS' | 'FALHA';
+
+export interface PesquisaInformacoesExecucaoResponse {
+  id: number;
+  buscaId: number;
+  status: PesquisaInformacoesStatus;
+  criadoEm: LocalDateTimeString;
+  iniciadoEm: LocalDateTimeString | null;
+  atualizadoEm: LocalDateTimeString;
+  terminadoEm: LocalDateTimeString | null;
+  totalLeads: number;
+  progresso: number;
+  processados: number;
+  ignoradosJaCompletos: number;
+  comInstagram: number;
+  comSite: number;
+  comAmbos: number;
+  semInformacoes: number;
+  falhas: number;
+  erroCodigo: string | null;
+  erroMensagem: string | null;
+}

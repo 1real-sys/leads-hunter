@@ -1,20 +1,94 @@
 <section class="historico-detalhe" aria-labelledby="historico-detalhe-title">
   <header class="historico-detalhe__header">
     <div>
-      <h1 id="historico-detalhe-title">Busca #{{ buscaId }}</h1>
+      <h1 id="historico-detalhe-title">Busca #{{ buscaId() }}</h1>
       <p>Consulte os resultados registrados nesta execução e o estado comercial atual dos leads.</p>
     </div>
     <div class="historico-detalhe__actions">
       <a class="historico-detalhe__back" routerLink="/historico">Voltar ao histórico</a>
-      <button class="historico-detalhe__back" type="button"
+      <button
+        class="historico-detalhe__back"
+        type="button"
         [disabled]="buscandoCnpj() || estado() !== 'success'"
-        [attr.aria-busy]="buscandoCnpj()" (click)="buscarCnpj()">
+        [attr.aria-busy]="buscandoCnpj()"
+        (click)="buscarCnpj()"
+      >
         {{ buscandoCnpj() ? 'Buscando CNPJ…' : 'Buscar CNPJ' }}
+      </button>
+      <button
+        class="historico-detalhe__back"
+        type="button"
+        data-testid="buscar-informacoes"
+        [disabled]="estado() !== 'success' || !pesquisa.podeIniciar()"
+        [attr.aria-busy]="pesquisa.ocupada()"
+        (click)="buscarInformacoes()"
+      >
+        {{
+          pesquisa.ativa() || pesquisa.iniciando() ? 'Buscando informações…' : 'Buscar informações'
+        }}
       </button>
     </div>
   </header>
 
   <div class="historico-detalhe__workspace">
+    <div class="historico-detalhe__pesquisa" aria-live="polite" aria-atomic="true" role="status">
+      @if (pesquisa.iniciando()) {
+        <p>Iniciando busca de informações…</p>
+      } @else if (pesquisa.consultando()) {
+        <p>Consultando o andamento da busca de informações…</p>
+      } @else if (pesquisa.execucao(); as execucao) {
+        @if (pesquisa.ativa()) {
+          <p>
+            <strong>Buscando informações…</strong> {{ execucao.progresso }} de
+            {{ execucao.totalLeads }} leads contabilizados.
+            {{ execucao.status === 'PENDENTE' ? 'Aguardando a vez de pesquisar.' : '' }}
+            Você pode sair desta página e acompanhar ao voltar.
+          </p>
+        } @else if (execucao.status !== 'FALHA') {
+          <p><strong>Busca de informações concluída</strong></p>
+        }
+        @if (!pesquisa.ativa()) {
+          <p>
+            {{ execucao.processados }} processados; {{ execucao.ignoradosJaCompletos }} já
+            completos; {{ execucao.comInstagram }} com Instagram; {{ execucao.comSite }} com site;
+            {{ execucao.comAmbos }} com ambos; {{ execucao.semInformacoes }} sem informações.
+          </p>
+          @if (execucao.falhas > 0) {
+            <p>
+              {{ execucao.falhas }} de {{ execucao.totalLeads }} leads não puderam ser pesquisados.
+              Os resultados já salvos foram preservados.
+            </p>
+          }
+        }
+      }
+    </div>
+    @if (pesquisa.execucao()?.status === 'FALHA') {
+      <p class="historico-detalhe__pesquisa-erro" role="alert">
+        Não foi possível concluir a busca de informações.
+        {{ pesquisa.execucao()?.erroMensagem }} Você pode iniciar uma nova tentativa.
+      </p>
+    }
+    @if (pesquisa.erro()) {
+      <div class="historico-detalhe__pesquisa-erro" role="alert">
+        <p>{{ pesquisa.erro() }} Consulte o andamento antes de iniciar outra busca.</p>
+        <button
+          class="historico-detalhe__back"
+          type="button"
+          [disabled]="pesquisa.consultando()"
+          (click)="pesquisa.retomar()"
+        >
+          Retomar acompanhamento
+        </button>
+      </div>
+    }
+    @if (erroAtualizacao()) {
+      <div class="historico-detalhe__pesquisa-erro" role="alert">
+        <p>{{ erroAtualizacao() }}</p>
+        <button class="historico-detalhe__back" type="button" (click)="carregar(true)">
+          Atualizar dados
+        </button>
+      </div>
+    }
     @if (buscandoCnpj()) {
       <p role="status">Buscando CNPJ dos leads desta busca…</p>
     }
@@ -193,7 +267,21 @@
                         </div>
                         <div>
                           <dt>Observações atuais</dt>
-                          <dd>{{ lead.observacoes || 'Nenhuma observação registrada.' }}</dd>
+                          <dd class="historico-detalhe__observacoes">
+                            @for (trecho of observacoes().get(lead.id); track $index) {
+                              @if (trecho.url) {
+                                <a
+                                  [href]="trecho.url"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  [attr.aria-label]="trecho.texto + ' (abre em nova aba)'"
+                                  >{{ trecho.texto }}</a
+                                >
+                              } @else {
+                                <span>{{ trecho.texto }}</span>
+                              }
+                            }
+                          </dd>
                         </div>
                       </dl>
                     </td>
