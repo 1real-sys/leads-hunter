@@ -76,7 +76,7 @@ class GooglePesquisaWebClientTest {
 
         assertThatThrownBy(() -> client.pesquisar(request(TipoPesquisaWeb.INSTAGRAM)))
             .isInstanceOf(GooglePesquisaWebTimeoutException.class)
-            .hasMessage("A pesquisa pública do Google excedeu o tempo limite.");
+            .hasMessage("A pesquisa externa excedeu o tempo limite.");
     }
 
     @Test

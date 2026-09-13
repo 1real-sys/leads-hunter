@@ -23,32 +23,47 @@ public class BuscaInformacoesService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public BuscaInformacoesResponse buscarInformacoes(Long buscaId) {
+        return buscarInformacoes(buscaId, (passo, erro) -> passo.get());
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public BuscaInformacoesResponse buscarInformacoes(Long buscaId, BuscaInformacoesProgresso progresso) {
         List<BuscaInformacoesLead> leads = persistencia.carregarLeads(buscaId);
         Contadores contadores = new Contadores(leads.size());
+        progresso.registrar(contadores::resposta, null);
         int falhasConsecutivas = 0;
 
         for (int indice = 0; indice < leads.size(); indice++) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new IllegalStateException("Pesquisa interrompida.");
+            }
             BuscaInformacoesLead lead = leads.get(indice);
             if (formatador.possuiInstagramESiteValidos(lead.observacoes())) {
                 contadores.ignorarCompleto();
+                progresso.registrar(contadores::resposta, null);
                 continue;
             }
 
             try {
                 PesquisaInformacoesWebResultado encontrado = pesquisa.pesquisar(lead.dados());
-                PesquisaInformacoesWebResultado persistido =
-                    persistencia.atualizarObservacoes(lead.leadId(), encontrado);
-                contadores.processar(persistido);
+                progresso.registrar(() -> {
+                    PesquisaInformacoesWebResultado persistido =
+                        persistencia.atualizarObservacoes(lead.leadId(), encontrado);
+                    contadores.processar(persistido);
+                    return contadores.resposta();
+                }, null);
                 falhasConsecutivas = 0;
             } catch (GooglePesquisaWebBloqueadaException exception) {
                 contadores.registrarFalha();
-                contabilizarRestantesSemPesquisar(leads, indice + 1, contadores);
+                progresso.registrar(contadores::resposta, PesquisaInformacoesErro.deFalhaExterna(exception));
+                contabilizarRestantesSemPesquisar(leads, indice + 1, contadores, progresso);
                 break;
             } catch (GooglePesquisaWebException exception) {
                 contadores.registrarFalha();
+                progresso.registrar(contadores::resposta, PesquisaInformacoesErro.deFalhaExterna(exception));
                 falhasConsecutivas++;
                 if (falhasConsecutivas >= MAXIMO_FALHAS_TECNICAS_CONSECUTIVAS) {
-                    contabilizarRestantesSemPesquisar(leads, indice + 1, contadores);
+                    contabilizarRestantesSemPesquisar(leads, indice + 1, contadores, progresso);
                     break;
                 }
             }
@@ -59,7 +74,8 @@ public class BuscaInformacoesService {
     private void contabilizarRestantesSemPesquisar(
         List<BuscaInformacoesLead> leads,
         int proximoIndice,
-        Contadores contadores
+        Contadores contadores,
+        BuscaInformacoesProgresso progresso
     ) {
         for (int indice = proximoIndice; indice < leads.size(); indice++) {
             if (formatador.possuiInstagramESiteValidos(leads.get(indice).observacoes())) {
@@ -67,6 +83,7 @@ public class BuscaInformacoesService {
             } else {
                 contadores.registrarFalha();
             }
+            progresso.registrar(contadores::resposta, null);
         }
     }
 

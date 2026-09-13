@@ -32,7 +32,8 @@ public class UrlCandidatoCanonicalizer {
         "foursquare.com", "restaurantguru.com.br", "kekanto.com.br", "telelistas.net",
         "apontador.com.br", "solutudo.com.br", "cylex.com.br", "guiamais.com.br",
         "listamais.com.br", "econodata.com.br", "cnpj.biz", "casadosdados.com.br",
-        "empresasdobrasil.com", "consultacnpj.com"
+        "empresasdobrasil.com", "consultacnpj.com", "cnpj.info", "guiaja.net", "supermercado.net.br",
+        "restaurantguru.com", "reclameaqui.com.br", "duckduckgo.com", "brave.com"
     );
 
     Optional<URI> canonicalizar(URI original, TipoPesquisaWeb tipo) {

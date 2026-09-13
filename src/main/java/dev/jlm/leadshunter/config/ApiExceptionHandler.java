@@ -4,6 +4,7 @@ import dev.jlm.leadshunter.bloqueio.NomeBloqueadoDuplicadoException;
 import dev.jlm.leadshunter.bloqueio.NomeBloqueadoInvalidoException;
 import dev.jlm.leadshunter.bloqueio.NomeBloqueadoNaoEncontradoException;
 import dev.jlm.leadshunter.busca.BuscaNaoEncontradaException;
+import dev.jlm.leadshunter.busca.PesquisaInformacoesLimiteException;
 import dev.jlm.leadshunter.geo.BboxInvalidoException;
 import dev.jlm.leadshunter.integracao.places.PlacesApiConfigurationException;
 import dev.jlm.leadshunter.integracao.places.PlacesApiInvalidResponseException;
@@ -28,6 +29,13 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 @Slf4j
 public class ApiExceptionHandler {
+
+    @ExceptionHandler(PesquisaInformacoesLimiteException.class)
+    public ResponseEntity<ApiErrorResponse> handlePesquisaLimite(
+        PesquisaInformacoesLimiteException exception, HttpServletRequest request
+    ) {
+        return resposta(HttpStatus.TOO_MANY_REQUESTS, "PESQUISA_LIMITE_EXCEDIDO", exception.getMessage(), request);
+    }
 
     @ExceptionHandler(PlacesRateLimitExceededException.class)
     public ResponseEntity<ApiErrorResponse> handleRateLimit(
@@ -184,7 +192,7 @@ public class ApiExceptionHandler {
         return resposta(
             HttpStatus.BAD_REQUEST,
             "VALIDACAO_INVALIDA",
-            "Os parâmetros de paginação devem respeitar os limites permitidos.",
+            "Os parâmetros da requisição devem respeitar os limites permitidos.",
             request
         );
     }

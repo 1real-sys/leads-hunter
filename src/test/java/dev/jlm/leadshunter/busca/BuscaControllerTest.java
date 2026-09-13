@@ -37,11 +37,14 @@ class BuscaControllerTest {
     @Mock
     private BuscaCnpjService buscaCnpjService;
 
+    @Mock
+    private BuscaInformacoesExecucaoService buscaInformacoesExecucaoService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new BuscaController(buscaService, buscaCnpjService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new BuscaController(buscaService, buscaCnpjService, buscaInformacoesExecucaoService))
             .setControllerAdvice(new ApiExceptionHandler())
             .build();
     }

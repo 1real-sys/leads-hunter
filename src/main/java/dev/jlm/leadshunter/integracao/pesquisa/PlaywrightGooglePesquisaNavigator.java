@@ -15,7 +15,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -31,8 +30,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class PlaywrightGooglePesquisaNavigator implements GooglePesquisaWebNavigator, AutoCloseable {
 
-    private static final String GOOGLE_SEARCH_HOST = "www.google.com";
-    private static final String GOOGLE_SEARCH_PATH = "/search";
     private static final Set<String> RECURSOS_BLOQUEADOS = Set.of("image", "media", "font", "stylesheet");
     private static final Duration MARGEM_ESPERA_FUTURE = Duration.ofSeconds(5);
 
@@ -93,7 +90,7 @@ public class PlaywrightGooglePesquisaNavigator implements GooglePesquisaWebNavig
         }
 
         try {
-            return future.get(timeoutMs + MARGEM_ESPERA_FUTURE.toMillis(), TimeUnit.MILLISECONDS);
+            return future.get(timeoutMs + intervaloMinimoMs + MARGEM_ESPERA_FUTURE.toMillis(), TimeUnit.MILLISECONDS);
         } catch (java.util.concurrent.TimeoutException exception) {
             future.cancel(true);
             throw new GooglePesquisaWebTimeoutException(exception);
@@ -111,12 +108,14 @@ public class PlaywrightGooglePesquisaNavigator implements GooglePesquisaWebNavig
     }
 
     private GooglePesquisaPagina navegarNaThreadDoBrowser(URI uri) {
+        FontePesquisaWeb fonte = FontePesquisaWeb.deDestino(uri);
+        var desafio = new java.util.concurrent.atomic.AtomicBoolean();
         try {
             aguardarIntervaloMinimo();
             Browser navegador = obterBrowser();
             Browser.NewContextOptions opcoesContexto = new Browser.NewContextOptions()
                 .setAcceptDownloads(false)
-                .setJavaScriptEnabled(true)
+                .setJavaScriptEnabled(fonte != FontePesquisaWeb.DUCKDUCKGO)
                 .setLocale("pt-BR")
                 .setTimezoneId("America/Sao_Paulo")
                 .setServiceWorkers(ServiceWorkerPolicy.BLOCK)
@@ -131,7 +130,13 @@ public class PlaywrightGooglePesquisaNavigator implements GooglePesquisaWebNavig
                 pagina.setDefaultNavigationTimeout(timeoutMs);
                 pagina.route("**/*", rota -> {
                     String tipoRecurso = rota.request().resourceType();
-                    if (RECURSOS_BLOQUEADOS.contains(tipoRecurso) || !destinoPermitido(rota.request().url())) {
+                    String destino = rota.request().url();
+                    String caminho = caminhoDe(destino);
+                    if (caminho != null && (caminho.contains("/sorry") || caminho.contains("/captcha")
+                        || caminho.contains("/challenge") || caminho.contains("/anomaly"))) {
+                        desafio.set(true);
+                        rota.abort();
+                    } else if (RECURSOS_BLOQUEADOS.contains(tipoRecurso) || !destinoPermitido(destino, fonte)) {
                         rota.abort();
                     } else {
                         rota.resume();
@@ -146,12 +151,13 @@ public class PlaywrightGooglePesquisaNavigator implements GooglePesquisaWebNavig
                 );
                 aguardarConteudoUtil(pagina);
 
+                String html = lerConteudo(pagina);
                 URI urlFinal = URI.create(pagina.url());
-                if (!hostGooglePermitido(urlFinal.getHost())) {
+                if (desafio.get()) throw new GooglePesquisaWebBloqueadaException();
+                if (!fonte.permiteRecurso(urlFinal)) {
                     throw new GooglePesquisaWebIndisponivelException();
                 }
 
-                String html = pagina.content();
                 if (html.getBytes(StandardCharsets.UTF_8).length > tamanhoMaximoRespostaBytes) {
                     throw new GooglePesquisaWebFormatoInvalidoException();
                 }
@@ -164,6 +170,7 @@ public class PlaywrightGooglePesquisaNavigator implements GooglePesquisaWebNavig
         } catch (GooglePesquisaWebException exception) {
             throw exception;
         } catch (PlaywrightException exception) {
+            if (desafio.get()) throw new GooglePesquisaWebBloqueadaException();
             invalidarBrowserSeDesconectado();
             if (browserNaoInstalado(exception)) {
                 throw new GooglePesquisaWebIndisponivelException(
@@ -219,7 +226,7 @@ public class PlaywrightGooglePesquisaNavigator implements GooglePesquisaWebNavig
     private void aguardarConteudoUtil(Page pagina) {
         try {
             pagina.waitForSelector(
-                "h3, #search, #captcha, form[action*=\"/sorry\"]",
+                "h3, #search, #web, .result, li.b_algo, #b_results, #captcha, .anomaly-modal, form[action*=\"/sorry\"]",
                 new Page.WaitForSelectorOptions().setTimeout(Math.min(timeoutMs, 4_000))
             );
         } catch (TimeoutError ignored) {
@@ -227,43 +234,42 @@ public class PlaywrightGooglePesquisaNavigator implements GooglePesquisaWebNavig
         }
     }
 
-    private void validarDestinoInicial(URI uri) {
-        if (uri == null
-            || !"https".equalsIgnoreCase(uri.getScheme())
-            || !GOOGLE_SEARCH_HOST.equalsIgnoreCase(uri.getHost())
-            || !GOOGLE_SEARCH_PATH.equals(uri.getPath())) {
-            throw new IllegalArgumentException("Destino de pesquisa não permitido");
+    private String lerConteudo(Page pagina) {
+        PlaywrightException ultima = null;
+        for (int tentativa = 0; tentativa < 3; tentativa++) {
+            try {
+                return pagina.content();
+            } catch (PlaywrightException exception) {
+                ultima = exception;
+                pagina.waitForTimeout(300);
+            }
         }
+        throw ultima;
     }
 
-    private boolean destinoPermitido(String url) {
+    private void validarDestinoInicial(URI uri) {
+        FontePesquisaWeb.deDestino(uri);
+    }
+
+    private boolean destinoPermitido(String url, FontePesquisaWeb fonte) {
         try {
             URI uri = URI.create(url);
             String esquema = uri.getScheme();
             if ("data".equalsIgnoreCase(esquema) || "blob".equalsIgnoreCase(esquema)) {
                 return true;
             }
-            return "https".equalsIgnoreCase(esquema) && hostGooglePermitido(uri.getHost());
+            return fonte.permiteRecurso(uri);
         } catch (IllegalArgumentException exception) {
             return false;
         }
     }
 
-    private boolean hostGooglePermitido(String host) {
-        if (host == null) {
-            return false;
+    private String caminhoDe(String url) {
+        try {
+            return URI.create(url).getPath();
+        } catch (IllegalArgumentException exception) {
+            return null;
         }
-        String normalizado = host.toLowerCase(Locale.ROOT);
-        return normalizado.equals("google.com")
-            || normalizado.endsWith(".google.com")
-            || normalizado.equals("google.com.br")
-            || normalizado.endsWith(".google.com.br")
-            || normalizado.equals("gstatic.com")
-            || normalizado.endsWith(".gstatic.com")
-            || normalizado.equals("googleusercontent.com")
-            || normalizado.endsWith(".googleusercontent.com")
-            || normalizado.equals("googleapis.com")
-            || normalizado.endsWith(".googleapis.com");
     }
 
     private boolean browserNaoInstalado(PlaywrightException exception) {

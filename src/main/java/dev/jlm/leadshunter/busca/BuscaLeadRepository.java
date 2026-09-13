@@ -9,6 +9,8 @@ import java.util.List;
 @Repository
 public interface BuscaLeadRepository extends JpaRepository<BuscaLead, Long> {
 
+    long countByBuscaId(Long buscaId);
+
     @EntityGraph(attributePaths = "lead")
     List<BuscaLead> findByBuscaIdOrderByScoreNaBuscaDesc(Long buscaId);
 

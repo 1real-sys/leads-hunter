@@ -116,7 +116,7 @@ public class GooglePesquisaWebClient implements GooglePesquisaGateway {
         bloqueadoAteMs.accumulateAndGet(limite, Math::max);
     }
 
-    private String montarConsulta(GooglePesquisaWebRequest request) {
+    String montarConsulta(GooglePesquisaWebRequest request) {
         List<String> partes = new ArrayList<>();
         String nome = limpar(request.nome());
         if (nome.isBlank()) {

@@ -68,4 +68,87 @@ class PesquisaWebInternaServiceTest {
             assertThat(request.municipio()).isEqualTo("Campinas");
         });
     }
+
+    @Test
+    void deveTentarConsultaSemMunicipioQuandoNaoAcharInstagramComLocalizacao() {
+        List<GooglePesquisaWebRequest> requests = new ArrayList<>();
+        GooglePesquisaGateway client = request -> {
+            requests.add(request);
+            if (request.tipo() == TipoPesquisaWeb.INSTAGRAM && request.municipio() != null) {
+                return new GooglePesquisaWebResponse(request.googlePlaceId(), request.tipo(), "q", List.of(
+                    new GoogleResultadoWeb(URI.create("https://www.instagram.com/outraloja/"),
+                        "Outra Loja", "Outra cidade")));
+            }
+            if (request.tipo() == TipoPesquisaWeb.INSTAGRAM) {
+                return new GooglePesquisaWebResponse(request.googlePlaceId(), request.tipo(), "q", List.of(
+                    new GoogleResultadoWeb(URI.create("https://www.instagram.com/supermercadomichel/"),
+                        "Supermercado Michel (@supermercadomichel) • Instagram", "Castelo - ES")));
+            }
+            return new GooglePesquisaWebResponse(request.googlePlaceId(), request.tipo(), "q", List.of());
+        };
+        PesquisaWebInternaService service = new PesquisaWebInternaService(client,
+            new ClassificadorUrlService(new UrlCandidatoCanonicalizer()));
+        PesquisaLeadDados lead = new PesquisaLeadDados("place-1", "Supermercado Michel", CategoriaNegocio.MERCADO,
+            "Rua das Flores, 10, Castelo - ES", "Rua das Flores", "10", "Centro", "Castelo", "ES",
+            null, null, null);
+
+        PesquisaInformacoesWebResultado resultado = service.pesquisar(lead);
+
+        assertThat(resultado.instagram()).contains(URI.create("https://www.instagram.com/supermercadomichel"));
+        assertThat(requests).extracting(GooglePesquisaWebRequest::tipo)
+            .containsExactly(TipoPesquisaWeb.INSTAGRAM, TipoPesquisaWeb.SITE_PROPRIO, TipoPesquisaWeb.INSTAGRAM);
+        assertThat(requests.get(2).municipio()).isNull();
+        assertThat(requests.get(2).uf()).isNull();
+    }
+
+    @Test
+    void deveAproveitarInstagramNaConsultaDeSiteSemTerceiraChamada() {
+        List<GooglePesquisaWebRequest> requests = new ArrayList<>();
+        GooglePesquisaGateway client = request -> {
+            requests.add(request);
+            return resposta(request, request.tipo() == TipoPesquisaWeb.SITE_PROPRIO ? List.of(
+                candidato("https://instagram.com/padariaaurora", "Campinas - SP"),
+                candidato("https://padariaaurora.example", "Campinas - SP")) : List.of());
+        };
+        var resultado = new PesquisaWebInternaService(client,
+            new ClassificadorUrlService(new UrlCandidatoCanonicalizer())).pesquisar(leadAurora());
+        assertThat(resultado.instagram()).isPresent();
+        assertThat(resultado.siteProprio()).isPresent();
+        assertThat(requests).hasSize(2);
+    }
+
+    @Test
+    void terceiraConsultaNaoDeveApagarAmbiguidadeAnterior() {
+        GooglePesquisaGateway client = request -> resposta(request,
+            request.tipo() == TipoPesquisaWeb.SITE_PROPRIO ? List.of() : request.municipio() == null
+                ? List.of(candidato("https://instagram.com/padariaaurora", "Campinas - SP"))
+                : List.of(candidato("https://instagram.com/padariaaurora", "Campinas - SP"),
+                    candidato("https://instagram.com/padariaauroraoficial", "Campinas - SP")));
+        var resultado = new PesquisaWebInternaService(client,
+            new ClassificadorUrlService(new UrlCandidatoCanonicalizer())).pesquisar(leadAurora());
+        assertThat(resultado.instagram()).isEmpty();
+    }
+
+    @Test
+    void terceiraConsultaNaoDeveOcultarLocalizacaoDivergenteDoMesmoPerfil() {
+        GooglePesquisaGateway client = request -> resposta(request,
+            request.tipo() == TipoPesquisaWeb.SITE_PROPRIO ? List.of() : List.of(candidato(
+                "https://instagram.com/padariaaurora", request.municipio() == null ? "Campinas - SP" : "Curitiba - PR")));
+        var resultado = new PesquisaWebInternaService(client,
+            new ClassificadorUrlService(new UrlCandidatoCanonicalizer())).pesquisar(leadAurora());
+        assertThat(resultado.instagram()).isEmpty();
+    }
+
+    private GooglePesquisaWebResponse resposta(GooglePesquisaWebRequest request, List<GoogleResultadoWeb> candidatos) {
+        return new GooglePesquisaWebResponse(request.googlePlaceId(), request.tipo(), "q", candidatos);
+    }
+
+    private GoogleResultadoWeb candidato(String url, String resumo) {
+        return new GoogleResultadoWeb(URI.create(url), "Padaria Aurora", resumo);
+    }
+
+    private PesquisaLeadDados leadAurora() {
+        return new PesquisaLeadDados("place-1", "Padaria Aurora", CategoriaNegocio.PADARIA,
+            null, null, null, null, "Campinas", "SP", null, null, null);
+    }
 }

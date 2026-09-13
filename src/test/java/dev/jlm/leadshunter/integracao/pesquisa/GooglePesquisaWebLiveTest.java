@@ -14,12 +14,14 @@ class GooglePesquisaWebLiveTest {
         try (PlaywrightGooglePesquisaNavigator navigator = new PlaywrightGooglePesquisaNavigator(
             20_000,
             2_097_152,
-            2
+            1,
+            15_000
         )) {
             GooglePesquisaWebClient client = new GooglePesquisaWebClient(
                 navigator,
                 new GooglePesquisaHtmlParser(),
-                10
+                10,
+                3_600_000
             );
 
             try {
@@ -38,12 +40,15 @@ class GooglePesquisaWebLiveTest {
                     .isNotEmpty()
                     .allMatch(resultado -> resultado.url().getHost() != null)
                     .allMatch(resultado -> !resultado.titulo().isBlank());
+                System.out.println("PESQUISA_PUBLICA=RESULTADOS; quantidade=" + response.resultados().size());
             } catch (GooglePesquisaWebBloqueadaException exception) {
                 assertThat(exception)
-                    .hasMessage("O Google bloqueou temporariamente a pesquisa automatizada.")
+                    .hasMessage("A fonte de pesquisa bloqueou temporariamente o acesso automatizado.")
                     .hasMessageNotContaining("captcha")
                     .hasMessageNotContaining("html")
                     .hasMessageNotContaining("sorry");
+                // Teste aprovado aqui comprova tratamento do bloqueio, não captura/precisão real.
+                System.out.println("PESQUISA_PUBLICA=BLOQUEADA; captura_e_precisao=NAO_VALIDADAS; sem_retry=true");
             }
         }
     }

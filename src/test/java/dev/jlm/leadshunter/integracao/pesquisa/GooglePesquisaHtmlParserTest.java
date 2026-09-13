@@ -35,7 +35,7 @@ class GooglePesquisaHtmlParserTest {
     void deveIdentificarCaptchaSemExporOHtml() throws IOException {
         assertThatThrownBy(() -> parser.extrair(pagina("google-captcha.html", 429), 10))
             .isInstanceOf(GooglePesquisaWebBloqueadaException.class)
-            .hasMessage("O Google bloqueou temporariamente a pesquisa automatizada.")
+            .hasMessage("A fonte de pesquisa bloqueou temporariamente o acesso automatizado.")
             .hasMessageNotContaining("captcha");
     }
 
@@ -43,7 +43,7 @@ class GooglePesquisaHtmlParserTest {
     void deveFalharDeFormaSeguraQuandoOFormatoMudar() throws IOException {
         assertThatThrownBy(() -> parser.extrair(pagina("google-formato-alterado.html", 200), 10))
             .isInstanceOf(GooglePesquisaWebFormatoInvalidoException.class)
-            .hasMessage("O formato da página de pesquisa mudou ou não pôde ser reconhecido.")
+            .hasMessage("O formato da resposta de pesquisa não pôde ser reconhecido.")
             .hasMessageNotContaining("novo-componente");
     }
 

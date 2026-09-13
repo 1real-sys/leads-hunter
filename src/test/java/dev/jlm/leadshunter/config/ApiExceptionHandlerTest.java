@@ -9,6 +9,7 @@ import dev.jlm.leadshunter.busca.BuscaController;
 import dev.jlm.leadshunter.busca.BuscaCnpjService;
 import dev.jlm.leadshunter.busca.BuscaNaoEncontradaException;
 import dev.jlm.leadshunter.busca.BuscaService;
+import dev.jlm.leadshunter.busca.BuscaInformacoesExecucaoService;
 import dev.jlm.leadshunter.integracao.places.PlacesApiConfigurationException;
 import dev.jlm.leadshunter.integracao.places.PlacesApiInvalidResponseException;
 import dev.jlm.leadshunter.integracao.places.PlacesApiQuotaExceededException;
@@ -32,11 +33,14 @@ class ApiExceptionHandlerTest {
     @Mock
     private BuscaCnpjService buscaCnpjService;
 
+    @Mock
+    private BuscaInformacoesExecucaoService buscaInformacoesExecucaoService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new BuscaController(buscaService, buscaCnpjService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new BuscaController(buscaService, buscaCnpjService, buscaInformacoesExecucaoService))
             .setControllerAdvice(new ApiExceptionHandler())
             .build();
     }

@@ -14,6 +14,42 @@ class ClassificadorUrlServiceTest {
     );
 
     @Test
+    void naoDeveConfirmarInstagramSomentePorNomeEHandleConcatenado() {
+        PesquisaLeadDados lead = lead("Supermercado Michel", CategoriaNegocio.MERCADO, "Castelo", "ES");
+        GoogleResultadoWeb candidato = resultado(
+            "https://www.instagram.com/supermercadomichel/",
+            "Supermercado Michel (@supermercadomichel) • Instagram",
+            "6.750 seguidores, 3.087 publicações"
+        );
+
+        PesquisaInformacoesWebResultado resultado = classificador.classificar(
+            lead,
+            List.of(candidato),
+            List.of()
+        );
+
+        assertThat(resultado.instagram()).isEmpty();
+    }
+
+    @Test
+    void deveRejeitarSiteDeOutraCidadeQuandoONomeBateMasAUfDiverge() {
+        PesquisaLeadDados lead = lead("Supermercado Michel", CategoriaNegocio.MERCADO, "Castelo", "ES");
+        GoogleResultadoWeb candidato = resultado(
+            "https://supermercadomichel.com.br/",
+            "Supermercado Michel",
+            "Supermercado em Curitiba - PR"
+        );
+
+        PesquisaInformacoesWebResultado resultado = classificador.classificar(
+            lead,
+            List.of(),
+            List.of(candidato)
+        );
+
+        assertThat(resultado.siteProprio()).isEmpty();
+    }
+
+    @Test
     void deveCapturarInstagramClaroMesmoSemSiteProprio() {
         PesquisaLeadDados lead = lead(
             "Açougue São José",
