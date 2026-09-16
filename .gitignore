@@ -43,3 +43,8 @@ src/main/resources/cnpj/
 ### Python ###
 __pycache__/
 *.py[cod]
+
+### Ambiente local / segredos ###
+.env
+.env.local
+.env.*.local
