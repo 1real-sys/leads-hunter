@@ -139,6 +139,32 @@ class PesquisaWebInternaServiceTest {
         assertThat(resultado.instagram()).isEmpty();
     }
 
+    @Test
+    void deveLimitarAberturasDePaginaPorLead() {
+        int[] aberturas = {0};
+        List<GoogleResultadoWeb> candidatos = new ArrayList<>();
+        for (String usuario : List.of("michela", "michelb", "michelc", "micheld", "michele")) {
+            candidatos.add(new GoogleResultadoWeb(URI.create("https://instagram.com/" + usuario),
+                "Supermercado Michel " + usuario, "Fotos e vídeos"));
+        }
+        GooglePesquisaGateway client = request -> new GooglePesquisaWebResponse(request.googlePlaceId(),
+            request.tipo(), "q", request.tipo() == TipoPesquisaWeb.INSTAGRAM ? candidatos : List.of());
+        var leitor = new LeitorPaginaCandidata(
+            (uri, timeout, max) -> {
+                aberturas[0]++;
+                return new LeitorPaginaCandidata.Resposta(200, "text/html",
+                    "sem dados".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }, uri -> true, 1_000, 65_536);
+        var lead = new PesquisaLeadDados("place-1", "Supermercado Michel", CategoriaNegocio.MERCADO,
+            null, null, null, null, null, "ES", null, null, null);
+
+        var resultado = new PesquisaWebInternaService(client,
+            new ClassificadorUrlService(new UrlCandidatoCanonicalizer()), leitor).pesquisar(lead);
+
+        assertThat(resultado.instagram()).isEmpty();
+        assertThat(aberturas[0]).isEqualTo(3);
+    }
+
     private GooglePesquisaWebResponse resposta(GooglePesquisaWebRequest request, List<GoogleResultadoWeb> candidatos) {
         return new GooglePesquisaWebResponse(request.googlePlaceId(), request.tipo(), "q", candidatos);
     }

@@ -80,16 +80,27 @@ class PesquisaBraveLeadsReaisLiveTest {
                         rs.getString("cnpj"),
                         rs.getString("razao_social"));
                     List<GooglePesquisaWebResponse> respostas = new ArrayList<>();
-                    // Amostra limitada: três consultas por lead, no máximo 18 chamadas por execução.
-                    // Falha técnica interrompe a coleta; não há retry ou escrita no banco real.
-                    var consultas = consultaDiagnostico == null ? List.of(request(lead, TipoPesquisaWeb.INSTAGRAM, false),
-                        request(lead, TipoPesquisaWeb.SITE_PROPRIO, false),
-                        request(lead, TipoPesquisaWeb.INSTAGRAM, true)) : List.of(new GooglePesquisaWebRequest(
-                            lead.googlePlaceId(), consultaDiagnostico, lead.categoria(), null, null, null,
-                            TipoPesquisaWeb.SITE_PROPRIO));
-                    for (var request : consultas) {
-                        Thread.sleep(1_100);
-                        respostas.add(brave.pesquisar(request));
+                    // Executa o mesmo planejamento da aplicação: até cinco consultas por lead.
+                    // A amostra tem no máximo seis leads; não há retry ou escrita no banco real.
+                    GooglePesquisaGateway gravador = request -> {
+                        try {
+                            Thread.sleep(1_100);
+                        } catch (InterruptedException exception) {
+                            Thread.currentThread().interrupt();
+                            throw new GooglePesquisaWebIndisponivelException(exception);
+                        }
+                        var resposta = brave.pesquisar(request);
+                        respostas.add(resposta);
+                        return resposta;
+                    };
+                    if (consultaDiagnostico == null) {
+                        new PesquisaWebInternaService(gravador,
+                            new ClassificadorUrlService(new UrlCandidatoCanonicalizer()),
+                            new LeitorPaginaCandidata(10_000, 524_288)).pesquisar(lead);
+                        assertThat(respostas).hasSizeBetween(2, 5);
+                    } else {
+                        gravador.pesquisar(new GooglePesquisaWebRequest(lead.googlePlaceId(), consultaDiagnostico,
+                            lead.categoria(), null, null, null, TipoPesquisaWeb.SITE_PROPRIO));
                     }
                     amostras.add(new Amostra(lead, respostas));
                 }
@@ -104,6 +115,8 @@ class PesquisaBraveLeadsReaisLiveTest {
 
     private void medir(List<Amostra> amostras) {
         assertThat(amostras).isNotEmpty();
+        String instagramEsperado = System.getProperty("pesquisaBraveInstagramEsperado");
+        if (instagramEsperado != null) assertThat(amostras).hasSize(1);
         int comInstagram = 0;
         int comSite = 0;
         for (var amostra : amostras) {
@@ -114,6 +127,9 @@ class PesquisaBraveLeadsReaisLiveTest {
             var service = new PesquisaWebInternaService(replay,
                 new ClassificadorUrlService(new UrlCandidatoCanonicalizer()));
             var resultado = service.pesquisar(amostra.lead());
+            if (instagramEsperado != null) {
+                assertThat(resultado.instagram()).contains(java.net.URI.create(instagramEsperado));
+            }
             if (resultado.instagram().isPresent()) comInstagram++;
             if (resultado.siteProprio().isPresent()) comSite++;
             System.out.println("BRAVE_LEAD nome=" + amostra.lead().nome() + "; municipio=" + amostra.lead().municipio()
@@ -122,12 +138,6 @@ class PesquisaBraveLeadsReaisLiveTest {
         }
         System.out.println("BRAVE_RESUMO total=" + amostras.size() + "; comInstagram=" + comInstagram
             + "; comSite=" + comSite);
-    }
-
-    private GooglePesquisaWebRequest request(PesquisaLeadDados lead, TipoPesquisaWeb tipo, boolean semLocal) {
-        return new GooglePesquisaWebRequest(lead.googlePlaceId(), lead.nome(), lead.categoria(),
-            semLocal ? null : lead.enderecoFormatado(), semLocal ? null : lead.municipio(),
-            semLocal ? null : lead.uf(), tipo);
     }
 
     record Amostra(PesquisaLeadDados lead, List<GooglePesquisaWebResponse> respostas) {}
