@@ -2245,3 +2245,40 @@ A validação real abriu a página do `@multishowcastelo` e encontrou o telefone
 - `features-pos-mvp/refinamento-pesquisa.md`
 - `fluxo.md`
 - `HISTORICO_IMPLEMENTACOES.md`
+
+## 78. Categorias de prospecção Informática, Vestuário e Pet Shop — 15/09/2026
+
+Foram adicionadas três categorias de negócio próprias à busca, para não forçar o usuário a usar `OUTROS`: `INFORMATICA`, `VESTUARIO` e `PETSHOP`. Cada uma foi mapeada para os tipos oficiais do Google Places (Table A), traduzidos na ida e reconhecidos na volta.
+
+`PlacesApiClient.tiposGoogle` passou a enviar `electronics_store` e `cell_phone_store` para Informática, `clothing_store`, `womens_clothing_store`, `shoe_store` e `sportswear_store` para Vestuário, e `pet_store` para Pet Shop. `PlacesResponseMapper.inferirCategoria` reconhece os mesmos tipos antes do retorno `OUTROS`. `ClassificadorUrlService.termosCategoria` e `GooglePesquisaWebClient.rotuloCategoria` foram completados. No frontend, `CATEGORIAS_NEGOCIO` e os mapas de rótulo de busca, kanban, resultado e histórico receberam os novos valores.
+
+A montagem dos tipos passou a ser verificada por teste unitário com inspeção do corpo HTTP em `PlacesApiClientTest`, e a inferência por `PlacesResponseMapperTest`. As suítes passaram com a suíte backend e 239 testes de frontend, além do build sem warnings. A chamada real foi executada no `PlacesApiClientLiveTest` (opt-in) com uma única requisição à Av. Paulista/SP e as três categorias no mesmo pedido: 20 resultados, nenhum em `OUTROS` (3 Informática, 15 Vestuário e 2 Pet Shop), com Renner, C&A, Zara, Centauro, Kalunga, Petz e Cobasi classificados corretamente. Não houve mudança de contrato HTTP, schema, `ScoringService` ou migration.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/test/java/dev/jlm/leadshunter/integracao/places/PlacesApiClientLiveTest.java`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/lead/CategoriaNegocio.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/places/PlacesApiClient.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/places/PlacesResponseMapper.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClient.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/places/PlacesApiClientTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/places/PlacesResponseMapperTest.java`
+- `frontend/src/app/shared/models/enums.model.ts`
+- `frontend/src/app/shared/models/api-contracts.spec.ts`
+- `frontend/src/app/features/busca/busca-form.model.ts`
+- `frontend/src/app/features/busca/busca-form.model.spec.ts`
+- `frontend/src/app/features/busca/busca-resultados.ts`
+- `frontend/src/app/features/kanban/kanban.model.ts`
+- `frontend/src/app/features/historico/historico-page.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.ts`
+- `API.md`
+- `README.md`
+- `fluxo.md`
+- `features-pos-mvp/refinamento-categorias.md`
+- `HISTORICO_IMPLEMENTACOES.md`

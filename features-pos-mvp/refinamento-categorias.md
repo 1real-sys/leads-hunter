@@ -51,7 +51,7 @@ Uma categoria nova precisa existir em **quatro lugares** para funcionar de ponta
 
 ### CTG-00 — Modelo e mapeamento no backend
 
-**Status: PLANEJADA.**
+**Status: CONCLUÍDA E VALIDADA em 15/09/2026.**
 
 **Objetivo:** adicionar os valores ao enum e traduzir corretamente ida e volta para o Google Places.
 
@@ -78,7 +78,7 @@ Uma categoria nova precisa existir em **quatro lugares** para funcionar de ponta
 
 ### CTG-01 — Frontend: seleção, filtros e rótulos
 
-**Status: PLANEJADA.**
+**Status: CONCLUÍDA E VALIDADA em 15/09/2026.**
 
 **Objetivo:** mostrar e permitir escolher as novas categorias na busca e nos filtros, sem quebrar o `Record<CategoriaNegocio, ...>` do TypeScript.
 
@@ -107,7 +107,7 @@ cd frontend && npm run build
 
 ### CTG-02 — Validação integrada e documentação
 
-**Status: PLANEJADA.**
+**Status: CONCLUÍDA E VALIDADA em 15/09/2026.**
 
 **Objetivo:** fechar a feature com uma execução real controlada e documentação sincronizada.
 
@@ -147,3 +147,18 @@ cd frontend && npm test -- --watch=false && npm run build
 - Categorias novas além das três pedidas (ex.: construção, autopeças, móveis) — só se houver necessidade real.
 - Reclassificação retroativa de leads já capturados.
 - Alteração de `ScoringService`, do modelo N:N, do rate limit ou do cache.
+
+## Resultado da execução — 15/09/2026
+
+**Backend (CTG-00):** `CategoriaNegocio` ganhou `INFORMATICA`, `VESTUARIO` e `PETSHOP` antes de `OUTROS`. `PlacesApiClient.tiposGoogle` passou a enviar `electronics_store`/`cell_phone_store`, `clothing_store`/`womens_clothing_store`/`shoe_store`/`sportswear_store` e `pet_store`. `PlacesResponseMapper.inferirCategoria` reconhece os mesmos tipos antes do retorno `OUTROS`. `ClassificadorUrlService.termosCategoria` e `GooglePesquisaWebClient.rotuloCategoria` foram completados (o primeiro é switch expression e passaria a não compilar sem os novos casos; o segundo também é exaustivo). Testes novos em `PlacesApiClientTest` (tipos enviados por categoria) e `PlacesResponseMapperTest` (inferência dos tipos específicos).
+
+**Frontend (CTG-01):** `CATEGORIAS_NEGOCIO` e os quatro mapas `Record<CategoriaNegocio, string>` (busca, kanban/filtros, resultado e histórico) foram atualizados, além do estado inicial do formulário. Nenhuma mudança de template foi necessária, porque os checkboxes já derivam de `OPCOES_CATEGORIA`.
+
+**Validação executada:**
+
+- `./mvnw -Dtest=PlacesApiClientTest,PlacesResponseMapperTest,ClassificadorUrlServiceTest,GooglePesquisaWebClientTest test` — passou.
+- `npm test -- --watch=false` — passou, 239 testes.
+- `npm run build` — passou, sem warnings.
+- `PlacesApiClientLiveTest` (opt-in, **uma única chamada real** à Google Places, Av. Paulista/SP, raio de 3 km, as três categorias no mesmo pedido): 20 resultados, **0 em `OUTROS`** — `INFORMATICA=3`, `VESTUARIO=15`, `PETSHOP=2`. Exemplos reais classificados corretamente: Renner, C&A, Riachuelo, Zara, Centauro, Kalunga e Americanas Express (Informática/Vestuário) e Petz Augusta e Cobasi (Pet Shop). O teste usa `PlacesRateLimiter(1, 60)`, então uma segunda requisição seria bloqueada.
+
+**Limite:** nenhum. O contrato HTTP, o schema `categorias_buscadas VARCHAR(500)` e o `ScoringService` permaneceram inalterados. Conforme a skill de frontend, esta implementação não autoriza `git add`/`git commit`: as mudanças ficam locais e sem staging até autorização explícita.

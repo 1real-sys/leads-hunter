@@ -628,7 +628,7 @@ Os refinamentos de filiais, nomes comerciais alternativos, telefone/endereço pa
 
 A suíte backend está isolada da base populada e passou integralmente nos testes habilitados. O usuário MySQL dos testes precisa de CREATE/DROP DATABASE; falha ao criar o catálogo temporário interrompe os testes, sem fallback para a base da aplicação. O uso do IDHM e do CNPJ no `ScoringService` e a limpeza retroativa de leads bloqueados permanecem fora das entregas atuais.
 
-Há um refinamento **planejado** para incluir as categorias de prospecção **Informática**, **Vestuário** e **Pet Shop / Ração** na busca, em vez de forçá-las em Outros. O plano está em `features-pos-mvp/refinamento-categorias.md` (sprints CTG-00 a CTG-02) e ainda não foi implementado.
+As categorias de prospecção **Informática**, **Vestuário** e **Pet Shop / Ração** foram incluídas em 15/09/2026 (sprints CTG-00 a CTG-02 de `features-pos-mvp/refinamento-categorias.md`). Elas existem no enum, no mapeamento para os tipos oficiais do Google Places (`electronics_store`/`cell_phone_store`; `clothing_store`/`womens_clothing_store`/`shoe_store`/`sportswear_store`; `pet_store`), na inferência de volta, nos textos da pesquisa inteligente e nos rótulos do frontend. Selecionar uma delas deixa de cair em `OUTROS`. O contrato HTTP, o schema e o `ScoringService` permaneceram iguais.
 
 ## Documentação e configuração local
 

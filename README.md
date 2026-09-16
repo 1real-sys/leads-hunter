@@ -371,7 +371,7 @@ curl -X POST http://localhost:8080/api/buscas \
 
 Valores de enum aceitos:
 
-- `CategoriaNegocio`: `MERCADO`, `PADARIA`, `DOCERIA`, `RESTAURANTE`, `DISTRIBUIDORA`, `ACOUGUE`, `FARMACIA`, `OUTROS`
+- `CategoriaNegocio`: `MERCADO`, `PADARIA`, `DOCERIA`, `RESTAURANTE`, `DISTRIBUIDORA`, `ACOUGUE`, `FARMACIA`, `INFORMATICA`, `VESTUARIO`, `PETSHOP`, `OUTROS`
 - `StatusFunil`: `NOVO`, `QUALIFICADO`, `CONTATADO`, `GANHO`, `PERDIDO`
 - `Temperatura`: `QUENTE`, `MORNO`, `FRIO`
 

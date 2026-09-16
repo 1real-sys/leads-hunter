@@ -62,7 +62,7 @@ Para erros de validação, somente o primeiro erro de campo encontrado é coloca
 
 Os valores são enviados exatamente como abaixo, em maiúsculas.
 
-- `CategoriaNegocio`: `MERCADO`, `PADARIA`, `DOCERIA`, `RESTAURANTE`, `DISTRIBUIDORA`, `ACOUGUE`, `FARMACIA`, `OUTROS`.
+- `CategoriaNegocio`: `MERCADO`, `PADARIA`, `DOCERIA`, `RESTAURANTE`, `DISTRIBUIDORA`, `ACOUGUE`, `FARMACIA`, `INFORMATICA`, `VESTUARIO`, `PETSHOP`, `OUTROS`.
 - `StatusFunil`: `NOVO`, `QUALIFICADO`, `CONTATADO`, `GANHO`, `PERDIDO`.
 - `Temperatura`: `QUENTE`, `MORNO`, `FRIO`.
 
