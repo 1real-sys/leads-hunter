@@ -2074,3 +2074,174 @@ A suíte e o pacote passaram com 333 testes, 327 aprovados e seis opt-in não ha
 - `fluxo.md`
 - `tecnologias.md`
 - `HISTORICO_IMPLEMENTACOES.md`
+
+---
+
+## 72. Reconhecimento de filiais e endereços na pesquisa de informações — 13/09/2026
+
+A pesquisa passou a reconhecer páginas oficiais de filiais mesmo quando o domínio contém apenas a marca. O caso Petz Vila Velha foi reproduzido com a API real do Brave: a página correta aparecia nos resultados, mas era descartada pela comparação do domínio e por conflitos de outras unidades na página nacional de lojas. A avaliação agora consolida contradições por página antes de escolher a melhor página elegível do site, preservando a URL específica da unidade nas observações.
+
+Foi adicionado um analisador de endereço que equipara tipos de logradouro abreviados e por extenso, mantém rua e número na mesma ocorrência e rejeita endereços explicitamente divergentes. Na ausência dos componentes estruturados, usa o endereço formatado. Telefones com zero de tronco no DDD, como `(027)`, passam a confirmar o número nacional correspondente. Permanecem a confirmação independente da identidade, os bloqueios de diretórios, os vetos de município/UF/CNPJ/DDD e o limite de três consultas por lead. Não foram adicionadas dependências, acesso a sites candidatos, alterações de schema ou frontend.
+
+Seis chamadas reais, somente de leitura, comprovaram a mudança de site ausente para `https://www.petz.com.br/loja/petz-vila-velha`. O Instagram não foi confirmado. O replay de oito leads manteve a recusa dos sete casos anteriores e aceitou somente a página da Petz. A captura inicial foi versionada como fixture offline sem credenciais e com identificador de teste; novos testes cobrem o serviço, a gravação/leitura do bloco de observações e casos positivos/negativos de filial, endereço e URL. Passaram 117 testes direcionados e a suíte completa com 371 testes, 365 aprovados e seis opt-in ignorados, sem falhas/erros. O pacote foi gerado após a suíte. O documento solicitado recebeu diagnóstico, motivos, tentativas e resultados sem remover o texto original.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/AnalisadorEnderecoPesquisa.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaFiliaisPrecisaoTest.java`
+- `src/test/resources/pesquisa/brave-petz-vila-velha.json`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/UrlCandidatoCanonicalizer.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/UrlCandidatoCanonicalizerTest.java`
+- `features-pos-mvp/refinamento-pesquisa.md`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `API.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+
+---
+
+## 73. Confirmação de Instagram com nome comercial alternativo — 14/09/2026
+
+A pesquisa passou a reconhecer perfis que usam um nome comercial diferente do cadastro quando compartilham a marca distintiva e apresentam telefone, CNPJ ou Place ID exato no conteúdo público. O exemplo Supermercado Michel já retornava o perfil Central de Compras Michel, mas os trechos iniciais eram insuficientes e a exigência do nome completo impedia aproveitar a identidade alternativa.
+
+Quando o Instagram continua ausente e há telefone válido, o serviço pode consultar até dois perfis relacionados já encontrados, usando usuário e telefone, com máximo de cinco consultas por lead. A lista é fixada antes das confirmações para limitar consumo e impedir consultas encadeadas. As respostas são avaliadas juntas, preservando conflitos e ambiguidades. A consulta usa um record validado e mantém os provedores fixos, sem acesso a sites/perfis candidatos.
+
+Referências públicas em resultados de sites podem confirmar um perfil já descoberto quando endereço com número, telefone exato e referência explícita a um único Instagram aparecem no mesmo trecho/bloco. Informações de trechos separados não são combinadas, e a fonte não é automaticamente aceita como site próprio. A regra é geral, sem nomes ou domínios específicos de estabelecimentos; permanecem os limites de pontuação, os vetos de identidade e o tratamento de falhas técnicas.
+
+O diagnóstico e a validação consumiram dez chamadas Brave somente de leitura. A execução final confirmou `https://www.instagram.com/centraldecomprasmichel` em cinco consultas; o homônimo com DDD incompatível continuou rejeitado e nenhum site foi confirmado. A captura final virou fixture offline, com identificador de teste e sem credenciais. O replay cobre o fluxo e a preservação do texto manual ao substituir o bloco de ausência. Passaram 154 testes direcionados e a suíte completa com 418 testes, 412 aprovados e seis opt-in ignorados, sem falhas/erros. O JAR foi gerado após a suíte. Não houve alteração de frontend, schema ou dados da aplicação.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ConfirmacaoPerfilInstagram.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaIdentidadeAlternativaTest.java`
+- `src/test/resources/pesquisa/brave-michel-confirmacao.json`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebRequest.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/BravePesquisaApiClient.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClient.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaBraveLeadsReaisLiveTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/BravePesquisaApiClientTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/GooglePesquisaWebClientTest.java`
+- `features-pos-mvp/refinamento-pesquisa.md`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `API.md`
+- `fluxo.md`
+- `tecnologias.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+
+---
+
+## 74. Reconhecimento de telefone, username e endereço parcial — 15/09/2026
+
+A investigação do Hortifruti Castelo mostrou que a Brave já devolvia o perfil correto em primeiro lugar. O descarte ocorria pelo número do imóvel divergente e pela falta do celular cadastrado no resultado. Também foi reproduzida uma falha geral: telefones com zero de tronco sem parênteses não eram extraídos, apesar de a normalização já suportar esse formato.
+
+O classificador passou a reconhecer esse telefone e o analisador passou a separar conflitos de logradouro e número. No Instagram, divergência apenas do número pode ser resolvida por telefone exato no mesmo logradouro/município ou pelo conjunto restrito de nome exato, username com até duas edições, mesma rua/cidade e número vizinho com diferença máxima de dois. Município presente somente no nome ou título deixa de servir como localização. A consolidação conserva confirmações posteriores e os vetos de outra rua, município/UF, CNPJ e DDD. Sites próprios mantêm as regras anteriores. Não houve regra por estabelecimento, nova estratégia de pesquisa, aumento de consultas ou alteração da base.
+
+O HTML público confirmou o celular e endereço atuais informados pelo usuário, enquanto a Brave ainda apresentou telefone antigo. A primeira tentativa ficou ambígua com perfis que tinham “Castelo” apenas no nome; a separação entre identidade e localização resolveu essa falha geral. Foram quinze chamadas Brave de leitura. A validação real final confirmou `https://www.instagram.com/hortfrutcastelo` em duas chamadas e nenhum site. Passaram 154 testes direcionados, a suíte completa com 446 testes (440 aprovados e seis opt-in ignorados) e o empacotamento após a suíte.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/AnalisadorEnderecoPesquisa.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlPrecisaoTest.java`
+- `features-pos-mvp/refinamento-pesquisa.md`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `API.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+## 75. README da aplicação e configuração por `.env` — 14/09/2026
+
+Foi criado o `README.md` da raiz como porta de entrada do projeto, explicando o que é, para que serve, principais recursos, tecnologias, requisitos completos, configuração por `.env`, execução de backend/frontend, injeção da base de CNPJ por município desejado, dataset de IDHM, resumo das rotas, testes, estrutura e limitações de escopo.
+
+A configuração sensível deixou de ter valores hardcoded no `application.yml` do worktree e passou a ser lida somente de variáveis de ambiente (`DB_USERNAME`, `DB_PASSWORD`, `GOOGLE_PLACES_API_KEY`, `BRAVE_SEARCH_API_KEY`). O `.env` passou a ser ignorado pelo Git e um `.env.example` foi adicionado como modelo.
+
+A validação rodou com `DB_USERNAME`/`DB_PASSWORD` no ambiente: `./mvnw test` passou com 446 testes, zero falhas, zero erros e seis opt-in ignorados, incluindo o contexto Spring com MySQL 8.1 e Flyway no catálogo temporário isolado. O `./mvnw -DskipTests package` também passou.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `README.md`
+- `.env.example`
+
+**Modificados:**
+
+- `src/main/resources/application.yml`
+- `.gitignore`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+## 76. Handle de ramo e termos genéricos plurais na pesquisa inteligente — 15/09/2026
+
+A investigação do lead **Multishow Supermercados Castelo - Volta Redonda** mostrou que a Brave já devolvia `https://www.instagram.com/multishowcastelo/` na primeira consulta. O descarte ocorria na própria lógica: `supermercados` (plural) não era tratado como termo genérico e a identidade exigia todos os termos do nome, então `volta` e `redonda`, que são complemento de praça, impediam a aceitação e a confirmação de um handle que contém apenas `multishow` + `castelo`.
+
+O `ClassificadorUrlService` passou a reconhecer a flexão de número de termos genéricos e a aceitar handles de filial que combinam marca e praça: exige uma sequência contígua de ao menos dois termos distintivos contendo, no mesmo trecho, um termo do município e um termo que não venha dele. Handles de rede, de outra praça ou que repetem apenas a cidade continuam recusados, assim como leads cujo nome é só a praça (ex.: `Padaria São José`). A regra vale só para Instagram e mantém limiar, margem e vetos existentes. O perfil aceito já entra na primeira análise, o que eliminou a consulta extra sem município na reprodução real.
+
+A validação real confirmou `instagram=https://www.instagram.com/multishowcastelo` e nenhum site, em duas chamadas. Passaram 13 testes novos, a suíte backend completa com 459 testes (453 aprovados e seis opt-in ignorados) e o empacotamento. A captura foi versionada como fixture offline.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaRamoIdentificadorTest.java`
+- `src/test/resources/pesquisa/brave-multishow-castelo.json`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlService.java`
+- `features-pos-mvp/refinamento-pesquisa.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+## 77. Abertura validada da URL candidata e teto de requisições — 15/09/2026
+
+A pesquisa inteligente passou a poder abrir a própria URL candidata (site próprio ou perfil público do Instagram) para verificar se telefone, endereço ou CNPJ do lead aparecem na página. Isso resolve o caso em que o dado existe na bio ou no corpo da página, mas não no trecho indexado pelo buscador. Abrir o candidato não é scraping de motores de busca; a fonte da pesquisa continua sendo a API do Brave.
+
+Para controlar custo e abuso, cada lead tem no máximo 3 consultas ao Brave (duas de descoberta e uma de fallback/confirmação) e 3 aberturas de página. As páginas são escolhidas entre candidatos já relacionados pelo nome/handle, sem conflito e ainda não confirmados, priorizando perfis de Instagram, e são deduplicadas. A abertura não segue redirecionamentos, limita-se a HTTP/HTTPS público (bloqueia localhost, sufixos internos, portas não padrão e faixas any/loopback/link-local/site-local/multicast), tem timeout e limite de bytes, aceita apenas tipos de conteúdo HTML/texto/JSON/XML e extrai meta descrição, JSON estruturado pequeno e texto do corpo. Falha, bloqueio ou resposta de erro não viram ausência conclusiva nem alteram observações. A página lida é apenas mais uma evidência para o classificador existente; limiar, margem e vetos foram preservados.
+
+A validação real abriu a página do `@multishowcastelo` e encontrou o telefone exato da bio. O Multishow foi confirmado em duas consultas ao Brave, sem site. Passaram 480 testes (473 aprovados e sete opt-in ignorados) e o empacotamento. Não houve alteração de schema, frontend, Google Places ou novas dependências de runtime.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/LeitorPaginaCandidata.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/LeitorPaginaCandidataTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/LeitorPaginaCandidataLiveTest.java`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlService.java`
+- `src/main/resources/application.yml`
+- `.env.example`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaIdentidadeAlternativaTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlPrecisaoTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaBraveLeadsReaisLiveTest.java`
+- `AGENTS.md`
+- `README.md`
+- `.opencode/skills/leadradar-overview/SKILL.md`
+- `.opencode/skills/leadradar-testes/SKILL.md`
+- `features-pos-mvp/pesquisa-inteligente.md`
+- `features-pos-mvp/refinamento-pesquisa.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`

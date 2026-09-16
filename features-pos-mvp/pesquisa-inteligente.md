@@ -1,6 +1,6 @@
 # Sprint INFO-01 — Busca interna de site e Instagram no Histórico
 
-**Status: EM IMPLEMENTAÇÃO — INFO-01.7 parcial: API Brave funcional, refinamento conservador de precisão validado com regressões e consultas reais. A amostra atual não corroborou URLs dos leads; falta ampliar o aceite com vínculos conhecidos. Scraping desativado por padrão.**
+**Status: EM IMPLEMENTAÇÃO — INFO-01.7 parcial: API Brave funcional, refinamentos de filiais, nomes alternativos e endereço parcial validados com regressões e consultas reais. Site da Petz Vila Velha e Instagram do Supermercado Michel e do Hortifruti Castelo confirmados; falta ampliar o aceite com uma amostra rotulada maior. Scraping desativado por padrão.**
 
 ## Objetivo
 
@@ -156,9 +156,9 @@ Os padrões podem ser ajustados por propriedades Spring: `pesquisa-inteligente.g
 
 **Status: CONCLUÍDA em 12/09/2026.** `PesquisaWebInternaService` executa uma consulta de Instagram e outra de site por lead e entrega os resultados ao `ClassificadorUrlService`. O lead é convertido em `PesquisaLeadDados`, snapshot imutável com os sinais disponíveis, evitando transportar entidade JPA para o futuro processamento assíncrono.
 
-O canonicalizador aceita apenas `http`/`https`, remove caminho, query e fragmento de sites e converte Instagram em `https://www.instagram.com/{usuario}`. Posts, reels, stories, áreas internas do Instagram, credenciais na URL, portas não padrão, hosts locais/IPs e redes sociais, mapas, diretórios, agregadores, marketplaces, avaliações e delivery são rejeitados antes da pontuação. Sites com e sem `www` e URLs com rastreamento são deduplicados pelo host.
+O canonicalizador aceita apenas `http`/`https`, preserva o caminho da página confirmada, remove query e fragmento de sites e converte Instagram em `https://www.instagram.com/{usuario}`. Posts, reels, stories, áreas internas do Instagram, credenciais na URL, portas não padrão, hosts locais/IPs e redes sociais, mapas, diretórios, agregadores, marketplaces, avaliações e delivery são rejeitados antes da pontuação. Sites com e sem `www` e URLs com rastreamento são consolidados por página; depois, a página elegível de maior pontuação representa o site. Conflitos de outras filiais não invalidam a página local. Esse refinamento, incluindo marca/unidade e equivalências de endereço, está documentado em `features-pos-mvp/refinamento-pesquisa.md`.
 
-A identidade recebe sinais determinísticos de nome normalizado, domínio/handle, categoria, município, endereço, telefone, CNPJ, razão social e `googlePlaceId` quando este aparece no resultado público. A seleção exige nome forte, uma evidência independente ou identificador distintivo, mínimo de 70 pontos e margem de 15 pontos para o segundo candidato elegível. CNPJ explícito de outra unidade invalida o candidato; nomes genéricos sem confirmação local/forte e empates resultam em ausência. O classificador não acessa nenhuma URL candidata.
+A identidade recebe sinais determinísticos de nome normalizado, domínio/handle, categoria, município, endereço, telefone, CNPJ, razão social e `googlePlaceId` quando este aparece no resultado público. A seleção exige nome forte, uma evidência independente ou identificador distintivo, mínimo de 70 pontos e margem de 15 pontos para o segundo candidato elegível. Desde 14/09/2026, Instagram também admite nome comercial alternativo com marca distintiva compartilhada e telefone, CNPJ ou Place ID exato no conteúdo público. Desde 15/09/2026, o serviço pode abrir até três páginas candidatas por lead (priorizando perfis de Instagram) para validar telefone, endereço ou CNPJ no conteúdo público; a abertura não segue redirecionamentos, restringe-se a HTTP/HTTPS público e falha/bloqueio não concluem ausência. CNPJ explícito de outra unidade invalida o candidato; nomes genéricos sem confirmação local/forte e empates resultam em ausência.
 
 **Objetivo:** encontrar URLs suficientemente confiáveis para o estabelecimento correto, incluindo seu Instagram quando existir publicamente.
 
@@ -306,7 +306,7 @@ Validação: 239 testes frontend passaram; build de produção sem warnings; smo
 
 ### INFO-01.7 — Validação integrada e documentação
 
-**Status: PARCIAL em 13/09/2026 — a chave está configurada e a API foi exercitada; o refinamento abaixo corrige associações inseguras, mas o aceite amplo de cobertura ainda depende de evidências.**
+**Status: PARCIAL em 15/09/2026 — a API foi exercitada e confirmou os casos Petz Vila Velha, Supermercado Michel e Hortifruti Castelo; o aceite amplo de precisão/cobertura ainda depende de amostra rotulada maior.**
 
 **Refinamento de precisão — estado atual:**
 
@@ -314,24 +314,27 @@ Validação: 239 testes frontend passaram; build de produção sem warnings; smo
 - Nome/handle iguais, seguidores ou categoria isoladamente não provam identidade. Exige-se município independente do nome comercial, endereço com número ou identificador forte. Telefone nacional e internacional são comparados com DDD; números espalhados no texto não são concatenados para fabricar correspondência de telefone/CNPJ.
 - Município/UF explicitamente divergentes e CNPJ conflitante vetam o candidato; DDD divergente também veta quando não há confirmação por CNPJ/Place ID. Bairro genérico não neutraliza conflitos. Query strings, paths e nome de rua/bairro não confirmam município.
 - Sites precisam de relação entre nome e domínio-base inclusive para nomes genéricos. Diretório desconhecido ou subdomínio com nome do lead não basta. Instagram com handle abreviado exige identificador externo forte. Posts e reels continuam recusados, sem derivar perfis por suposição.
-- Resultados das duas consultas iniciais são reaproveitados para Instagram e site. Havendo terceira consulta de Instagram sem município, a seleção considera todos os candidatos anteriores; duplicatas não apagam conflitos e homônimos não somem por mudança de consulta. Máximo mantido em três consultas por lead.
-- Foram feitas **40 chamadas reais**, sem escrita no banco: 18 de referência, 18 com trechos adicionais nos mesmos seis leads, três para Michel e uma consulta diagnóstica pelo telefone. O site de Oliveira antes aceito trouxe Viamão/RS nos novos trechos; `@supermercadomichel` trouxe DDD 41 enquanto o lead de Castelo tem DDD 28. Ambas as associações foram recusadas. Nenhuma URL dos sete leads foi suficientemente corroborada. Isso não demonstra inexistência de site/Instagram nem uma taxa geral de precisão.
-- A confirmação extra por telefone não trouxe evidência útil e **não** virou nova consulta automática. Os temporários locais permitem comparar o classificador sem consumir novamente a API; não contêm credenciais e não são versionados.
-- `./mvnw package` passou com **333 testes: 327 aprovados, zero falhas/erros e seis opt-in**. O E2E legado de HTML simulado desativa explicitamente Brave real e espera 14 navegações (incluindo as consultas condicionais já existentes), sem alterar o comportamento da UI.
+- Resultados das duas consultas iniciais são reaproveitados para Instagram e site. Havendo terceira consulta de Instagram sem município, a seleção considera todos os candidatos anteriores; duplicatas não apagam conflitos e homônimos não somem por mudança de consulta. Se persistir a ausência de Instagram, com telefone válido e perfis relacionados ainda sem confirmação, até duas consultas adicionais por usuário e telefone buscam evidência: **máximo de cinco consultas por lead**. A lista é fixada antes dessas consultas, sem encadear descobertas; as duas confirmações são avaliadas em conjunto para preservar ambiguidades.
+- Nome comercial alternativo no Instagram exige marca distintiva compartilhada e identificador externo exato. Uma referência em resultado de site pode confirmar perfil já descoberto se o mesmo trecho/bloco reúne endereço com número, telefone exato e referência explícita a um único Instagram. Trechos separados, reticências e blocos de unidades diferentes não são combinados. A fonte não vira automaticamente site próprio; termos da consulta não contam como evidência.
+- O refinamento do Hortifruti reconhece telefone com zero de tronco também sem parênteses, como `028 999353480`. No Instagram, número de imóvel divergente pode ser revalidado por telefone exato no mesmo logradouro/município ou pelo conjunto restrito de nome exato, username com até duas edições, mesma rua/cidade e número vizinho com diferença máxima de dois. Município no nome/título não conta como localização. Demais conflitos e regras de sites próprios permanecem. Embora o JSON da Brave ainda traga telefone antigo, a validação real confirmou `https://www.instagram.com/hortfrutcastelo` em duas chamadas e recusou os concorrentes. A leitura pontual do HTML público confirmou o celular atual informado pelo usuário, sem adicionar scraping do Instagram à aplicação. Detalhes estão em `features-pos-mvp/refinamento-pesquisa.md`.
+- No primeiro refinamento de 13/09, foram feitas **40 chamadas reais**, sem escrita no banco: 18 de referência, 18 com trechos adicionais nos mesmos seis leads, três para Michel e uma consulta diagnóstica pelo telefone. O site de Oliveira antes aceito trouxe Viamão/RS nos novos trechos; `@supermercadomichel` trouxe DDD 41 enquanto o lead de Castelo tem DDD 28. Ambas as associações foram recusadas. Nenhuma URL dos sete leads foi suficientemente corroborada naquela rodada. Isso não demonstra inexistência de site/Instagram nem uma taxa geral de precisão.
+- A consulta diagnóstica genérica pelo telefone naquela rodada não trouxe evidência útil. No refinamento posterior de Michel, a consulta pelo **usuário do perfil já descoberto e telefone** trouxe o vínculo completo na página indexada da Central de Compras e passou a integrar o fluxo condicional. A validação real final confirmou `https://www.instagram.com/centraldecomprasmichel` em cinco consultas. Foram dez chamadas na rodada completa de diagnóstico/validação, sem escrita no banco ou chamadas à Google Places.
+- Passaram **154 testes direcionados**, a suíte completa `./mvnw test` com **418 testes: 412 aprovados, zero falhas/erros e seis opt-in ignorados**, e `./mvnw -DskipTests package`. As fixtures versionadas de Petz e Michel permitem regressão offline sem credenciais; escolhas e experimentos estão em `features-pos-mvp/refinamento-pesquisa.md`. O E2E legado de HTML simulado desativa explicitamente Brave real; não houve alteração de UI nesta rodada.
 - Não houve migration, dependência, alteração de UI ou saneamento retroativo das observações. Blocos antigos completos continuam ignorados pelo comportamento existente.
 
 Referência dos parâmetros utilizados: [documentação oficial de Web Search da Brave API](https://api-dashboard.search.brave.com/api-reference/web/search/get).
 
-Diagnóstico opt-in (máximo de seis leads, até 18 chamadas; usar somente com orçamento disponível):
+Diagnóstico opt-in (máximo de seis leads, até 30 chamadas; usar somente com orçamento disponível):
 
 ```bash
 ./mvnw test -Dtest=PesquisaBraveLeadsReaisLiveTest -DpesquisaBraveLeadsLive=true
 # Nome exato opcional: -DpesquisaBraveNome='Supermercado Michel'
+# Asserção opcional para uma amostra de um lead: -DpesquisaBraveInstagramEsperado=https://www.instagram.com/centraldecomprasmichel
 # Sem rede/banco: reutilizar o caminho temporário emitido como BRAVE_AMOSTRA
 ./mvnw test -Dtest=PesquisaBraveLeadsReaisLiveTest -DpesquisaBraveLeadsLive=true -DpesquisaBraveReplay=/tmp/brave-precisao-ARQUIVO.json
 ```
 
-O comando live interrompe em falha técnica, espaça chamadas em 1,1 segundo, lê o banco em modo somente leitura e mede candidatos, não atesta sozinho que as URLs pertencem aos leads. Os registros abaixo descrevem as rodadas anteriores, inclusive capturas depois consideradas insuficientemente corroboradas.
+O comando live executa o mesmo planejamento da aplicação, interrompe em falha técnica, espaça chamadas em 1,1 segundo e lê o banco em modo somente leitura. Sem a asserção opcional de URL conhecida, mede candidatos e não atesta sozinho que pertencem aos leads. O replay exige uma captura com todas as consultas solicitadas pelo fluxo atual; se faltar alguma, falha sem acessar a rede. Para a regressão offline versionada, use `./mvnw -Dtest=PesquisaIdentidadeAlternativaTest,PesquisaFiliaisPrecisaoTest test`. Os registros abaixo descrevem as rodadas anteriores, inclusive capturas depois consideradas insuficientemente corroboradas.
 
 **Atualização após a mudança para a API do Brave (13/09/2026):**
 
