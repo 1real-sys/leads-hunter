@@ -9,8 +9,14 @@ public record GooglePesquisaWebRequest(
     String enderecoFormatado,
     String municipio,
     String uf,
-    TipoPesquisaWeb tipo
+    TipoPesquisaWeb tipo,
+    ConfirmacaoPerfilInstagram confirmacao
 ) {
+
+    public GooglePesquisaWebRequest(String googlePlaceId, String nome, CategoriaNegocio categoria,
+                                    String enderecoFormatado, String municipio, String uf, TipoPesquisaWeb tipo) {
+        this(googlePlaceId, nome, categoria, enderecoFormatado, municipio, uf, tipo, null);
+    }
 
     public GooglePesquisaWebRequest {
         if (googlePlaceId == null || googlePlaceId.isBlank()) {
@@ -24,6 +30,9 @@ public record GooglePesquisaWebRequest(
         }
         if (tipo == null) {
             throw new IllegalArgumentException("tipo é obrigatório");
+        }
+        if (confirmacao != null && tipo != TipoPesquisaWeb.INSTAGRAM) {
+            throw new IllegalArgumentException("Confirmação exige pesquisa de Instagram");
         }
     }
 }

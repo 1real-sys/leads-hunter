@@ -13,6 +13,16 @@ class GooglePesquisaWebClientTest {
     private final GooglePesquisaHtmlParser parser = new GooglePesquisaHtmlParser();
 
     @Test
+    void confirmacaoDeveManterConsultaAmplaParaEncontrarReferenciasPublicasAoPerfil() {
+        NavegadorFake navegador = new NavegadorFake(paginaSemResultados());
+        var client = new GooglePesquisaWebClient(navegador, parser, 10);
+        var request = new GooglePesquisaWebRequest("place-1", "Drogaria Aurora", CategoriaNegocio.FARMACIA,
+            null, null, null, TipoPesquisaWeb.INSTAGRAM, new ConfirmacaoPerfilInstagram("farmaaurora", "19999999999"));
+        assertThat(client.pesquisar(request).consulta()).isEqualTo("farmaaurora 19 99999-9999");
+        assertThat(navegador.uri.getHost()).isEqualTo("www.google.com");
+    }
+
+    @Test
     void deveMontarConsultaDeInstagramComNomeCategoriaELocalizacao() {
         NavegadorFake navegador = new NavegadorFake(paginaSemResultados());
         GooglePesquisaWebClient client = new GooglePesquisaWebClient(navegador, parser, 10);

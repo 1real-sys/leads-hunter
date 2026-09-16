@@ -88,6 +88,7 @@ public class BravePesquisaApiClient implements GooglePesquisaGateway {
     }
 
     static String montarConsulta(GooglePesquisaWebRequest request) {
+        if (request.confirmacao() != null) return request.confirmacao().consulta();
         String nome = limparTermo(request.nome());
         if (nome.isBlank()) {
             throw new IllegalArgumentException("nome deve conter texto pesquisável");

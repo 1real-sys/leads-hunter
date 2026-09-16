@@ -24,6 +24,28 @@ class BravePesquisaApiClientTest {
     private final Function<GooglePesquisaWebRequest, String> consulta = request -> "\"Padaria Aurora\" site:instagram.com";
 
     @Test
+    void confirmacaoDevePesquisarPerfilETelefoneNoProvedorFixoSemUsarNomeComoRestricao() {
+        var uriCapturada = new AtomicReference<URI>();
+        var cliente = new BravePesquisaApiClient((uri, token, timeout, limite) -> {
+            uriCapturada.set(uri);
+            return new BravePesquisaApiClient.Resposta(200, URL_RESULTADOS.getBytes(StandardCharsets.UTF_8));
+        }, BravePesquisaApiClient::montarConsulta, "chave", true, 15_000, 10, 65_536);
+        var request = new GooglePesquisaWebRequest("place-1", "Drogaria Aurora", CategoriaNegocio.FARMACIA,
+            null, null, null, TipoPesquisaWeb.INSTAGRAM, new ConfirmacaoPerfilInstagram("farmaaurora", "19999999999"));
+
+        assertThat(cliente.pesquisar(request).consulta()).isEqualTo("farmaaurora 19 99999-9999");
+        assertThat(uriCapturada.get().getHost()).isEqualTo("api.search.brave.com");
+        assertThat(uriCapturada.get().getQuery()).contains("q=farmaaurora 19 99999-9999", "operators=false");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"https://evil.example", "aurora site:evil", "aurora\nsite:evil", "aurora/contato"})
+    void confirmacaoNaoDeveAceitarUrlOuOperadoresNoUsuario(String usuario) {
+        assertThatThrownBy(() -> new ConfirmacaoPerfilInstagram(usuario, "19999999999"))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void deveMontarConsultaPropriaSemOperadoresDoGoogle() {
         assertThat(BravePesquisaApiClient.montarConsulta(request()))
             .isEqualTo("Padaria Aurora Campinas SP instagram");

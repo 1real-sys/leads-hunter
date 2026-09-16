@@ -117,6 +117,7 @@ public class GooglePesquisaWebClient implements GooglePesquisaGateway {
     }
 
     String montarConsulta(GooglePesquisaWebRequest request) {
+        if (request.confirmacao() != null) return request.confirmacao().consulta();
         List<String> partes = new ArrayList<>();
         String nome = limpar(request.nome());
         if (nome.isBlank()) {
