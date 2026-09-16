@@ -433,7 +433,7 @@ leads-hunter/
 
 - Aplicação **local e single-user**; sem autenticação, usuários, roles ou deploy.
 - **WhatsApp apenas como link manual** `https://wa.me/55...`; sem disparo automático ou em massa.
-- **Sem scraping de Instagram** como fonte (a pesquisa usa a API oficial do Brave; o scraping fica desativado).
+- A pesquisa usa a **API oficial do Brave**. A abertura da URL candidata (site próprio ou perfil público do Instagram) serve apenas para validar telefone/endereço/CNPJ do lead, com teto de **3 consultas ao Brave e 3 páginas por lead**, sem seguir redirecionamentos e sem acessar destinos privados; o scraping de motores de busca permanece desativado.
 - Sem Docker/Compose, CI/CD, Redis, RabbitMQ/Kafka ou cache distribuído.
 - Cache e rate limit são **em memória** e reiniciam com a aplicação.
 - O CNPJ não entra no cálculo do score.

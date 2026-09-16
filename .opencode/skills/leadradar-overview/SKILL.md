@@ -46,8 +46,7 @@ Implementar apenas:
 
 Não implementar no MVP:
 
-- scraping de Instagram;
-- integração com Instagram;
+- integração com Instagram (login, API ou publicação);
 - disparo automático ou em massa de WhatsApp;
 - Baileys;
 - WhatsApp Business API;

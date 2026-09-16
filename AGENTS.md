@@ -12,7 +12,8 @@ Este arquivo é a fonte principal de instruções para qualquer agente trabalhan
 ## Regras obrigatórias
 
 - Não implementar frontend se a tarefa não pedir.
-- Não implementar autenticação, deploy, scraping de Instagram, Redis, RabbitMQ ou Kafka no MVP.
+- Não implementar autenticação, deploy, Redis, RabbitMQ ou Kafka no MVP.
+- A pesquisa inteligente pode abrir a URL candidata (site próprio ou perfil público do Instagram) apenas para validar telefone, endereço ou CNPJ do lead. Abrir candidatos não é scraping de motores de busca: não seguir redirecionamentos, não acessar destinos privados e respeitar o teto de 3 consultas ao Brave e 3 páginas por lead.
 - WhatsApp deve ser apenas link manual `https://wa.me/55...`; nunca implementar disparo automático ou em massa.
 - Não usar `lead.busca_id`. O relacionamento correto é `Busca N:N Lead` via `BuscaLead`.
 - Deduplicar `Lead` por `googlePlaceId`.

@@ -640,7 +640,6 @@ Não priorizar no MVP:
 - filas;
 - Redis;
 - deploy remoto;
-- scraping de Instagram;
 - automação de WhatsApp;
 - testes de carga com milhares de leads.
 
