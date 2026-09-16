@@ -23,6 +23,9 @@ describe('modelo do formulário de busca', () => {
         DISTRIBUIDORA: false,
         ACOUGUE: false,
         FARMACIA: false,
+        INFORMATICA: false,
+        VESTUARIO: false,
+        PETSHOP: false,
         OUTROS: false,
       },
     });
@@ -37,6 +40,9 @@ describe('modelo do formulário de busca', () => {
       { valor: 'DISTRIBUIDORA', rotulo: 'Distribuidora' },
       { valor: 'ACOUGUE', rotulo: 'Açougue' },
       { valor: 'FARMACIA', rotulo: 'Farmácia' },
+      { valor: 'INFORMATICA', rotulo: 'Informática' },
+      { valor: 'VESTUARIO', rotulo: 'Vestuário' },
+      { valor: 'PETSHOP', rotulo: 'Pet Shop / Ração' },
       { valor: 'OUTROS', rotulo: 'Outros' },
     ]);
   });

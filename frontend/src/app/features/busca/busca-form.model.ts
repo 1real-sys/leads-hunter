@@ -19,6 +19,9 @@ const ROTULOS_CATEGORIA: Readonly<Record<CategoriaNegocio, string>> = {
   DISTRIBUIDORA: 'Distribuidora',
   ACOUGUE: 'Açougue',
   FARMACIA: 'Farmácia',
+  INFORMATICA: 'Informática',
+  VESTUARIO: 'Vestuário',
+  PETSHOP: 'Pet Shop / Ração',
   OUTROS: 'Outros',
 };
 
@@ -41,6 +44,9 @@ export function criarBuscaFormInicial(): BuscaFormModel {
       DISTRIBUIDORA: false,
       ACOUGUE: false,
       FARMACIA: false,
+      INFORMATICA: false,
+      VESTUARIO: false,
+      PETSHOP: false,
       OUTROS: false,
     },
   };

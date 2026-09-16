@@ -30,6 +30,9 @@ describe('contratos TypeScript da API', () => {
       'DISTRIBUIDORA',
       'ACOUGUE',
       'FARMACIA',
+      'INFORMATICA',
+      'VESTUARIO',
+      'PETSHOP',
       'OUTROS',
     ]);
     expect(STATUS_FUNIL).toEqual(['NOVO', 'QUALIFICADO', 'CONTATADO', 'GANHO', 'PERDIDO']);

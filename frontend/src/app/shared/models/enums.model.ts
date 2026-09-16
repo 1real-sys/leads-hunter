@@ -6,6 +6,9 @@ export const CATEGORIAS_NEGOCIO = [
   'DISTRIBUIDORA',
   'ACOUGUE',
   'FARMACIA',
+  'INFORMATICA',
+  'VESTUARIO',
+  'PETSHOP',
   'OUTROS'
 ] as const;
 

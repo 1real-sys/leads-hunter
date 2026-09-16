@@ -12,6 +12,9 @@ const ROTULOS_CATEGORIA: Readonly<Record<CategoriaNegocio, string>> = {
   DISTRIBUIDORA: 'Distribuidora',
   ACOUGUE: 'Açougue',
   FARMACIA: 'Farmácia',
+  INFORMATICA: 'Informática',
+  VESTUARIO: 'Vestuário',
+  PETSHOP: 'Pet Shop / Ração',
   OUTROS: 'Outros',
 };
 
