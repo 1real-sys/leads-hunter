@@ -99,7 +99,7 @@ class ClassificadorUrlServiceTest {
             )
         );
 
-        assertThat(resultado.siteProprio()).contains(URI.create("https://doceencanto.com.br/"));
+        assertThat(resultado.siteProprio()).contains(URI.create("https://doceencanto.com.br/cardapio"));
     }
 
     @Test

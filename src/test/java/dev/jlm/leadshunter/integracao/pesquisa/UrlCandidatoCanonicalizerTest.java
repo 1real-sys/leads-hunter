@@ -34,11 +34,29 @@ class UrlCandidatoCanonicalizerTest {
     }
 
     @Test
-    void deveRemoverCaminhoRastreamentoEFragmentoDoSite() {
+    void devePreservarPaginaERemoverRastreamentoEFragmentoDoSite() {
         assertThat(canonicalizer.canonicalizar(
             URI.create("https://WWW.PadariaCentral.com.br/cardapio?utm_source=google&gclid=123#paes"),
             TipoPesquisaWeb.SITE_PROPRIO
-        )).contains(URI.create("https://www.padariacentral.com.br/"));
+        )).contains(URI.create("https://www.padariacentral.com.br/cardapio"));
+    }
+
+    @Test
+    void devePreservarEscapesDoCaminhoSemTransformarBarraCodificadaEmOutroRecurso() {
+        assertThat(canonicalizer.canonicalizar(
+            URI.create("https://loja.example/unidades/S%C3%A3o%2FJos%C3%A9?utm_source=brave#endereco"),
+            TipoPesquisaWeb.SITE_PROPRIO
+        )).contains(URI.create("https://loja.example/unidades/S%C3%A3o%2FJos%C3%A9"));
+    }
+
+    @Test
+    void deveDeduplicarPaginasEquivalentesSemMisturarFiliaisDoMesmoDominio() {
+        String pagina = canonicalizer.chaveDeduplicacao(URI.create("https://www.loja.example/filial-a/"),
+            TipoPesquisaWeb.SITE_PROPRIO);
+        assertThat(pagina).isEqualTo(canonicalizer.chaveDeduplicacao(URI.create("http://loja.example/filial-a"),
+            TipoPesquisaWeb.SITE_PROPRIO));
+        assertThat(pagina).isNotEqualTo(canonicalizer.chaveDeduplicacao(URI.create("https://loja.example/filial-b"),
+            TipoPesquisaWeb.SITE_PROPRIO));
     }
 
     @ParameterizedTest

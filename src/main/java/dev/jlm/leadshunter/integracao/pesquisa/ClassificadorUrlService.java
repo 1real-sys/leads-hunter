@@ -6,6 +6,7 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -21,13 +22,22 @@ public class ClassificadorUrlService {
 
     private static final int PONTUACAO_MINIMA = 70;
     private static final int MARGEM_UNICIDADE = 15;
+    private static final int MAXIMO_CONFIRMACOES = 2;
+    // Handle de ramo (marca + discriminação) é um identificador forte, porém não exato.
+    private static final int PONTOS_RAMO_IDENTIFICADOR = 65;
+    private static final Pattern INSTAGRAM_ROTULADO = Pattern.compile(
+        "(?i)\\binstagram\\s*:\\s*@?([a-z0-9._]{1,30})(?![a-z0-9._:/])"
+    );
+    private static final Pattern INSTAGRAM_LINK = Pattern.compile(
+        "(?i)https?://(?:www\\.|m\\.)?instagram\\.com/[^\\s<>\"·,;]+"
+    );
     private static final Pattern ACENTOS = Pattern.compile("\\p{M}+");
     private static final Pattern NAO_ALFANUMERICO = Pattern.compile("[^a-z0-9]+");
     private static final Pattern CNPJ_NO_TEXTO = Pattern.compile(
         "(?<!\\d)\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}(?!\\d)"
     );
     private static final Pattern TELEFONE_NO_TEXTO = Pattern.compile(
-        "(?<![\\p{L}\\d])(?:\\+?55[ .-]?)?\\(?[1-9]\\d\\)?[ .-]?\\d{4,5}[ .-]?\\d{4}(?!\\d)"
+        "(?<![\\p{L}\\d])(?:\\+?55[ .-]?)?(?:\\(0?[1-9]\\d\\)|0?[1-9]\\d)[ .-]?\\d{4,5}[ .-]?\\d{4}(?!\\d)"
     );
     private static final Pattern LOCAL_COM_UF = Pattern.compile(
         "(?iu)([\\p{L}][\\p{L} .']{1,60})\\s*[-/,|]\\s*"
@@ -61,9 +71,113 @@ public class ClassificadorUrlService {
             throw new IllegalArgumentException("lead é obrigatório");
         }
         return new PesquisaInformacoesWebResultado(
-            selecionar(lead, resultadosInstagram, TipoPesquisaWeb.INSTAGRAM),
+            selecionar(lead, acrescentarReferencias(lead, resultadosInstagram, resultadosSite), TipoPesquisaWeb.INSTAGRAM),
             selecionar(lead, resultadosSite, TipoPesquisaWeb.SITE_PROPRIO)
         );
+    }
+
+    List<URI> perfisParaConfirmar(PesquisaLeadDados lead, List<GoogleResultadoWeb> resultados) {
+        Map<String, Avaliacao> perfis = new HashMap<>();
+        for (GoogleResultadoWeb resultado : resultados) {
+            canonicalizer.canonicalizar(resultado == null ? null : resultado.url(), TipoPesquisaWeb.INSTAGRAM)
+                .ifPresent(url -> perfis.merge(url.toString(), avaliar(lead, resultado, url, TipoPesquisaWeb.INSTAGRAM),
+                    this::consolidar));
+        }
+        return perfis.values().stream()
+            .filter(a -> a.nomeRelacionado() && !a.elegivel() && !a.conflito())
+            .sorted(Comparator.comparingInt(Avaliacao::pontuacao).reversed()
+                .thenComparing(a -> a.url().toString()))
+            .limit(MAXIMO_CONFIRMACOES)
+            .map(Avaliacao::url).toList();
+    }
+
+    /** Candidatos com relação de nome ainda não confirmados, para validar lendo a própria página. */
+    List<GoogleResultadoWeb> candidatosParaValidar(PesquisaLeadDados lead, List<GoogleResultadoWeb> resultados) {
+        Map<String, Avaliacao> melhores = new LinkedHashMap<>();
+        Map<String, GoogleResultadoWeb> originais = new HashMap<>();
+        for (GoogleResultadoWeb resultado : resultados) {
+            if (resultado == null) {
+                continue;
+            }
+            for (TipoPesquisaWeb tipo : TipoPesquisaWeb.values()) {
+                var url = canonicalizer.canonicalizar(resultado.url(), tipo);
+                if (url.isEmpty()) {
+                    continue;
+                }
+                String chave = tipo.name() + "|" + canonicalizer.chaveDeduplicacao(url.get(), tipo);
+                melhores.merge(chave, avaliar(lead, resultado, url.get(), tipo), this::consolidar);
+                originais.putIfAbsent(chave, resultado);
+            }
+        }
+        Map<URI, GoogleResultadoWeb> unicos = new LinkedHashMap<>();
+        Comparator<Map.Entry<String, Avaliacao>> ordem = Comparator
+            // Perfil de Instagram primeiro: é onde a bio costuma confirmar telefone/endereço.
+            .comparingInt((Map.Entry<String, Avaliacao> entrada) ->
+                entrada.getKey().startsWith(TipoPesquisaWeb.INSTAGRAM.name() + "|") ? 0 : 1)
+            .thenComparing(Comparator.comparingInt(
+                (Map.Entry<String, Avaliacao> entrada) -> entrada.getValue().pontuacao()).reversed())
+            .thenComparing(entrada -> entrada.getValue().url().toString());
+        melhores.entrySet().stream()
+            .filter(entrada -> entrada.getValue().nomeRelacionado()
+                && !entrada.getValue().elegivel() && !entrada.getValue().conflito())
+            .sorted(ordem)
+            .forEach(entrada -> {
+                GoogleResultadoWeb original = originais.get(entrada.getKey());
+                unicos.putIfAbsent(entrada.getValue().url(),
+                    new GoogleResultadoWeb(entrada.getValue().url(), original.titulo(), original.resumo()));
+            });
+        return List.copyOf(unicos.values());
+    }
+
+    private List<GoogleResultadoWeb> acrescentarReferencias(
+        PesquisaLeadDados lead, List<GoogleResultadoWeb> instagram, List<GoogleResultadoWeb> sites
+    ) {
+        if (instagram == null || instagram.isEmpty() || sites == null || sites.isEmpty()) return instagram;
+        Map<URI, GoogleResultadoWeb> perfis = new LinkedHashMap<>();
+        for (GoogleResultadoWeb candidato : instagram) {
+            canonicalizer.canonicalizar(candidato == null ? null : candidato.url(), TipoPesquisaWeb.INSTAGRAM)
+                .ifPresent(url -> perfis.putIfAbsent(url, candidato));
+        }
+        if (perfis.isEmpty()) return instagram;
+        List<GoogleResultadoWeb> enriquecidos = new ArrayList<>(instagram);
+        for (GoogleResultadoWeb fonte : sites) {
+            if (fonte == null || fonte.resumo() == null
+                || canonicalizer.canonicalizar(fonte.url(), TipoPesquisaWeb.SITE_PROPRIO).isEmpty()) continue;
+            // Não juntar snippets, saltos de conteúdo ou blocos de unidades diferentes.
+            for (String trecho : fonte.resumo().split("(?:\\R|\\*{3,}|\\.{3,}|…)+")) {
+                Set<URI> referencias = referenciasInstagram(trecho);
+                if (referencias.size() != 1 || !telefoneCompativel(trecho, lead.telefoneNormalizado())) continue;
+                URI perfil = referencias.iterator().next();
+                GoogleResultadoWeb candidato = perfis.get(perfil);
+                if (candidato == null) continue;
+                var endereco = AnalisadorEnderecoPesquisa.analisar(lead, trecho);
+                if (!endereco.numeroCompativel() || endereco.conflito()
+                    || conflitoLocalizacao(trecho, lead) || possuiConflitoCnpj(trecho, lead.cnpj())) continue;
+                // A referência explícita, o endereço e o telefone pertencem à mesma ocorrência pública.
+                // O título permanece o do perfil; a fonte não é transformada em site próprio do lead.
+                enriquecidos.add(new GoogleResultadoWeb(perfil, candidato.titulo(), trecho));
+            }
+        }
+        return enriquecidos;
+    }
+
+    private Set<URI> referenciasInstagram(String trecho) {
+        Set<URI> referencias = new LinkedHashSet<>();
+        Matcher rotulados = INSTAGRAM_ROTULADO.matcher(trecho);
+        while (rotulados.find()) {
+            canonicalizer.canonicalizar(URI.create("https://www.instagram.com/" + rotulados.group(1)),
+                TipoPesquisaWeb.INSTAGRAM).ifPresent(referencias::add);
+        }
+        Matcher links = INSTAGRAM_LINK.matcher(trecho);
+        while (links.find()) {
+            try {
+                canonicalizer.canonicalizar(URI.create(links.group()), TipoPesquisaWeb.INSTAGRAM)
+                    .ifPresent(referencias::add);
+            } catch (IllegalArgumentException ignored) {
+                // Texto externo malformado não interrompe a classificação dos demais candidatos.
+            }
+        }
+        return referencias;
     }
 
     private Optional<URI> selecionar(
@@ -90,9 +204,18 @@ public class ClassificadorUrlService {
             );
         }
 
-        List<Avaliacao> ordenadas = melhoresPorDestino.values().stream()
+        // Conflitos pertencem à mesma página/perfil. Uma lista nacional não invalida a página da filial.
+        Map<String, Avaliacao> melhoresPorSite = new HashMap<>();
+        for (Avaliacao avaliacao : melhoresPorDestino.values()) {
+            if (!avaliacao.elegivel()) continue;
+            String chave = tipo == TipoPesquisaWeb.SITE_PROPRIO
+                ? avaliacao.url().getHost().replaceFirst("^www\\.", "") : avaliacao.url().toString();
+            melhoresPorSite.merge(chave, avaliacao, this::melhor);
+        }
+        List<Avaliacao> ordenadas = melhoresPorSite.values().stream()
             .filter(Avaliacao::elegivel)
-            .sorted(Comparator.comparingInt(Avaliacao::pontuacao).reversed())
+            .sorted(Comparator.comparingInt(Avaliacao::pontuacao).reversed()
+                .thenComparing(avaliacao -> avaliacao.url().toString()))
             .toList();
         if (ordenadas.isEmpty()) {
             return Optional.empty();
@@ -119,6 +242,8 @@ public class ClassificadorUrlService {
         String nome = normalizar(lead.nome());
         Set<String> tokensNome = tokens(nome);
         Set<String> tokensDistintivos = tokensDistintivos(tokensNome);
+        Set<String> tokensDominio = tipo == TipoPesquisaWeb.SITE_PROPRIO
+            ? tokensMarca(nome, lead.municipio(), tokensDistintivos) : tokensDistintivos;
         Set<String> tokensEvidencia = tokens(evidencia);
 
         int tokensCorrespondentes = intersecao(tokensNome, tokensEvidencia);
@@ -128,21 +253,30 @@ public class ClassificadorUrlService {
 
         String identificador = identificador(url, tipo);
         String identificadorCompacto = normalizar(identificador).replace(" ", "");
-        boolean identificadorForte = !tokensDistintivos.isEmpty()
-            && tokensDistintivos.stream().allMatch(identificadorCompacto::contains);
+        String nomeCompacto = nome.replace(" ", "");
+        boolean identificadorAproximado = tipo == TipoPesquisaWeb.INSTAGRAM
+            && nomeCompacto.length() >= 8 && distanciaLimitada(nomeCompacto, identificadorCompacto, 2);
+        boolean identificadorForte = !tokensDominio.isEmpty()
+            && tokensDominio.stream().allMatch(identificadorCompacto::contains);
         int pontosIdentificador = identificadorForte
             ? 25
-            : tokensDistintivos.stream().anyMatch(identificadorCompacto::contains) ? 10 : 0;
+            : tokensDominio.stream().anyMatch(identificadorCompacto::contains) ? 10 : 0;
+        // Handle de filial costuma combinar a marca com a praça (ex.: marca + município).
+        boolean ramoConfirmado = tipo == TipoPesquisaWeb.INSTAGRAM
+            && identificadorDeRamo(lead, identificadorCompacto, tokensDistintivos);
+        int pontosRamo = ramoConfirmado ? PONTOS_RAMO_IDENTIFICADOR : 0;
 
         // "Castelo" em "Supermercado Castelo" não é uma confirmação de município.
-        String contextoLocal = evidencia.replace(nome, " ");
+        String contextoLocal = normalizar(resultado.resumo()).replace(nome, " ");
         String municipio = normalizar(lead.municipio());
         if (!municipio.isBlank()) {
             contextoLocal = contextoLocal.replaceAll(
                 "\\b(?:bairro|rua|avenida|rodovia|r|av) " + Pattern.quote(municipio) + "\\b", " ");
         }
-        boolean municipioCompativel = contemFrase(contextoLocal, normalizar(lead.municipio()));
-        int pontosLocalizacao = municipioCompativel ? 20 : pontosEndereco(lead, contextoLocal);
+        String uf = normalizar(lead.uf());
+        boolean municipioCompativel = localizacaoCompativel(contextoLocal, municipio, uf);
+        var endereco = AnalisadorEnderecoPesquisa.analisar(lead, evidenciaOriginal);
+        int pontosLocalizacao = (municipioCompativel ? 20 : 0) + endereco.pontuacao();
         int pontosCategoria = contemAlgum(evidencia, termosCategoria(lead.categoria())) ? 10 : 0;
         int pontosTelefone = telefoneCompativel(evidenciaOriginal, lead.telefoneNormalizado()) ? 30 : 0;
         int pontosCnpj = cnpjCompativel(evidenciaOriginal, lead.cnpj()) ? 40 : 0;
@@ -150,40 +284,118 @@ public class ClassificadorUrlService {
         int pontosRazaoSocial = contemFrase(evidencia, normalizar(lead.razaoSocial())) ? 15 : 0;
 
         boolean conflitoCnpj = possuiConflitoCnpj(evidenciaOriginal, lead.cnpj());
+        boolean marcaCompativel = !tokensDistintivos.isEmpty()
+            && tokensDistintivos.stream().allMatch(token -> tokensEvidencia.contains(token)
+                || identificadorCompacto.contains(token));
         boolean nomeForte = (nomeExato || (tokensCorrespondentes >= 2 && proporcaoNome >= 0.75))
-            && tokensDistintivos.stream().allMatch(token -> tokensEvidencia.contains(token) || identificadorForte);
+            && tokensDistintivos.stream().allMatch(token -> tokensEvidencia.contains(token)
+                || identificadorCompacto.contains(token));
         boolean identificadorExternoForte = pontosTelefone > 0 || pontosCnpj > 0 || pontosPlaceId > 0;
+        boolean nomeAlternativoConfirmado = tipo == TipoPesquisaWeb.INSTAGRAM
+            && marcaCompativel && identificadorExternoForte;
         boolean conflitoLocalizacao = conflitoLocalizacao(evidenciaOriginal, lead);
-        boolean corroborado = municipioCompativel || pontosLocalizacao >= 20 || identificadorExternoForte;
-        Set<String> tokensIdentidade = tokensDistintivos.isEmpty() ? tokensNome : tokensDistintivos;
+        boolean corroborado = municipioCompativel || endereco.numeroCompativel() || identificadorExternoForte
+            || ramoConfirmado;
+        Set<String> tokensIdentidade = tokensDominio.isEmpty() ? tokensNome : tokensDominio;
         boolean identificadorRelacionado = !tokensIdentidade.isEmpty()
             && tokensIdentidade.stream().allMatch(identificadorCompacto::contains);
         // Identificador abreviado só é aceito com confirmação forte (telefone, CNPJ ou Place ID).
         boolean destinoRelacionado = identificadorRelacionado
-            || (tipo == TipoPesquisaWeb.INSTAGRAM && identificadorExternoForte);
-        boolean conflito = conflitoCnpj || conflitoLocalizacao
+            || (tipo == TipoPesquisaWeb.INSTAGRAM && (identificadorExternoForte || ramoConfirmado
+                || (nomeExato && identificadorAproximado && municipioCompativel && endereco.numeroProximo())));
+        boolean conflito = conflitoCnpj || conflitoLocalizacao || endereco.conflitoLogradouro()
             || (pontosCnpj == 0 && pontosPlaceId == 0 && conflitoDdd(evidenciaOriginal, lead.telefoneNormalizado()));
+        boolean enderecoCorroborado = tipo == TipoPesquisaWeb.INSTAGRAM
+            && ((pontosTelefone > 0 && endereco.logradouroCompativel() && municipioCompativel
+                && enderecoCorroboradoPorTelefone(lead, resultado.resumo()))
+                || (nomeExato && identificadorAproximado && municipioCompativel && endereco.numeroProximo()));
 
         int pontuacao = pontosNome
             + pontosIdentificador
+            + pontosRamo
             + pontosLocalizacao
             + pontosCategoria
             + pontosTelefone
             + pontosCnpj
             + pontosPlaceId
             + pontosRazaoSocial;
-        boolean elegivel = !conflito
-            && nomeForte
+        boolean identidadeCompativel = (nomeForte || nomeAlternativoConfirmado || ramoConfirmado)
             && corroborado
             && destinoRelacionado;
-        return new Avaliacao(url, pontuacao, elegivel, conflito);
+        return new Avaliacao(url, pontuacao, identidadeCompativel, conflito, nomeExato || marcaCompativel,
+            endereco.conflitoNumero(), enderecoCorroborado);
+    }
+
+    /**
+     * Handle de filial costuma juntar a marca a um discriminante da praça, como o município
+     * (ex.: marca + "Castelo" -> "marcacastelo"). Exige uma sequência contígua de ao menos dois
+     * termos distintivos do nome dentro do handle, contendo ao mesmo tempo um termo do município
+     * (a praça) e um termo que não venha dele (a marca). Assim, handles que são apenas a própria
+     * cidade, ou apenas um nome genérico de lugar, não confirmam o ramo.
+     */
+    private boolean identificadorDeRamo(
+        PesquisaLeadDados lead,
+        String identificadorCompacto,
+        Set<String> tokensDistintivos
+    ) {
+        if (tokensDistintivos.size() < 2) {
+            return false;
+        }
+        Set<String> doMunicipio = tokens(normalizar(lead.municipio()));
+        if (doMunicipio.isEmpty()) {
+            return false;
+        }
+        List<String> tokens = List.copyOf(tokensDistintivos);
+        for (int inicio = 0; inicio < tokens.size(); inicio++) {
+            StringBuilder concatenado = new StringBuilder(tokens.get(inicio));
+            boolean contemMarca = !doMunicipio.contains(tokens.get(inicio));
+            boolean contemPraca = doMunicipio.contains(tokens.get(inicio));
+            for (int fim = inicio + 1; fim < tokens.size(); fim++) {
+                String token = tokens.get(fim);
+                contemMarca |= !doMunicipio.contains(token);
+                contemPraca |= doMunicipio.contains(token);
+                concatenado.append(token);
+                if (contemMarca && contemPraca && identificadorCompacto.contains(concatenado.toString())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean enderecoCorroboradoPorTelefone(PesquisaLeadDados lead, String resumo) {
+        if (resumo == null) return false;
+        // Uma diferença no número do imóvel exige telefone, logradouro e município no mesmo trecho.
+        for (String trecho : resumo.split("(?:\\R|\\*{3,}|\\.{3,}|…)+")) {
+            if (!telefoneCompativel(trecho, lead.telefoneNormalizado())
+                || !contemFrase(normalizar(trecho), normalizar(lead.municipio()))) continue;
+            var endereco = AnalisadorEnderecoPesquisa.analisar(lead, trecho);
+            if (endereco.logradouroCompativel() && !endereco.conflitoLogradouro()) return true;
+        }
+        return false;
     }
 
     private Avaliacao consolidar(Avaliacao atual, Avaliacao nova) {
         Avaliacao melhor = atual.elegivel() != nova.elegivel() ? (atual.elegivel() ? atual : nova)
-            : nova.pontuacao() > atual.pontuacao() ? nova : atual;
+            : melhor(atual, nova);
         boolean conflito = atual.conflito() || nova.conflito();
-        return new Avaliacao(melhor.url(), melhor.pontuacao(), melhor.elegivel() && !conflito, conflito);
+        return new Avaliacao(melhor.url(), melhor.pontuacao(), melhor.identidadeCompativel(), conflito,
+            atual.nomeRelacionado() || nova.nomeRelacionado(), atual.numeroDivergente() || nova.numeroDivergente(),
+            atual.enderecoCorroborado() || nova.enderecoCorroborado());
+    }
+
+    private Avaliacao melhor(Avaliacao atual, Avaliacao nova) {
+        if (nova.pontuacao() != atual.pontuacao()) return nova.pontuacao() > atual.pontuacao() ? nova : atual;
+        return nova.url().toString().compareTo(atual.url().toString()) < 0 ? nova : atual;
+    }
+
+    private Set<String> tokensMarca(String nome, String municipio, Set<String> originais) {
+        String local = normalizar(municipio);
+        if (!contemFrase(nome, local)) return originais;
+        // Retira somente o município completo; a identidade e a confirmação da filial continuam obrigatórias.
+        String marca = nome.replaceAll("(?<![a-z0-9])" + Pattern.quote(local) + "(?![a-z0-9])", " ");
+        Set<String> distintivos = tokensDistintivos(tokens(marca));
+        return distintivos.isEmpty() ? originais : distintivos;
     }
 
     private boolean conflitoLocalizacao(String evidencia, PesquisaLeadDados lead) {
@@ -205,6 +417,14 @@ public class ClassificadorUrlService {
         return false;
     }
 
+    private boolean localizacaoCompativel(String contexto, String municipio, String uf) {
+        if (municipio.isBlank()) return false;
+        return (!uf.isBlank() && contemFrase(contexto, municipio + " " + uf))
+            || contexto.equals(municipio)
+            || contemFrase(contexto, "em " + municipio)
+            || contemFrase(contexto, "centro de " + municipio);
+    }
+
     private int pontosNome(boolean nomeExato, int correspondentes, double proporcao) {
         if (nomeExato) {
             return 45;
@@ -216,26 +436,6 @@ public class ClassificadorUrlService {
             return 30;
         }
         return correspondentes == 1 ? 15 : 0;
-    }
-
-    private int pontosEndereco(PesquisaLeadDados lead, String evidencia) {
-        String logradouro = normalizar(primeiroNaoVazio(lead.logradouro(), inicioEndereco(lead.enderecoFormatado())));
-        boolean ruaCompativel = contemTokensRelevantes(evidencia, logradouro, 2);
-        boolean numeroCompativel = contemFrase(evidencia, normalizar(lead.numero()));
-        if (ruaCompativel && numeroCompativel) {
-            return 20;
-        }
-        if (ruaCompativel) {
-            return 10;
-        }
-        return 0;
-    }
-
-    private boolean contemTokensRelevantes(String evidencia, String valor, int minimo) {
-        Set<String> relevantes = tokens(valor);
-        relevantes.removeAll(PALAVRAS_VAZIAS);
-        relevantes.removeIf(token -> token.length() < 3 || token.equals("rua") || token.equals("avenida"));
-        return relevantes.size() >= minimo && tokens(evidencia).containsAll(relevantes);
     }
 
     private boolean possuiConflitoCnpj(String evidencia, String cnpjLead) {
@@ -264,6 +464,9 @@ public class ClassificadorUrlService {
 
     private String telefoneNacional(String valor) {
         String digitos = somenteDigitos(valor);
+        if ((digitos.length() == 11 || digitos.length() == 12) && digitos.startsWith("0")) {
+            return digitos.substring(1);
+        }
         return (digitos.length() == 12 || digitos.length() == 13) && digitos.startsWith("55")
             ? digitos.substring(2) : digitos;
     }
@@ -322,9 +525,23 @@ public class ClassificadorUrlService {
     private Set<String> tokensDistintivos(Set<String> tokensNome) {
         Set<String> resultado = new LinkedHashSet<>(tokensNome);
         resultado.removeAll(PALAVRAS_VAZIAS);
-        resultado.removeAll(TERMOS_GENERICOS);
+        // "Supermercados", "Farmacias", "Acougues": a flexão de número também é genérica.
+        resultado.removeIf(this::termoGenerico);
         resultado.removeIf(token -> token.length() < 3);
         return resultado;
+    }
+
+    private boolean termoGenerico(String token) {
+        if (TERMOS_GENERICOS.contains(token)) {
+            return true;
+        }
+        if (token.endsWith("ns")) {
+            return TERMOS_GENERICOS.contains(token.substring(0, token.length() - 2) + "m");
+        }
+        if (token.endsWith("s")) {
+            return TERMOS_GENERICOS.contains(token.substring(0, token.length() - 1));
+        }
+        return false;
     }
 
     private int intersecao(Set<String> esquerda, Set<String> direita) {
@@ -335,6 +552,25 @@ public class ClassificadorUrlService {
             }
         }
         return quantidade;
+    }
+
+    private boolean distanciaLimitada(String esperado, String encontrado, int limite) {
+        if (Math.abs(esperado.length() - encontrado.length()) > limite) return false;
+        int[] anterior = java.util.stream.IntStream.rangeClosed(0, encontrado.length()).toArray();
+        for (int i = 1; i <= esperado.length(); i++) {
+            int[] atual = new int[encontrado.length() + 1];
+            atual[0] = i;
+            int menor = atual[0];
+            for (int j = 1; j <= encontrado.length(); j++) {
+                int substituicao = anterior[j - 1]
+                    + (esperado.charAt(i - 1) == encontrado.charAt(j - 1) ? 0 : 1);
+                atual[j] = Math.min(Math.min(anterior[j] + 1, atual[j - 1] + 1), substituicao);
+                menor = Math.min(menor, atual[j]);
+            }
+            if (menor > limite) return false;
+            anterior = atual;
+        }
+        return anterior[encontrado.length()] <= limite;
     }
 
     private boolean contemFrase(String texto, String frase) {
@@ -384,18 +620,6 @@ public class ClassificadorUrlService {
         return partes[indice];
     }
 
-    private String inicioEndereco(String endereco) {
-        if (endereco == null) {
-            return null;
-        }
-        int virgula = endereco.indexOf(',');
-        return virgula < 0 ? endereco : endereco.substring(0, virgula);
-    }
-
-    private String primeiroNaoVazio(String primeiro, String segundo) {
-        return primeiro != null && !primeiro.isBlank() ? primeiro : segundo;
-    }
-
     private String juntar(String... valores) {
         List<String> presentes = new ArrayList<>();
         for (String valor : valores) {
@@ -406,6 +630,10 @@ public class ClassificadorUrlService {
         return String.join("\n", presentes);
     }
 
-    private record Avaliacao(URI url, int pontuacao, boolean elegivel, boolean conflito) {
+    private record Avaliacao(URI url, int pontuacao, boolean identidadeCompativel, boolean conflito,
+                             boolean nomeRelacionado, boolean numeroDivergente, boolean enderecoCorroborado) {
+        boolean elegivel() {
+            return identidadeCompativel && !conflito && (!numeroDivergente || enderecoCorroborado);
+        }
     }
 }

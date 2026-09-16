@@ -51,7 +51,7 @@ public class UrlCandidatoCanonicalizer {
             }
             return tipo == TipoPesquisaWeb.INSTAGRAM
                 ? canonicalizarInstagram(original, host)
-                : canonicalizarSite(esquema, host);
+                : canonicalizarSite(original, esquema, host);
         } catch (IllegalArgumentException | URISyntaxException exception) {
             return Optional.empty();
         }
@@ -62,7 +62,8 @@ public class UrlCandidatoCanonicalizer {
             return uri.toString().toLowerCase(Locale.ROOT);
         }
         String host = uri.getHost().toLowerCase(Locale.ROOT);
-        return host.startsWith("www.") ? host.substring(4) : host;
+        String dominio = host.startsWith("www.") ? host.substring(4) : host;
+        return dominio + uri.getRawPath().replaceFirst("/+$", "");
     }
 
     private Optional<URI> canonicalizarInstagram(URI original, String host) throws URISyntaxException {
@@ -96,11 +97,14 @@ public class UrlCandidatoCanonicalizer {
         return Optional.of(new URI("https", null, "www.instagram.com", -1, "/" + usuario, null, null));
     }
 
-    private Optional<URI> canonicalizarSite(String esquema, String host) throws URISyntaxException {
+    private Optional<URI> canonicalizarSite(URI original, String esquema, String host) throws URISyntaxException {
         if (dominioBloqueado(host)) {
             return Optional.empty();
         }
-        return Optional.of(new URI(esquema, null, host, -1, "/", null, null));
+        String caminho = original.normalize().getRawPath();
+        if (caminho == null || caminho.isEmpty()) caminho = "/";
+        // Preserva a página que comprovou a filial e os escapes do caminho; remove query e fragmento.
+        return Optional.of(new URI(esquema + "://" + host + caminho));
     }
 
     private String normalizarEsquema(String esquema) {

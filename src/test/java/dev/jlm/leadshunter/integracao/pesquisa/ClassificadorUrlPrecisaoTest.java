@@ -77,6 +77,158 @@ class ClassificadorUrlPrecisaoTest {
         assertThat(result.instagram()).contains(URI.create("https://www.instagram.com/supermercado.oliv"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"028 99900-1234", "028999001234", "028.99900.1234", "028-99900-1234"})
+    void deveConfirmarHandleAbreviadoComTelefoneExatoEZeroDeTroncoSemParenteses(String telefone) {
+        var result = classificador.classificar(lead(), List.of(resultado(
+            "https://instagram.com/supermercado.oliv", "Supermercado Oliveira",
+            "Rua Maria Ortiz, 621. Telefone: " + telefone)), List.of());
+        assertThat(result.instagram()).contains(URI.create("https://www.instagram.com/supermercado.oliv"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"028 99900-1235", "1028999001234", "0289990012345", "028 seguidores 99900 fotos 1234 posts"})
+    void zeroDeTroncoNaoDevePermitirTelefoneDiferenteOuFabricado(String telefone) {
+        assertThat(classificador.classificar(lead(), List.of(resultado(
+            "https://instagram.com/supermercado.oliv", "Supermercado Oliveira",
+            "Rua Maria Ortiz, 621. Telefone: " + telefone)), List.of()).instagram()).isEmpty();
+    }
+
+    @Test
+    void devePreservarVetoDeDddDivergenteTambemComZeroDeTroncoSemParenteses() {
+        assertThat(classificador.classificar(lead(), List.of(resultado(
+            "https://instagram.com/supermercadooliveira", "Supermercado Oliveira",
+            "Castelo - ES. Telefone: 041 99900-1234")), List.of()).instagram()).isEmpty();
+    }
+
+    @Test
+    void deveDistinguirUsernameAbreviadoDeConflitoRealNoEnderecoDoHortifruti() {
+        var lead = new PesquisaLeadDados("fixture-hortifruti", "Hortifruti Castelo", CategoriaNegocio.MERCADO,
+            "Av. Nossa Sra. da Penha, 557 - São Miguel, Castelo - ES", "Avenida Nossa Senhora da Penha", "557",
+            "São Miguel", "Castelo", "ES", "5528999353480", null, null);
+        String perfil = "https://www.instagram.com/hortfrutcastelo";
+        String titulo = "HORTIFRUTI CASTELO (@hortfrutcastelo)";
+
+        // Nome exato, handle relacionado, mesma avenida/município e número vizinho confirmam o perfil.
+        assertThat(classificador.classificar(lead, List.of(resultado(perfil, titulo,
+            "028 3542-2436. Av. Nossa Senhora da Penha, 559 - Castelo | ES")), List.of()).instagram())
+            .contains(URI.create(perfil));
+        assertThat(classificador.classificar(lead, List.of(
+            resultado(perfil, titulo, "028 3542-2436. Av. Nossa Senhora da Penha, 559 - Castelo | ES"),
+            resultado("https://instagram.com/hortifrutidocastelo", "HORTIFRUTI DO CASTELO",
+                "Frutas, verduras e temperos. Venha nos conhecer! SSA, Bahia"),
+            resultado("https://instagram.com/hortifruti_lisboa_castelo", "Castelo Maçã",
+                "O melhor da natureza pra sua mesa")
+        ), List.of()).instagram()).contains(URI.create(perfil));
+        // Com identidade corroborada, a grafia abreviada é aceita sem alias ou distância aproximada de nomes.
+        assertThat(classificador.classificar(lead, List.of(resultado(perfil, titulo,
+            "028 99935-3480. Av. Nossa Senhora da Penha, 557 - Castelo | ES")), List.of()).instagram())
+            .contains(URI.create(perfil));
+        // O telefone exato e a mesma avenida/município resolvem a divergência limitada ao número.
+        assertThat(classificador.classificar(lead, List.of(resultado(perfil, titulo,
+            "028 99935-3480. Av. Nossa Senhora da Penha, 559 - Castelo | ES")), List.of()).instagram())
+            .contains(URI.create(perfil));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "Av. Nossa Senhora da Penha, 560 - Castelo | ES",
+        "Av. Nossa Senhora da Penha, 559 - Vitória | ES",
+        "Rua Nossa Senhora da Penha, 559 - Castelo | ES"
+    })
+    void numeroProximoSemConjuntoCompletoDeIdentidadeNaoDeveConfirmarInstagram(String resumo) {
+        var lead = new PesquisaLeadDados("fixture-hortifruti", "Hortifruti Castelo", CategoriaNegocio.MERCADO,
+            "Av. Nossa Sra. da Penha, 557 - São Miguel, Castelo - ES", "Avenida Nossa Senhora da Penha", "557",
+            "São Miguel", "Castelo", "ES", "5528999353480", null, null);
+        assertThat(classificador.classificar(lead, List.of(resultado(
+            "https://instagram.com/hortfrutcastelo", "Hortifruti Castelo", resumo)), List.of()).instagram()).isEmpty();
+    }
+
+    @Test
+    void numeroProximoExigeNomeExatoEHandleFortementeRelacionado() {
+        var lead = new PesquisaLeadDados("fixture-hortifruti", "Hortifruti Castelo", CategoriaNegocio.MERCADO,
+            "Av. Nossa Sra. da Penha, 557 - São Miguel, Castelo - ES", "Avenida Nossa Senhora da Penha", "557",
+            "São Miguel", "Castelo", "ES", "5528999353480", null, null);
+        String resumo = "Av. Nossa Senhora da Penha, 559 - Castelo | ES";
+        assertThat(classificador.classificar(lead, List.of(resultado(
+            "https://instagram.com/castelo", "Hortifruti", resumo)), List.of()).instagram()).isEmpty();
+    }
+
+    @Test
+    void deveRevalidarNumeroDivergenteComTelefoneExatoSemApagarEvidenciaAnterior() {
+        var anterior = resultado("https://instagram.com/supermercado.oliv", "Supermercado Oliveira",
+            "Rua Maria Ortiz, 622 - Castelo - ES. Telefone: 028 3542-0000");
+        var confirmado = resultado("https://instagram.com/supermercado.oliv/?hl=pt", "Supermercado Oliveira",
+            "Rua Maria Ortiz, 622 - Castelo - ES. Telefone: 028 99900-1234");
+        var url = URI.create("https://www.instagram.com/supermercado.oliv");
+        assertThat(classificador.classificar(lead(), List.of(anterior), List.of()).instagram()).isEmpty();
+        assertThat(classificador.perfisParaConfirmar(lead(), List.of(anterior))).containsExactly(url);
+        assertThat(classificador.classificar(lead(), List.of(anterior, confirmado), List.of()).instagram()).contains(url);
+        assertThat(classificador.classificar(lead(), List.of(confirmado, anterior), List.of()).instagram()).contains(url);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "Rua Maria Ortiz, 622 - Castelo - ES. Telefone: 028 99900-1235",
+        "Rua Maria Ortiz, 622. Telefone: 028 99900-1234",
+        "Rua Maria Ortiz, 622 - Castelo - ES.\nTelefone: 028 99900-1234",
+        "Rua Maria Ortiz, 622 - Castelo - ES. ... Telefone: 028 99900-1234",
+        "Rua Maria Ortiz, 622 - Castelo - ES. ***** Telefone: 028 99900-1234",
+        "Rua Maria Ortiz, 622 - Castelo - ES. CNPJ 12.345.678/0001-90"
+    })
+    void numeroDivergenteExigeTelefoneExatoEMesmoLogradouroMunicipioNoMesmoTrecho(String resumo) {
+        assertThat(classificador.classificar(lead(), List.of(resultado(
+            "https://instagram.com/supermercado.oliv", "Supermercado Oliveira", resumo)), List.of()).instagram()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Rua da Lua, 622 - Castelo - ES", "Curitiba - PR", "CNPJ 98.765.432/0001-10",
+        "Telefone: 041 99900-1234"})
+    void confirmacaoDeNumeroNaoDeveApagarConflitosDefinitivosDoPerfil(String conflito) {
+        var confirmado = resultado("https://instagram.com/supermercado.oliv", "Supermercado Oliveira",
+            "Rua Maria Ortiz, 622 - Castelo - ES. Telefone: 028 99900-1234");
+        var conflitante = resultado("https://instagram.com/supermercado.oliv", "Supermercado Oliveira", conflito);
+        assertThat(classificador.classificar(lead(), List.of(confirmado, conflitante), List.of()).instagram()).isEmpty();
+        assertThat(classificador.classificar(lead(), List.of(conflitante, confirmado), List.of()).instagram()).isEmpty();
+        assertThat(classificador.perfisParaConfirmar(lead(), List.of(confirmado, conflitante))).isEmpty();
+    }
+
+    @Test
+    void revalidacaoDoInstagramNaoDeveFlexibilizarNumeroDeSiteProprio() {
+        assertThat(classificador.classificar(lead(), List.of(), List.of(resultado(
+            "https://supermercadooliveira.example", "Supermercado Oliveira",
+            "Rua Maria Ortiz, 622 - Castelo - ES. Telefone: 028 99900-1234"))).siteProprio()).isEmpty();
+    }
+
+    @Test
+    void paginaComNumeroDivergenteDeveResolverEReavaliarTodosOsResultados() {
+        var consultas = new java.util.ArrayList<GooglePesquisaWebRequest>();
+        GooglePesquisaGateway client = request -> {
+            consultas.add(request);
+            return new GooglePesquisaWebResponse(request.googlePlaceId(), request.tipo(),
+                BravePesquisaApiClient.montarConsulta(request), List.of(resultado(
+                    "https://instagram.com/supermercado.oliv", "Supermercado Oliveira",
+                    "Rua Maria Ortiz, 622 - Castelo - ES. Telefone: 028 3542-0000")));
+        };
+        var leitor = new LeitorPaginaCandidata(
+            (uri, timeout, maxBytes) -> new LeitorPaginaCandidata.Resposta(200, "text/html",
+                "Rua Maria Ortiz, 621 - Castelo - ES. Telefone: 028 99900-1234"
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+            uri -> true, 1_000, 65_536);
+        assertThat(new PesquisaWebInternaService(client, classificador, leitor).pesquisar(lead()).instagram())
+            .contains(URI.create("https://www.instagram.com/supermercado.oliv"));
+        assertThat(consultas).hasSize(3);
+    }
+
+    @Test
+    void candidatosComMesmoTelefoneEEnderecoParcialDevemPreservarAmbiguidade() {
+        String resumo = "Rua Maria Ortiz, 622 - Castelo - ES. Telefone: 028 99900-1234";
+        assertThat(classificador.classificar(lead(), List.of(
+            resultado("https://instagram.com/supermercado.oliv", "Supermercado Oliveira", resumo),
+            resultado("https://instagram.com/supermercado.olve", "Supermercado Oliveira", resumo)
+        ), List.of()).instagram()).isEmpty();
+    }
+
     @Test
     void nomeGenericoNaoDevePermitirDominioDeDiretorioDesconhecido() {
         var lead = new PesquisaLeadDados("place-teste", "Padaria Central", CategoriaNegocio.PADARIA,
