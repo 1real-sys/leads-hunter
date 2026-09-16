@@ -179,6 +179,9 @@ public class GooglePesquisaWebClient implements GooglePesquisaGateway {
             case DISTRIBUIDORA -> "distribuidora";
             case ACOUGUE -> "açougue";
             case FARMACIA -> "farmácia";
+            case INFORMATICA -> "loja de informática";
+            case VESTUARIO -> "loja de roupas";
+            case PETSHOP -> "pet shop";
             case OUTROS -> "estabelecimento comercial";
         };
     }

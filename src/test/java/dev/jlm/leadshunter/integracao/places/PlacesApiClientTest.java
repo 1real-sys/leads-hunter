@@ -23,7 +23,11 @@ import org.springframework.web.client.RestClient;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+
+import org.hamcrest.Matcher;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 
 @ExtendWith(MockitoExtension.class)
 class PlacesApiClientTest {
@@ -135,6 +139,38 @@ class PlacesApiClientTest {
         permitirExecucaoDoRateLimiter();
 
         client.buscarProximos(criarRequest());
+
+        server.verify();
+    }
+
+    @Test
+    void deveTraduzirCategoriasDeLojaParaOsTiposOficiaisDoGoogle() {
+        assertTiposEnviados(CategoriaNegocio.INFORMATICA,
+            containsInAnyOrder("electronics_store", "cell_phone_store"));
+        assertTiposEnviados(CategoriaNegocio.VESTUARIO,
+            containsInAnyOrder("clothing_store", "womens_clothing_store", "shoe_store", "sportswear_store"));
+        assertTiposEnviados(CategoriaNegocio.PETSHOP, containsInAnyOrder("pet_store"));
+    }
+
+    private void assertTiposEnviados(CategoriaNegocio categoria, Matcher<Iterable<? extends String>> tipos) {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        PlacesApiClient client = new PlacesApiClient(builder, responseMapper, rateLimiter, "chave-de-teste", URL);
+        server.expect(requestTo(URL))
+            .andExpect(jsonPath("$.includedTypes", tipos))
+            .andRespond(withStatus(HttpStatus.OK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"places\":[]}"));
+        when(responseMapper.toPlacesSearchResponse(any()))
+            .thenReturn(new PlacesSearchResponse(List.of()));
+        permitirExecucaoDoRateLimiter();
+
+        client.buscarProximos(new PlacesSearchRequest(
+            new BigDecimal("-25.4284"),
+            new BigDecimal("-49.2733"),
+            5,
+            List.of(categoria)
+        ));
 
         server.verify();
     }

@@ -518,6 +518,9 @@ public class ClassificadorUrlService {
             case DISTRIBUIDORA -> Set.of("atacado", "distribuidora");
             case ACOUGUE -> Set.of("acougue", "carnes");
             case FARMACIA -> Set.of("drogaria", "farmacia");
+            case INFORMATICA -> Set.of("informatica", "eletronicos", "eletronica", "celular", "computador");
+            case VESTUARIO -> Set.of("moda", "roupas", "vestuario", "boutique", "calcados");
+            case PETSHOP -> Set.of("pet", "petshop", "racao", "agropecuaria");
             case OUTROS -> Set.of();
         };
     }

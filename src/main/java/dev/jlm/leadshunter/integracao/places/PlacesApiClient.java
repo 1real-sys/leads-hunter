@@ -148,6 +148,17 @@ public class PlacesApiClient {
                 case DISTRIBUIDORA -> tipos.add("store");
                 case ACOUGUE -> tipos.add("butcher_shop");
                 case FARMACIA -> tipos.add("pharmacy");
+                case INFORMATICA -> {
+                    tipos.add("electronics_store");
+                    tipos.add("cell_phone_store");
+                }
+                case VESTUARIO -> {
+                    tipos.add("clothing_store");
+                    tipos.add("womens_clothing_store");
+                    tipos.add("shoe_store");
+                    tipos.add("sportswear_store");
+                }
+                case PETSHOP -> tipos.add("pet_store");
                 case OUTROS -> tipos.add("store");
             }
         }

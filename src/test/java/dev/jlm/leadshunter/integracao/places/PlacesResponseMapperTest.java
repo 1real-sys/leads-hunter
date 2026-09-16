@@ -102,4 +102,35 @@ class PlacesResponseMapperTest {
         assertThat(mapper.toPlacesSearchResponse(null).places()).isEmpty();
         assertThat(mapper.toPlacesSearchResponse(new NearbySearchResponse(null)).places()).isEmpty();
     }
+
+    @Test
+    void deveInferirCategoriasDeLojaEspecificas() {
+        assertThat(categoriaDe(List.of("electronics_store", "store", "point_of_interest")))
+            .isEqualTo(CategoriaNegocio.INFORMATICA);
+        assertThat(categoriaDe(List.of("cell_phone_store"))).isEqualTo(CategoriaNegocio.INFORMATICA);
+        assertThat(categoriaDe(List.of("clothing_store", "store"))).isEqualTo(CategoriaNegocio.VESTUARIO);
+        assertThat(categoriaDe(List.of("womens_clothing_store"))).isEqualTo(CategoriaNegocio.VESTUARIO);
+        assertThat(categoriaDe(List.of("shoe_store", "store"))).isEqualTo(CategoriaNegocio.VESTUARIO);
+        assertThat(categoriaDe(List.of("sportswear_store"))).isEqualTo(CategoriaNegocio.VESTUARIO);
+        assertThat(categoriaDe(List.of("pet_store", "store"))).isEqualTo(CategoriaNegocio.PETSHOP);
+        assertThat(categoriaDe(List.of("store", "point_of_interest"))).isEqualTo(CategoriaNegocio.OUTROS);
+    }
+
+    private CategoriaNegocio categoriaDe(List<String> types) {
+        Place place = new Place(
+            "place-tipos",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            types,
+            List.of()
+        );
+        return mapper.toPlacesSearchResponse(new NearbySearchResponse(List.of(place)))
+            .places().getFirst().categoria();
+    }
 }

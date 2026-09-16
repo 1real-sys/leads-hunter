@@ -8,5 +8,8 @@ public enum CategoriaNegocio {
     DISTRIBUIDORA,
     ACOUGUE,
     FARMACIA,
+    INFORMATICA,
+    VESTUARIO,
+    PETSHOP,
     OUTROS
 }

@@ -136,6 +136,16 @@ public class PlacesResponseMapper {
         if (types.contains("bakery")) {
             return CategoriaNegocio.PADARIA;
         }
+        if (types.contains("pet_store")) {
+            return CategoriaNegocio.PETSHOP;
+        }
+        if (types.contains("electronics_store") || types.contains("cell_phone_store")) {
+            return CategoriaNegocio.INFORMATICA;
+        }
+        if (types.contains("clothing_store") || types.contains("womens_clothing_store")
+            || types.contains("shoe_store") || types.contains("sportswear_store")) {
+            return CategoriaNegocio.VESTUARIO;
+        }
 
         return CategoriaNegocio.OUTROS;
     }
