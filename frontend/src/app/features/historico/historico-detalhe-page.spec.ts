@@ -58,6 +58,7 @@ const EXECUCAO: PesquisaInformacoesExecucaoResponse = {
   id: 90,
   buscaId: 42,
   status: 'EM_ANDAMENTO',
+  usarBrave: true,
   criadoEm: '2026-09-13T01:00:00',
   iniciadoEm: '2026-09-13T01:00:00',
   atualizadoEm: '2026-09-13T01:00:00',
@@ -109,6 +110,10 @@ describe('HistoricoDetalhePage', () => {
     return harness.routeNativeElement!.querySelector('[data-testid="buscar-informacoes"]')!;
   }
 
+  function toggleBrave(): HTMLButtonElement {
+    return harness.routeNativeElement!.querySelector('[data-testid="usar-brave"]')!;
+  }
+
   it('posiciona Buscar informações após CNPJ, aguarda restauração e impede POST duplicado', async () => {
     const page = await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
     expect(botaoInformacoes().disabled).toBe(true);
@@ -119,11 +124,24 @@ describe('HistoricoDetalhePage', () => {
       .expectOne(API_ROUTES.buscaInformacoes(42))
       .flush(null, { status: 204, statusText: 'No Content' });
     await harness.fixture.whenStable();
-    expect(
-      [...harness.routeNativeElement!.querySelectorAll('.historico-detalhe__actions > *')].map(
-        (elemento) => elemento.textContent?.trim(),
-      ),
-    ).toEqual(['Voltar ao histórico', 'Buscar CNPJ', 'Buscar informações']);
+    const acoes = [...harness.routeNativeElement!.querySelectorAll('.historico-detalhe__actions > *')]
+      .map((elemento) => elemento.textContent?.trim());
+    expect(acoes[0]).toBe('Voltar ao histórico');
+    expect(acoes[1]).toBe('Buscar CNPJ');
+    expect(acoes[2]).toContain('Brave Search');
+    expect(acoes[2]).toContain('Ativado');
+    expect(acoes[3]).toBe('Buscar informações');
+    const site = harness.routeNativeElement!.querySelector(
+      '.historico-detalhe__identity a[href="https://zetafarmacia.example/"]',
+    ) as HTMLAnchorElement;
+    expect(site).not.toBeNull();
+    expect(site.textContent?.trim()).toBe('Site oficial');
+    expect(harness.routeNativeElement!.textContent).toContain('Site não informado');
+    expect(toggleBrave().getAttribute('aria-checked')).toBe('true');
+    toggleBrave().click();
+    await harness.fixture.whenStable();
+    expect(toggleBrave().getAttribute('aria-checked')).toBe('false');
+    expect(toggleBrave().textContent).toContain('Desativado');
     botaoInformacoes().click();
     page['buscarInformacoes']();
     await harness.fixture.whenStable();
@@ -131,7 +149,7 @@ describe('HistoricoDetalhePage', () => {
     expect(botaoInformacoes().textContent).toContain('Buscando informações…');
     const request = httpTesting.expectOne(API_ROUTES.buscaInformacoes(42));
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toBeNull();
+    expect(request.request.body).toEqual({ usarBrave: false });
     request.flush({ ...EXECUCAO, status: 'PENDENTE' });
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.textContent).toContain('Aguardando a vez de pesquisar');

@@ -83,6 +83,16 @@ class PesquisaInformacoesExecucaoJpaIntegrationTest {
     }
 
     @Test
+    void persistePreferenciaDeNaoUsarBraveNaExecucao() {
+        Long busca = criarBusca(0);
+
+        var resposta = service.iniciar(busca, false);
+
+        assertThat(resposta.usarBrave()).isFalse();
+        assertThat(service.consultar(busca).orElseThrow().usarBrave()).isFalse();
+    }
+
+    @Test
     void rollbackNaoDisparaWorkerELiberaReserva() {
         Long busca = criarBusca(0);
         tx.executeWithoutResult(status -> {
@@ -126,7 +136,7 @@ class PesquisaInformacoesExecucaoJpaIntegrationTest {
         Long busca = criarBusca(2);
         Long id = service.iniciar(busca).id();
         assertThat(persistencia.iniciar(id)).isEqualTo(busca);
-        when(gateway.pesquisar(any())).thenAnswer(invocacao -> {
+        when(gateway.pesquisar(any(), anyBoolean())).thenAnswer(invocacao -> {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             return SITE;
         }).thenAnswer(invocacao -> {
@@ -167,14 +177,14 @@ class PesquisaInformacoesExecucaoJpaIntegrationTest {
         Long busca = criarBusca(3);
         Long id = service.iniciar(busca).id();
         persistencia.iniciar(id);
-        when(gateway.pesquisar(any())).thenThrow(new GooglePesquisaWebBloqueadaException());
+        when(gateway.pesquisar(any(), anyBoolean())).thenThrow(new GooglePesquisaWebBloqueadaException());
         pesquisaService.buscarInformacoes(busca, (passo, erro) -> persistencia.registrar(id, passo, erro));
         persistencia.concluir(id);
         var resultado = service.consultar(busca).orElseThrow();
         assertThat(resultado.status()).isEqualTo(PesquisaInformacoesStatus.FALHA);
         assertThat(resultado.falhas()).isEqualTo(3);
         assertThat(resultado.erroCodigo()).isEqualTo(PesquisaInformacoesErro.PESQUISA_BLOQUEADA);
-        verify(gateway, times(1)).pesquisar(any());
+        verify(gateway, times(1)).pesquisar(any(), anyBoolean());
     }
 
     @Test

@@ -18,8 +18,9 @@ class BuscaInformacoesWorkerTest {
         var liberar = new CountDownLatch(1);
         var terminou = new CountDownLatch(2);
         Thread chamadora = Thread.currentThread();
-        when(persistencia.iniciar(anyLong())).thenAnswer(i -> i.getArgument(0));
-        when(pesquisa.buscarInformacoes(anyLong(), any())).thenAnswer(i -> {
+        when(persistencia.iniciarComConfiguracao(anyLong()))
+            .thenAnswer(i -> new PesquisaInformacoesExecucaoContexto(i.getArgument(0), true));
+        when(pesquisa.buscarInformacoes(anyLong(), anyBoolean(), any())).thenAnswer(i -> {
             assertThat(Thread.currentThread()).isNotEqualTo(chamadora);
             entrou.countDown();
             assertThat(liberar.await(5, TimeUnit.SECONDS)).isTrue();
@@ -35,7 +36,7 @@ class BuscaInformacoesWorkerTest {
             assertThat(worker.reservar()).isTrue();
             worker.enfileirar(2L);
             assertThat(worker.reservar()).isFalse();
-            verify(persistencia, never()).iniciar(2L);
+            verify(persistencia, never()).iniciarComConfiguracao(2L);
             liberar.countDown();
             assertThat(terminou.await(5, TimeUnit.SECONDS)).isTrue();
             verify(persistencia).concluir(1L);
@@ -51,8 +52,10 @@ class BuscaInformacoesWorkerTest {
         var pesquisa = mock(BuscaInformacoesService.class);
         var persistencia = mock(PesquisaInformacoesExecucaoPersistencia.class);
         var worker = new BuscaInformacoesWorker(pesquisa, persistencia);
-        when(persistencia.iniciar(1L)).thenReturn(9L);
-        when(pesquisa.buscarInformacoes(eq(9L), any())).thenThrow(new RuntimeException("segredo"));
+        when(persistencia.iniciarComConfiguracao(1L))
+            .thenReturn(new PesquisaInformacoesExecucaoContexto(9L, false));
+        when(pesquisa.buscarInformacoes(eq(9L), eq(false), any()))
+            .thenThrow(new RuntimeException("segredo"));
         try {
             worker.preparar();
             assertThat(worker.reservar()).isTrue();

@@ -100,7 +100,7 @@ class BuscaInformacoesServiceJpaIntegrationTest {
     void deveFalharCom404LogicoParaBuscaInexistente() {
         BuscaInformacoesService service = new BuscaInformacoesService(
             persistencia,
-            lead -> resultado(null, null),
+            (lead, usarBrave) -> resultado(null, null),
             formatador
         );
 
@@ -164,7 +164,7 @@ class BuscaInformacoesServiceJpaIntegrationTest {
         }
 
         @Override
-        public PesquisaInformacoesWebResultado pesquisar(PesquisaLeadDados lead) {
+        public PesquisaInformacoesWebResultado pesquisar(PesquisaLeadDados lead, boolean usarBrave) {
             placeIds.add(lead.googlePlaceId());
             return resultados.removeFirst();
         }

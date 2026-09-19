@@ -47,6 +47,7 @@ const execucaoBase = {
   id: 90,
   buscaId: 42,
   status: 'PENDENTE',
+  usarBrave: true,
   criadoEm: '2026-09-13T01:00:00',
   iniciadoEm: '2026-09-13T01:00:00',
   atualizadoEm: '2026-09-13T01:00:00',
@@ -119,8 +120,8 @@ try {
         if (path === '/api/buscas/42/informacoes') {
           if (request.method() === 'POST') {
             posts++;
-            assert.ok(request.postData() === null || request.postData() === 'null');
-            execucao = { ...execucaoBase };
+            assert.deepEqual(request.postDataJSON(), { usarBrave: false });
+            execucao = { ...execucaoBase, usarBrave: false };
             await route.fulfill({ status: 202, json: execucao });
           } else {
             gets++;
@@ -141,13 +142,15 @@ try {
         await page.goto(`${baseUrl}/historico/42`, { waitUntil: 'domcontentloaded' });
         const botao = page.getByTestId('buscar-informacoes');
         await aguardarBotaoDisponivel(page);
-        assert.deepEqual(
-          await page
-            .locator('.historico-detalhe__actions > *')
-            .allTextContents()
-            .then((textos) => textos.map((texto) => texto.trim())),
-          ['Voltar ao histórico', 'Buscar CNPJ', 'Buscar informações'],
-        );
+        const acoes = await page
+          .locator('.historico-detalhe__actions > *')
+          .allTextContents()
+          .then((textos) => textos.map((texto) => texto.trim()));
+        assert.equal(acoes[0], 'Voltar ao histórico');
+        assert.equal(acoes[1], 'Buscar CNPJ');
+        assert.match(acoes[2], /Brave Search/);
+        assert.match(acoes[2], /Ativado/);
+        assert.equal(acoes[3], 'Buscar informações');
         assert.equal(await page.locator('.historico-detalhe__observacoes a').count(), 4);
         assert.equal(await page.locator('.historico-detalhe__observacoes script').count(), 0);
         for (const link of await page.locator('.historico-detalhe__observacoes a').all()) {
@@ -155,6 +158,10 @@ try {
           assert.equal(await link.getAttribute('rel'), 'noopener noreferrer');
         }
         await auditar(page, `${nome}-pronto`);
+        const toggle = page.getByTestId('usar-brave');
+        assert.equal(await toggle.getAttribute('aria-checked'), 'true');
+        await toggle.click();
+        assert.equal(await toggle.getAttribute('aria-checked'), 'false');
         await botao.focus();
         await botao.press('Enter');
         await page.waitForFunction(() =>

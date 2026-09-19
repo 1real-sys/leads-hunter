@@ -23,11 +23,25 @@ public class BuscaInformacoesService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public BuscaInformacoesResponse buscarInformacoes(Long buscaId) {
-        return buscarInformacoes(buscaId, (passo, erro) -> passo.get());
+        return buscarInformacoes(buscaId, true, (passo, erro) -> passo.get());
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public BuscaInformacoesResponse buscarInformacoes(Long buscaId, BuscaInformacoesProgresso progresso) {
+        return buscarInformacoes(buscaId, true, progresso);
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public BuscaInformacoesResponse buscarInformacoes(Long buscaId, boolean usarBrave) {
+        return buscarInformacoes(buscaId, usarBrave, (passo, erro) -> passo.get());
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public BuscaInformacoesResponse buscarInformacoes(
+        Long buscaId,
+        boolean usarBrave,
+        BuscaInformacoesProgresso progresso
+    ) {
         List<BuscaInformacoesLead> leads = persistencia.carregarLeads(buscaId);
         Contadores contadores = new Contadores(leads.size());
         progresso.registrar(contadores::resposta, null);
@@ -45,7 +59,7 @@ public class BuscaInformacoesService {
             }
 
             try {
-                PesquisaInformacoesWebResultado encontrado = pesquisa.pesquisar(lead.dados());
+                PesquisaInformacoesWebResultado encontrado = pesquisa.pesquisar(lead.dados(), usarBrave);
                 progresso.registrar(() -> {
                     PesquisaInformacoesWebResultado persistido =
                         persistencia.atualizarObservacoes(lead.leadId(), encontrado);

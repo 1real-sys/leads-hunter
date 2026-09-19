@@ -2282,3 +2282,142 @@ A montagem dos tipos passou a ser verificada por teste unitário com inspeção 
 - `fluxo.md`
 - `features-pos-mvp/refinamento-categorias.md`
 - `HISTORICO_IMPLEMENTACOES.md`
+
+## 79. Captura e persistência do site oficial do Google Places — 18/09/2026
+
+Foi implementada a primeira sprint do refinamento do site oficial. A busca do Google Places agora solicita `websiteUri`, propaga o valor para o modelo interno e persiste o site na coluna `leads.website` sem apagar um endereço já conhecido quando uma resposta posterior não o informa. O contrato de leads, o histórico e as exportações CSV/XLSX passaram a expor o campo, e o Kanban/histórico exibem o link oficial ou um rótulo neutro quando ele não existe.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/resources/db/migration/V7__adicionar_website_lead.sql`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/places/PlacesApiClient.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/places/PlacesResponseMapper.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/places/PlacesSearchResponse.java`
+- `src/main/java/dev/jlm/leadshunter/lead/Lead.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaDetalheResponse.java`
+- `src/main/java/dev/jlm/leadshunter/exportacao/ExportService.java`
+- `frontend/src/app/shared/models/lead.model.ts`
+- `frontend/src/app/shared/models/busca.model.ts`
+- `frontend/src/app/features/kanban/lead-detalhe.html`
+- `frontend/src/app/features/historico/historico-detalhe-page.html`
+- `frontend/src/app/features/historico/historico-detalhe-page.scss`
+- `src/test/java/dev/jlm/leadshunter/integracao/places/PlacesApiClientTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/places/PlacesResponseMapperTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/lead/LeadControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/exportacao/ExportServiceTest.java`
+- `features-pos-mvp/refinamento-site-oficial.md`
+- `fluxo.md`
+
+## 80. Extração de links sociais do site oficial — 18/09/2026
+
+O leitor de páginas públicas passou a devolver o texto e os links encontrados em `PaginaLida`. Links absolutos, relativos e `rel=me` são resolvidos e filtrados pelo canonicalizador existente; somente perfis de Instagram públicos entram no resultado, enquanto posts, reels, hosts privados e URLs inválidas são descartados. O método textual anterior foi mantido para preservar os consumidores atuais.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PaginaLida.java`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/LeitorPaginaCandidata.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/LeitorPaginaCandidataTest.java`
+- `features-pos-mvp/refinamento-site-oficial.md`
+- `fluxo.md`
+
+## 81. Semeadura da pesquisa pelo site oficial — 18/09/2026
+
+`PesquisaLeadDados` passou a transportar o site persistido do lead. `PesquisaWebInternaService` canonicaliza o endereço, abre o site oficial uma única vez, usa o texto como evidência e transforma os perfis de Instagram extraídos em candidatos do classificador. Quando há confirmação pelo site ou por um perfil encontrado nele, o Brave não é consultado; sites inválidos seguem o fluxo anterior. A página oficial entra no mesmo orçamento de três aberturas por lead e URLs já lidas não são reabertas.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaLeadDados.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaService.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaServiceTest.java`
+- `features-pos-mvp/refinamento-site-oficial.md`
+- `fluxo.md`
+
+## 82. Fechamento do refinamento de site oficial — 18/09/2026
+
+O contrato público, a exportação e as telas do Kanban e do Histórico passaram a apresentar o site oficial capturado pelo Places. A documentação da API foi alinhada ao novo campo e ao fluxo de pesquisa semeado pelo site. Foram adicionados testes frontend para link presente/ausente e um diagnóstico opt-in de página pública real; a validação automatizada mediu zero consultas ao Brave quando o site confirma o lead e preservou o teto de três consultas no fallback.
+
+O diagnóstico real foi executado sem credenciais e não comprovou extração positiva porque a página pública estava indisponível para o leitor no ambiente; esse limite permanece registrado, sem transformar a tentativa em resultado positivo.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/SiteOficialLiveTest.java`
+
+**Modificados:**
+
+- `API.md`
+- `frontend/src/app/features/kanban/lead-detalhe.spec.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.spec.ts`
+- `frontend/src/app/shared/models/api-contracts.spec.ts`
+- `features-pos-mvp/refinamento-site-oficial.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+## 83. Controle manual do Brave na busca de informações — 19/09/2026
+
+Foi adicionado ao detalhe do Histórico um interruptor visível junto da ação `Buscar informações`. Ele permite escolher, por execução, se a pesquisa pode usar a API do Brave Search. A preferência é enviada pelo frontend, persistida na execução assíncrona e aplicada pelo worker: quando desligada, o sistema ainda valida o site oficial e candidatos já disponíveis, mas não faz consultas ao Brave. O padrão permanece ligado para manter compatibilidade com clientes antigos.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesRequest.java`
+- `src/main/java/dev/jlm/leadshunter/busca/PesquisaInformacoesExecucaoContexto.java`
+- `src/main/resources/db/migration/V8__configurar_uso_brave_por_execucao.sql`
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaController.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesExecucaoService.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesExecucao.java`
+- `src/main/java/dev/jlm/leadshunter/busca/PesquisaInformacoesExecucaoResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/PesquisaInformacoesExecucaoPersistencia.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesWorker.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaInformacoesService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaInformacoesGateway.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaWebInternaService.java`
+- `frontend/src/app/core/api/busca-api.ts`
+- `frontend/src/app/shared/models/busca.model.ts`
+- `frontend/src/app/features/historico/pesquisa-informacoes-store.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.html`
+- `frontend/src/app/features/historico/historico-detalhe-page.scss`
+- `API.md`
+- `fluxo.md`
+- `features-pos-mvp/refinamento-site-oficial.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+
+## 84. Refinamento da extração de Instagram em páginas dinâmicas — 18/09/2026
+
+Após a reprodução do caso Petz Vila Velha com o Brave desligado, a extração foi ampliada para reconhecer links de Instagram em atributos usados por páginas dinâmicas (`data-href`, `data-url`, `data-link` e `onclick`) e em URLs embutidas em JSON/estado inicial. O caminho completo do Instagram é preservado antes da canonicalização, evitando que links de posts e reels sejam encurtados indevidamente para um perfil.
+
+Foi incluído um teste controlado com os dados da filial Petz, confirmando que o site oficial pode fornecer o Instagram sem chamar o Brave quando o HTML está acessível. A reprodução live da URL da Petz recebeu `403 Access Denied` no leitor HTTP e no Chromium headless do ambiente; não foi implementado bypass, redirecionamento ou execução de desafio.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/LeitorPaginaCandidata.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/LeitorPaginaCandidataTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/PesquisaFiliaisPrecisaoTest.java`
+- `fluxo.md`
+- `features-pos-mvp/refinamento-site-oficial.md`
+- `HISTORICO_IMPLEMENTACOES.md`

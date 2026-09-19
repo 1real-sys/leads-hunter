@@ -27,12 +27,16 @@ public class BuscaController {
 
     @PostMapping("/{id}/informacoes")
     public ResponseEntity<PesquisaInformacoesExecucaoResponse> buscarInformacoes(
-        @PathVariable @Positive Long id
+        @PathVariable @Positive Long id,
+        @RequestBody(required = false) BuscaInformacoesRequest request
     ) {
+        var execucao = request == null
+            ? buscaInformacoesExecucaoService.iniciar(id)
+            : buscaInformacoesExecucaoService.iniciar(id, request.deveUsarBrave());
         return ResponseEntity.accepted()
             .cacheControl(CacheControl.noStore())
             .location(URI.create("/api/buscas/" + id + "/informacoes"))
-            .body(buscaInformacoesExecucaoService.iniciar(id));
+            .body(execucao);
     }
 
     @GetMapping("/{id}/informacoes")

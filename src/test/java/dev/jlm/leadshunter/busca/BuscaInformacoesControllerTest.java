@@ -15,6 +15,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -50,6 +51,19 @@ class BuscaInformacoesControllerTest {
             .andExpect(status().isAccepted())
             .andExpect(jsonPath("$.id").value(20))
             .andExpect(jsonPath("$.status").value("EM_ANDAMENTO"));
+    }
+
+    @Test
+    void postAceitaDesativarBraveNaExecucao() throws Exception {
+        when(service.iniciar(10L, false)).thenReturn(resposta(PesquisaInformacoesStatus.PENDENTE, null));
+
+        mvc.perform(post("/api/buscas/10/informacoes")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"usarBrave\":false}"))
+            .andExpect(status().isAccepted())
+            .andExpect(jsonPath("$.status").value("PENDENTE"));
+
+        verify(service).iniciar(10L, false);
     }
 
     @ParameterizedTest

@@ -183,6 +183,10 @@ export class HistoricoDetalhePage {
     if (this.estado() === 'success') this.pesquisa.iniciar();
   }
 
+  protected alternarUsoBrave(): void {
+    if (this.estado() === 'success') this.pesquisa.alternarUsoBrave();
+  }
+
   protected formatarDataLocal(data: string): string {
     const correspondencia = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(data);
 

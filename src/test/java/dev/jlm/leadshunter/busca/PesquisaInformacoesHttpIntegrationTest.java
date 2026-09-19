@@ -63,7 +63,7 @@ class PesquisaInformacoesHttpIntegrationTest {
         var entrouNoSegundo = new CountDownLatch(1);
         var liberarSegundo = new CountDownLatch(1);
         var chamadas = new AtomicInteger();
-        when(gateway.pesquisar(any())).thenAnswer(invocacao -> {
+        when(gateway.pesquisar(any(), anyBoolean())).thenAnswer(invocacao -> {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             if (chamadas.incrementAndGet() == 1) {
                 return new PesquisaInformacoesWebResultado(Optional.empty(), Optional.of(URI.create("https://padaria.example/")));
@@ -98,7 +98,7 @@ class PesquisaInformacoesHttpIntegrationTest {
             assertThat(leads.findById(leadIds.get(0)).orElseThrow().getObservacoes())
                 .startsWith("Anotação comercial").contains("https://padaria.example/");
             assertThat(leads.findById(leadIds.get(1)).orElseThrow().getObservacoes()).isEqualTo("Anotação comercial");
-            verify(gateway, times(2)).pesquisar(any());
+            verify(gateway, times(2)).pesquisar(any(), anyBoolean());
         } finally {
             liberarSegundo.countDown();
             if (service.consultar(buscaId).isPresent()) aguardarTermino(buscaId);

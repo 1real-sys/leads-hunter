@@ -12,7 +12,9 @@ Esta documentação descreve somente a API REST existente no backend atual.
 - **Paginação:** `GET /api/leads/pagina` possui paginação por status para o Kanban. As demais listagens e exportações continuam processando todos os registros que correspondem aos filtros.
 - **Rate limiting:** existe apenas sobre chamadas externas reais à Google Places feitas durante `POST /api/buscas`. Por padrão, o bucket em memória permite 10 chamadas e repõe essa capacidade gradualmente em 60 segundos. Um resultado atendido pelo cache não consome o limite. Os demais endpoints não possuem rate limiting próprio.
 - **Cache de buscas:** o resultado externo da Google é mantido em memória por 30 minutos, com até 100 entradas por padrão. A chave considera latitude e longitude arredondadas para quatro casas decimais, raio e categorias distintas ordenadas; `enderecoBase` não participa da chave. Mesmo em cache hit, uma nova busca e seus vínculos com leads são persistidos.
-- **Pesquisa inteligente:** tem worker próprio, uma execução em processamento e uma aguardando, limite padrão de 150 leads e bloqueio de duplicatas por busca. A fonte é a API oficial do Brave Search (`BRAVE_SEARCH_API_KEY`). O scraping Bing → Google → DuckDuckGo → Brave permanece no código, desativado por padrão. Sem chave, a pesquisa retorna indisponível. Não consome API da Google nem Places.
+- **Pesquisa inteligente:** tem worker próprio, uma execução em processamento e uma aguardando, limite padrão de 150 leads e bloqueio de duplicatas por busca. A fonte é a API oficial do Brave Search (`BRAVE_SEARCH_API_KEY`). O scraping Bing → Google → DuckDuckGo → Brave permanece no código, desativado por padrão. Sem chave, a pesquisa retorna indisponível. A execução pode desativar o Brave pelo campo `usarBrave`; nesse caso, somente evidências já disponíveis, incluindo o site oficial salvo, são avaliadas. Não consome API da Google nem Places.
+
+Quando um lead possui `website` capturado pelo Google Places, a pesquisa inteligente canonicaliza a URL, abre somente essa página pública e usa o texto como evidência. Links de perfis Instagram encontrados nela são candidatos do mesmo classificador de identidade; se o site ou um desses perfis confirmar o lead, nenhuma consulta ao Brave é feita. A página oficial conta no limite de três páginas abertas por lead, a abertura não segue redirecionamentos e destinos privados são recusados. Sites ausentes, inválidos ou sem confirmação seguem o fluxo normal de até três consultas ao Brave.
 
 ## Formato padrão dos erros
 
@@ -106,13 +108,22 @@ Remove o termo identificado pelo ID e retorna `204 No Content`. O bloqueio deixa
 
 ## POST /api/buscas/{id}/informacoes
 
-Inicia manualmente a pesquisa de Instagram e site próprio somente dos leads vinculados à busca. Recebe ID positivo no caminho, sem body. Retorna `202 Accepted`, `Cache-Control: no-store`, `Location: /api/buscas/{id}/informacoes` e o DTO da execução persistida, sem aguardar o acesso à internet.
+Inicia manualmente a pesquisa de Instagram e site próprio somente dos leads vinculados à busca. Recebe ID positivo no caminho e um body opcional para controlar a fonte complementar:
+
+```json
+{
+  "usarBrave": true
+}
+```
+
+`usarBrave` inicia como `true` quando omitido, preservando clientes antigos. Quando enviado como `false`, a execução não chama a API do Brave nem faz consultas de descoberta; ela ainda pode validar o site oficial e links já extraídos dentro dos limites existentes. Retorna `202 Accepted`, `Cache-Control: no-store`, `Location: /api/buscas/{id}/informacoes` e o DTO da execução persistida, sem aguardar o acesso à internet.
 
 ```json
 {
   "id": 42,
   "buscaId": 10,
   "status": "PENDENTE",
+  "usarBrave": true,
   "criadoEm": "2026-09-12T14:00:00",
   "iniciadoEm": null,
   "atualizadoEm": "2026-09-12T14:00:00",
@@ -257,6 +268,7 @@ Retorna um `BuscaResponse` com o ID da busca persistida, os parâmetros recebido
       "nome": "Padaria Central",
       "categoria": "PADARIA",
       "enderecoFormatado": "Rua Central, 100",
+      "website": "https://padariacentral.example/",
       "telefone": "(41) 3333-4444",
       "whatsappUrl": "https://wa.me/554133334444",
       "score": 95,
@@ -409,6 +421,7 @@ Retorna um `BuscaDetalheResponse`. Os leads são ordenados por `scoreNaBusca` de
       "nome": "Padaria Central",
       "categoria": "PADARIA",
       "enderecoFormatado": "Rua Sete, 100",
+      "website": "https://padariacentral.example/",
       "cnpj": "12345678000190",
       "razaoSocial": "Padaria Central LTDA",
       "telefone": "(27) 99999-0000",
@@ -512,6 +525,7 @@ Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores 
     "razaoSocial": "Padaria Central Ltda",
     "categoria": "PADARIA",
     "enderecoFormatado": "Rua Central, 100",
+    "website": "https://padariacentral.example/",
     "telefone": "(27) 99999-0000",
     "telefoneNormalizado": "5527999990000",
     "whatsappUrl": "https://wa.me/5527999990000",
@@ -601,6 +615,7 @@ Retorna somente os leads da página solicitada, ordenados por score decrescente,
       "razaoSocial": "Padaria Central Ltda",
       "categoria": "PADARIA",
       "enderecoFormatado": "Rua Central, 100",
+      "website": "https://padariacentral.example/",
       "telefone": "(27) 99999-0000",
       "telefoneNormalizado": "5527999990000",
       "whatsappUrl": "https://wa.me/5527999990000",
@@ -683,6 +698,7 @@ Retorna um `LeadResponse` com a mesma estrutura apresentada em `GET /api/leads`.
   "razaoSocial": "Padaria Central Ltda",
   "categoria": "PADARIA",
   "enderecoFormatado": "Rua Central, 100",
+  "website": "https://padariacentral.example/",
   "telefone": "(27) 99999-0000",
   "telefoneNormalizado": "5527999990000",
   "whatsappUrl": "https://wa.me/5527999990000",
@@ -782,6 +798,7 @@ Persiste somente os campos não nulos recebidos e retorna o `LeadResponse` compl
   "razaoSocial": "Padaria Central Ltda",
   "categoria": "PADARIA",
   "enderecoFormatado": "Rua Central, 100",
+  "website": "https://padariacentral.example/",
   "telefone": "(27) 99999-0000",
   "telefoneNormalizado": "5527999990000",
   "whatsappUrl": "https://wa.me/5527999990000",
@@ -832,9 +849,9 @@ As duas exportações usam a mesma consulta e a mesma ordenação de `GET /api/l
 
 As colunas, nesta ordem, são:
 
-`id`, `googlePlaceId`, `nome`, `cnpj`, `razaoSocial`, `categoria`, `enderecoFormatado`, `telefone`, `telefoneNormalizado`, `whatsappUrl`, `latitude`, `longitude`, `uf`, `municipioNome`, `idhm`, `ratingGoogle`, `totalReviews`, `score`, `temperatura`, `status`, `observacoes`, `ultimoContatoEm`, `criadoEm`, `atualizadoEm`.
+`id`, `googlePlaceId`, `nome`, `cnpj`, `razaoSocial`, `categoria`, `enderecoFormatado`, `website`, `telefone`, `telefoneNormalizado`, `whatsappUrl`, `latitude`, `longitude`, `uf`, `municipioNome`, `idhm`, `ratingGoogle`, `totalReviews`, `score`, `temperatura`, `status`, `observacoes`, `ultimoContatoEm`, `criadoEm`, `atualizadoEm`.
 
-O CNPJ é serializado com os 14 dígitos; no XLSX, a célula é explicitamente textual e preserva eventuais zeros à esquerda. CNPJ e razão social ficam em branco quando o lead não possui correspondência segura.
+O `website` é o `websiteUri` oficial capturado pela Google Places, quando disponível; pode ser `null` no JSON e fica vazio nas exportações. O CNPJ é serializado com os 14 dígitos; no XLSX, a célula é explicitamente textual e preserva eventuais zeros à esquerda. CNPJ e razão social ficam em branco quando o lead não possui correspondência segura.
 
 ## GET /api/exportacao/leads.csv
 
@@ -870,8 +887,8 @@ Retorna bytes do arquivo, inclusive quando não há leads. Nesse caso, o CSV con
 Exemplo simplificado do conteúdo:
 
 ```csv
-id,googlePlaceId,nome,cnpj,razaoSocial,categoria,enderecoFormatado,telefone,telefoneNormalizado,whatsappUrl,latitude,longitude,uf,municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,status,observacoes,ultimoContatoEm,criadoEm,atualizadoEm
-15,place-15,Padaria Central,12345678000190,Padaria Central Ltda,PADARIA,"Rua Central, 100",(27) 99999-0000,5527999990000,https://wa.me/5527999990000,-20.3155,-40.3128,ES,Vitória,0.845,4.8,120,95,QUENTE,CONTATADO,Retornar amanhã,2026-08-20T10:30,2026-08-19T09:00,2026-08-20T10:30
+id,googlePlaceId,nome,cnpj,razaoSocial,categoria,enderecoFormatado,website,telefone,telefoneNormalizado,whatsappUrl,latitude,longitude,uf,municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,status,observacoes,ultimoContatoEm,criadoEm,atualizadoEm
+15,place-15,Padaria Central,12345678000190,Padaria Central Ltda,PADARIA,"Rua Central, 100",https://padariacentral.example/,(27) 99999-0000,5527999990000,https://wa.me/5527999990000,-20.3155,-40.3128,ES,Vitória,0.845,4.8,120,95,QUENTE,CONTATADO,Retornar amanhã,2026-08-20T10:30,2026-08-19T09:00,2026-08-20T10:30
 ```
 
 Headers de resposta:

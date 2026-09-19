@@ -14,6 +14,7 @@ export class PesquisaInformacoesStore {
   readonly consultando = signal(false);
   readonly iniciando = signal(false);
   readonly conhecida = signal(false);
+  readonly usarBrave = signal(true);
   readonly erro = signal<string | null>(null);
   readonly ativa = computed(() => {
     const status = this.execucao()?.status;
@@ -40,6 +41,7 @@ export class PesquisaInformacoesStore {
     this.consultando.set(false);
     this.iniciando.set(false);
     this.conhecida.set(false);
+    this.usarBrave.set(true);
     this.erro.set(null);
   }
 
@@ -63,7 +65,12 @@ export class PesquisaInformacoesStore {
     this.iniciando.set(true);
     this.erro.set(null);
     this.execucao.set(null);
-    this.observar(this.api.buscarInformacoes(this.buscaId));
+    this.observar(this.api.buscarInformacoes(this.buscaId, this.usarBrave()));
+  }
+
+  alternarUsoBrave(): void {
+    if (!this.podeIniciar()) return;
+    this.usarBrave.update((atual) => !atual);
   }
 
   private observar(inicial: Observable<PesquisaInformacoesExecucaoResponse | null>): void {
@@ -84,6 +91,7 @@ export class PesquisaInformacoesStore {
           this.consultando.set(false);
           this.iniciando.set(false);
           this.conhecida.set(true);
+          if (execucao) this.usarBrave.set(execucao.usarBrave);
           this.execucao.set(execucao);
           if (execucao && !this.ativa() && this.ultimaFinalizada !== execucao.id) {
             this.ultimaFinalizada = execucao.id;

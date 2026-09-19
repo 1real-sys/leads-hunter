@@ -15,10 +15,13 @@ import { API_ROUTES } from './api-routes';
 export class BuscaApi {
   private readonly http = inject(HttpClient);
 
-  buscarInformacoes(id: number): Observable<PesquisaInformacoesExecucaoResponse> {
+  buscarInformacoes(
+    id: number,
+    usarBrave = true,
+  ): Observable<PesquisaInformacoesExecucaoResponse> {
     return this.http.post<PesquisaInformacoesExecucaoResponse>(
       API_ROUTES.buscaInformacoes(id),
-      null,
+      { usarBrave },
     );
   }
 

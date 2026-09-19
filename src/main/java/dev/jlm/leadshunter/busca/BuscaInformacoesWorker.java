@@ -57,9 +57,13 @@ public class BuscaInformacoesWorker {
 
     private void executar(Long id) {
         try {
-            Long buscaId = persistencia.iniciar(id);
-            if (buscaId == null) return;
-            pesquisa.buscarInformacoes(buscaId, (passo, erro) -> persistencia.registrar(id, passo, erro));
+            PesquisaInformacoesExecucaoContexto contexto = persistencia.iniciarComConfiguracao(id);
+            if (contexto == null) return;
+            pesquisa.buscarInformacoes(
+                contexto.buscaId(),
+                contexto.usarBrave(),
+                (passo, erro) -> persistencia.registrar(id, passo, erro)
+            );
             persistencia.concluir(id);
         } catch (RuntimeException exception) {
             boolean interrompida = Thread.currentThread().isInterrupted();

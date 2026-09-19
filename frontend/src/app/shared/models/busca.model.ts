@@ -88,6 +88,7 @@ export interface PesquisaInformacoesExecucaoResponse {
   id: number;
   buscaId: number;
   status: PesquisaInformacoesStatus;
+  usarBrave: boolean;
   criadoEm: LocalDateTimeString;
   iniciadoEm: LocalDateTimeString | null;
   atualizadoEm: LocalDateTimeString;

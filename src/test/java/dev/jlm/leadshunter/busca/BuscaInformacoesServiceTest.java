@@ -126,6 +126,16 @@ class BuscaInformacoesServiceTest {
         assertThat(pesquisa.placeIdsConsultados).isEmpty();
     }
 
+    @Test
+    void deveRepassarPreferenciaDeNaoUsarBrave() {
+        FakePersistencia persistencia = persistencia(lead(1, null));
+        FakePesquisa pesquisa = new FakePesquisa(resultado(null, null));
+
+        service(persistencia, pesquisa).buscarInformacoes(42L, false);
+
+        assertThat(pesquisa.usosBrave).containsExactly(false);
+    }
+
     private BuscaInformacoesService service(
         FakePersistencia persistencia,
         PesquisaInformacoesGateway pesquisa
@@ -166,14 +176,16 @@ class BuscaInformacoesServiceTest {
 
         private final ArrayDeque<Object> respostas = new ArrayDeque<>();
         private final List<String> placeIdsConsultados = new ArrayList<>();
+        private final List<Boolean> usosBrave = new ArrayList<>();
 
         private FakePesquisa(Object... respostas) {
             this.respostas.addAll(List.of(respostas));
         }
 
         @Override
-        public PesquisaInformacoesWebResultado pesquisar(PesquisaLeadDados lead) {
+        public PesquisaInformacoesWebResultado pesquisar(PesquisaLeadDados lead, boolean usarBrave) {
             placeIdsConsultados.add(lead.googlePlaceId());
+            usosBrave.add(usarBrave);
             Object resposta = respostas.removeFirst();
             if (resposta instanceof GooglePesquisaWebException exception) {
                 throw exception;

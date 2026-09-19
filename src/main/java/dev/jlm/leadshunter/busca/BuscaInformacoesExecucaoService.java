@@ -30,6 +30,11 @@ public class BuscaInformacoesExecucaoService {
 
     @Transactional
     public PesquisaInformacoesExecucaoResponse iniciar(Long buscaId) {
+        return iniciar(buscaId, true);
+    }
+
+    @Transactional
+    public PesquisaInformacoesExecucaoResponse iniciar(Long buscaId, boolean usarBrave) {
         Busca busca = buscas.bloquearPorId(buscaId)
             .orElseThrow(() -> new BuscaNaoEncontradaException(buscaId));
         var ativa = execucoes.findFirstByBuscaIdAndStatusInOrderByIdDesc(
@@ -51,7 +56,7 @@ public class BuscaInformacoesExecucaoService {
         };
         TransactionSynchronizationManager.registerSynchronization(sincronizacao);
         PesquisaInformacoesExecucao execucao = execucoes.saveAndFlush(
-            new PesquisaInformacoesExecucao(busca, (int) total));
+            new PesquisaInformacoesExecucao(busca, (int) total, usarBrave));
         sincronizacao.id = execucao.getId();
         return PesquisaInformacoesExecucaoResponse.de(execucao);
     }

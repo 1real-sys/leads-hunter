@@ -10,6 +10,7 @@ export const EXECUCAO: PesquisaInformacoesExecucaoResponse = {
   id: 90,
   buscaId: 42,
   status: 'EM_ANDAMENTO',
+  usarBrave: true,
   criadoEm: '2026-09-12T12:00:00',
   iniciadoEm: '2026-09-12T12:00:00',
   atualizadoEm: '2026-09-12T12:00:00',
@@ -71,7 +72,7 @@ describe('PesquisaInformacoesStore', () => {
     store.iniciar();
     const request = http.expectOne(rota);
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toBeNull();
+    expect(request.request.body).toEqual({ usarBrave: true });
     expect(store.iniciando()).toBe(true);
     request.flush({ ...EXECUCAO, status: 'PENDENTE' }, { status: 202, statusText: 'Accepted' });
     expect(store.ativa()).toBe(true);

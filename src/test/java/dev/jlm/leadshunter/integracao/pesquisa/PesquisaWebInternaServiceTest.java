@@ -159,6 +159,31 @@ class PesquisaWebInternaServiceTest {
     }
 
     @Test
+    void deveRespeitarBraveDesligadoEConsultarSomenteOQueJaFoiEncontrado() {
+        List<GooglePesquisaWebRequest> requests = new ArrayList<>();
+        AtomicInteger aberturas = new AtomicInteger();
+        var leitor = new LeitorPaginaCandidata(
+            (uri, timeout, max) -> {
+                aberturas.incrementAndGet();
+                return new LeitorPaginaCandidata.Resposta(200, "text/html",
+                    "<html><body>Sem evidência nova</body></html>".getBytes());
+            }, uri -> true, 1_000, 65_536);
+        GooglePesquisaGateway client = request -> {
+            requests.add(request);
+            return resposta(request, List.of());
+        };
+
+        var resultado = new PesquisaWebInternaService(
+            client, new ClassificadorUrlService(new UrlCandidatoCanonicalizer()), leitor
+        ).pesquisar(leadAuroraComSite("https://padariaaurora.example/"), false);
+
+        assertThat(resultado.instagram()).isEmpty();
+        assertThat(resultado.siteProprio()).isEmpty();
+        assertThat(aberturas).hasValue(1);
+        assertThat(requests).isEmpty();
+    }
+
+    @Test
     void deveDescartarWebsiteDeRedeSocialAntesDeAbrirOuConsultarComoSite() {
         AtomicInteger aberturas = new AtomicInteger();
         var leitor = new LeitorPaginaCandidata(

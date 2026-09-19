@@ -47,6 +47,48 @@ class PesquisaFiliaisPrecisaoTest {
         }
     }
 
+    @Test
+    void deveExtrairInstagramDoSiteOficialComBraveDesligado() {
+        List<GooglePesquisaWebRequest> consultas = new ArrayList<>();
+        String html = "<html><body>"
+            + "Petz Vila Velha Rodovia do Sol, 256 Itapuã - Vila Velha/ES "
+            + "(027) 3022-5308"
+            + "<a href=\"https://www.instagram.com/petz/\">Instagram</a>"
+            + "</body></html>";
+        var leitor = new LeitorPaginaCandidata(
+            (uri, timeout, maxBytes) -> new LeitorPaginaCandidata.Resposta(200, "text/html",
+                html.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+            uri -> true,
+            1_000,
+            65_536
+        );
+        GooglePesquisaGateway gateway = request -> {
+            consultas.add(request);
+            return new GooglePesquisaWebResponse(request.googlePlaceId(), request.tipo(), "consulta", List.of());
+        };
+
+        var resultado = new PesquisaWebInternaService(gateway, classificador, leitor)
+            .pesquisar(new PesquisaLeadDados(
+                "petz-vila-velha-fixture",
+                "Petz Vila Velha",
+                CategoriaNegocio.OUTROS,
+                "Rod. do Sol, 256 - Itapuã, Vila Velha - ES, 29102-320",
+                "Rodovia do Sol",
+                "256",
+                "Itapuã",
+                "Vila Velha",
+                "ES",
+                "552730225308",
+                null,
+                null,
+                SITE_PETZ.toString()
+            ), false);
+
+        assertThat(resultado.siteProprio()).contains(SITE_PETZ);
+        assertThat(resultado.instagram()).contains(URI.create("https://www.instagram.com/petz"));
+        assertThat(consultas).isEmpty();
+    }
+
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
         "Rod. do Sol | Rodovia do Sol, 256",

@@ -18,8 +18,16 @@ public class PesquisaInformacoesExecucaoPersistencia {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Long iniciar(Long id) {
+        PesquisaInformacoesExecucaoContexto contexto = iniciarComConfiguracao(id);
+        return contexto == null ? null : contexto.buscaId();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PesquisaInformacoesExecucaoContexto iniciarComConfiguracao(Long id) {
         PesquisaInformacoesExecucao execucao = repository.bloquearPorId(id).orElseThrow();
-        return execucao.iniciar() ? execucao.getBusca().getId() : null;
+        return execucao.iniciar()
+            ? new PesquisaInformacoesExecucaoContexto(execucao.getBusca().getId(), execucao.isUsarBrave())
+            : null;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

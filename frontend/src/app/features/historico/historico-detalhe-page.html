@@ -16,6 +16,26 @@
         {{ buscandoCnpj() ? 'Buscando CNPJ…' : 'Buscar CNPJ' }}
       </button>
       <button
+        class="historico-detalhe__brave-toggle"
+        type="button"
+        data-testid="usar-brave"
+        role="switch"
+        [attr.aria-checked]="pesquisa.usarBrave()"
+        [attr.aria-label]="
+          pesquisa.usarBrave()
+            ? 'Brave Search ativado. Desativar para não consultar a API externa.'
+            : 'Brave Search desativado. Ativar para consultar a API externa.'
+        "
+        [disabled]="estado() !== 'success' || !pesquisa.podeIniciar()"
+        (click)="alternarUsoBrave()"
+      >
+        <span class="historico-detalhe__brave-toggle-track" aria-hidden="true"><span></span></span>
+        <span>Brave Search</span>
+        <span class="historico-detalhe__brave-toggle-state" aria-hidden="true">
+          {{ pesquisa.usarBrave() ? 'Ativado' : 'Desativado' }}
+        </span>
+      </button>
+      <button
         class="historico-detalhe__back"
         type="button"
         data-testid="buscar-informacoes"

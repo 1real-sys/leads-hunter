@@ -49,7 +49,11 @@ public class PesquisaWebInternaService implements PesquisaInformacoesGateway {
 
     @Override
     public PesquisaInformacoesWebResultado pesquisar(PesquisaLeadDados lead) {
+        return pesquisar(lead, true);
+    }
 
+    @Override
+    public PesquisaInformacoesWebResultado pesquisar(PesquisaLeadDados lead, boolean usarBrave) {
         if (lead == null) {
             throw new IllegalArgumentException("lead é obrigatório");
         }
@@ -77,7 +81,7 @@ public class PesquisaWebInternaService implements PesquisaInformacoesGateway {
             siteConfirmado = possuiResultado(resultado);
         }
 
-        if (!siteConfirmado) {
+        if (!siteConfirmado && usarBrave) {
             candidatos.addAll(client.pesquisar(request(lead, TipoPesquisaWeb.INSTAGRAM)).resultados());
             buscas++;
             candidatos.addAll(client.pesquisar(request(lead, TipoPesquisaWeb.SITE_PROPRIO)).resultados());
@@ -99,7 +103,7 @@ public class PesquisaWebInternaService implements PesquisaInformacoesGateway {
         }
 
         var telefone = ConfirmacaoPerfilInstagram.telefoneNacional(lead.telefoneNormalizado());
-        if (!siteConfirmado && resultado.instagram().isEmpty()
+        if (usarBrave && !siteConfirmado && resultado.instagram().isEmpty()
             && telefone.isPresent() && buscas < MAXIMO_BUSCAS) {
             // No máximo uma confirmação, respeitando o teto total de consultas por lead.
             for (var perfil : classificador.perfisParaConfirmar(lead, candidatos)) {

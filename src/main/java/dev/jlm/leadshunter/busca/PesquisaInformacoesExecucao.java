@@ -33,14 +33,20 @@ public class PesquisaInformacoesExecucao {
     @Column(nullable = false) private int comAmbos;
     @Column(nullable = false) private int semInformacoes;
     @Column(nullable = false) private int falhas;
+    @Column(name = "usar_brave", nullable = false) private boolean usarBrave;
     @Enumerated(EnumType.STRING) @Column(length = 50)
     private PesquisaInformacoesErro erroCodigo;
     @Column(length = 255)
     private String erroMensagem;
 
     public PesquisaInformacoesExecucao(Busca busca, int totalLeads) {
+        this(busca, totalLeads, true);
+    }
+
+    public PesquisaInformacoesExecucao(Busca busca, int totalLeads, boolean usarBrave) {
         this.busca = busca;
         this.totalLeads = totalLeads;
+        this.usarBrave = usarBrave;
         status = PesquisaInformacoesStatus.PENDENTE;
         criadoEm = LocalDateTime.now();
         atualizadoEm = criadoEm;
