@@ -6,6 +6,7 @@ import dev.jlm.leadshunter.lead.CategoriaNegocio;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class PesquisaWebInternaServiceTest {
@@ -118,6 +119,90 @@ class PesquisaWebInternaServiceTest {
     }
 
     @Test
+    void deveSemearPesquisaPeloSiteOficialEExtrairInstagramSemConsultarBrave() {
+        List<GooglePesquisaWebRequest> requests = new ArrayList<>();
+        String html = "<html><body>Padaria Aurora Rua das Flores, 10, Campinas - SP "
+            + "Telefone (19) 99999-9999 "
+            + "<a href=\"https://instagram.com/padariaaurora\">Instagram</a></body></html>";
+        var leitor = leitorQueDevolve(html);
+        GooglePesquisaGateway client = request -> {
+            requests.add(request);
+            return resposta(request, List.of());
+        };
+
+        var resultado = new PesquisaWebInternaService(client,
+            new ClassificadorUrlService(new UrlCandidatoCanonicalizer()), leitor)
+            .pesquisar(leadAuroraComSite("https://padariaaurora.example/"));
+
+        assertThat(resultado.siteProprio()).contains(URI.create("https://padariaaurora.example/"));
+        assertThat(resultado.instagram()).contains(URI.create("https://www.instagram.com/padariaaurora"));
+        assertThat(requests).isEmpty();
+    }
+
+    @Test
+    void deveConsultarBraveQuandoSiteOficialNaoConfirmaNada() {
+        List<GooglePesquisaWebRequest> requests = new ArrayList<>();
+        GooglePesquisaGateway client = request -> {
+            requests.add(request);
+            return resposta(request, List.of());
+        };
+        var leitor = leitorQueDevolve("<html><body>Bem-vindo</body></html>");
+
+        var resultado = new PesquisaWebInternaService(client,
+            new ClassificadorUrlService(new UrlCandidatoCanonicalizer()), leitor)
+            .pesquisar(leadAuroraComSite("https://padariaaurora.example/"));
+
+        assertThat(resultado.instagram()).isEmpty();
+        assertThat(resultado.siteProprio()).isEmpty();
+        assertThat(requests).extracting(GooglePesquisaWebRequest::tipo)
+            .containsExactly(TipoPesquisaWeb.INSTAGRAM, TipoPesquisaWeb.SITE_PROPRIO, TipoPesquisaWeb.INSTAGRAM);
+    }
+
+    @Test
+    void deveDescartarWebsiteDeRedeSocialAntesDeAbrirOuConsultarComoSite() {
+        AtomicInteger aberturas = new AtomicInteger();
+        var leitor = new LeitorPaginaCandidata(
+            (uri, timeout, max) -> {
+                aberturas.incrementAndGet();
+                return new LeitorPaginaCandidata.Resposta(200, "text/html", "x".getBytes());
+            }, uri -> true, 1_000, 65_536);
+        List<GooglePesquisaWebRequest> requests = new ArrayList<>();
+        GooglePesquisaGateway client = request -> {
+            requests.add(request);
+            return resposta(request, List.of());
+        };
+
+        new PesquisaWebInternaService(client,
+            new ClassificadorUrlService(new UrlCandidatoCanonicalizer()), leitor)
+            .pesquisar(leadAuroraComSite("https://www.instagram.com/padariaaurora"));
+
+        assertThat(aberturas).hasValue(0);
+        assertThat(requests).hasSize(3);
+    }
+
+    @Test
+    void deveContarPaginaOficialNoTetoDeTresPaginas() {
+        AtomicInteger aberturas = new AtomicInteger();
+        String html = "<html><body>Sem evidência "
+            + "<a href=\"https://instagram.com/aurora1\">1</a>"
+            + "<a href=\"https://instagram.com/aurora2\">2</a>"
+            + "<a href=\"https://instagram.com/aurora3\">3</a>"
+            + "<a href=\"https://instagram.com/aurora4\">4</a></body></html>";
+        var leitor = new LeitorPaginaCandidata(
+            (uri, timeout, max) -> {
+                aberturas.incrementAndGet();
+                return new LeitorPaginaCandidata.Resposta(200, "text/html", html.getBytes());
+            }, uri -> true, 1_000, 65_536);
+        GooglePesquisaGateway client = request -> resposta(request, List.of());
+
+        new PesquisaWebInternaService(client,
+            new ClassificadorUrlService(new UrlCandidatoCanonicalizer()), leitor)
+            .pesquisar(leadAuroraComSite("https://padariaaurora.example/"));
+
+        assertThat(aberturas).hasValue(3);
+    }
+
+    @Test
     void terceiraConsultaNaoDeveApagarAmbiguidadeAnterior() {
         GooglePesquisaGateway client = request -> resposta(request,
             request.tipo() == TipoPesquisaWeb.SITE_PROPRIO ? List.of() : request.municipio() == null
@@ -176,5 +261,21 @@ class PesquisaWebInternaServiceTest {
     private PesquisaLeadDados leadAurora() {
         return new PesquisaLeadDados("place-1", "Padaria Aurora", CategoriaNegocio.PADARIA,
             null, null, null, null, "Campinas", "SP", null, null, null);
+    }
+
+    private PesquisaLeadDados leadAuroraComSite(String website) {
+        return new PesquisaLeadDados("place-1", "Padaria Aurora", CategoriaNegocio.PADARIA,
+            "Rua das Flores, 10, Campinas - SP", "Rua das Flores", "10", null,
+            "Campinas", "SP", "5519999999999", null, null, website);
+    }
+
+    private LeitorPaginaCandidata leitorQueDevolve(String html) {
+        return new LeitorPaginaCandidata(
+            (uri, timeout, max) -> new LeitorPaginaCandidata.Resposta(200, "text/html",
+                html.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+            uri -> true,
+            1_000,
+            65_536
+        );
     }
 }

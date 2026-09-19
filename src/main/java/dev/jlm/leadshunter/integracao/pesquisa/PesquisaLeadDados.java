@@ -15,8 +15,40 @@ public record PesquisaLeadDados(
     String uf,
     String telefoneNormalizado,
     String cnpj,
-    String razaoSocial
+    String razaoSocial,
+    String website
 ) {
+
+    public PesquisaLeadDados(
+        String googlePlaceId,
+        String nome,
+        CategoriaNegocio categoria,
+        String enderecoFormatado,
+        String logradouro,
+        String numero,
+        String bairro,
+        String municipio,
+        String uf,
+        String telefoneNormalizado,
+        String cnpj,
+        String razaoSocial
+    ) {
+        this(
+            googlePlaceId,
+            nome,
+            categoria,
+            enderecoFormatado,
+            logradouro,
+            numero,
+            bairro,
+            municipio,
+            uf,
+            telefoneNormalizado,
+            cnpj,
+            razaoSocial,
+            null
+        );
+    }
 
     public PesquisaLeadDados {
         if (googlePlaceId == null || googlePlaceId.isBlank()) {
@@ -46,7 +78,8 @@ public record PesquisaLeadDados(
             lead.getUf(),
             lead.getTelefoneNormalizado(),
             lead.getCnpj(),
-            lead.getRazaoSocial()
+            lead.getRazaoSocial(),
+            lead.getWebsite()
         );
     }
 }
