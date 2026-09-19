@@ -75,6 +75,7 @@ class BuscaServiceTest {
                 "Padaria Central",
                 CategoriaNegocio.PADARIA,
                 "Rua Central, 100",
+                "https://padariacentral.example/",
                 "(41) 3333-4444",
                 new BigDecimal("-25.4300"),
                 new BigDecimal("-49.2700"),
@@ -138,6 +139,7 @@ class BuscaServiceTest {
         verify(leadRepository).save(leadCaptor.capture());
         assertThat(leadCaptor.getValue().getGooglePlaceId()).isEqualTo("place-1");
         assertThat(leadCaptor.getValue().getStatus()).isEqualTo(StatusFunil.NOVO);
+        assertThat(leadCaptor.getValue().getWebsite()).isEqualTo("https://padariacentral.example/");
         assertThat(leadCaptor.getValue().getRatingGoogle()).isEqualByComparingTo("4.5");
         assertThat(leadCaptor.getValue().getTelefone()).isEqualTo("(41) 3333-4444");
         assertThat(leadCaptor.getValue().getTelefoneNormalizado()).isEqualTo("554133334444");
@@ -167,6 +169,8 @@ class BuscaServiceTest {
         assertThat(response.leads().getFirst().id()).isEqualTo(20L);
         assertThat(response.leads().getFirst().nome()).isEqualTo("Padaria Central");
         assertThat(response.leads().getFirst().categoria()).isEqualTo(CategoriaNegocio.PADARIA);
+        assertThat(response.leads().getFirst().website())
+            .isEqualTo("https://padariacentral.example/");
         assertThat(response.leads().getFirst().whatsappUrl())
             .isEqualTo("https://wa.me/554133334444");
         assertThat(response.leads().getFirst().score()).isEqualTo(95);
@@ -236,6 +240,7 @@ class BuscaServiceTest {
         leadExistente.setId(30L);
         leadExistente.setGooglePlaceId("place-existente");
         leadExistente.setNome("Nome antigo");
+        leadExistente.setWebsite("https://site-conhecido.example/");
         leadExistente.setStatus(StatusFunil.QUALIFICADO);
         leadExistente.setObservacoes("Cliente pediu retorno na sexta");
         leadExistente.setUltimoContatoEm(LocalDateTime.of(2026, 8, 10, 15, 30));
@@ -270,6 +275,7 @@ class BuscaServiceTest {
         verify(leadRepository, times(1)).save(leadExistente);
         verify(buscaLeadRepository, times(1)).save(any(BuscaLead.class));
         assertThat(leadExistente.getNome()).isEqualTo("Nome atualizado");
+        assertThat(leadExistente.getWebsite()).isEqualTo("https://site-conhecido.example/");
         assertThat(leadExistente.getRatingGoogle()).isEqualByComparingTo("4.5");
         assertThat(leadExistente.getStatus()).isEqualTo(StatusFunil.QUALIFICADO);
         assertThat(leadExistente.getObservacoes()).isEqualTo("Cliente pediu retorno na sexta");

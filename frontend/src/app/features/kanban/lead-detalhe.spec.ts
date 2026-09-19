@@ -15,6 +15,7 @@ const LEAD_COMPLETO: LeadResponse = {
   razaoSocial: 'Padaria Central Ltda',
   categoria: 'PADARIA',
   enderecoFormatado: 'Rua Central, 100, Centro, Vitória - ES',
+  website: 'https://padariacentral.example/',
   telefone: '(27) 3333-4444',
   telefoneNormalizado: '552733334444',
   whatsappUrl: 'https://wa.me/552733334444',
@@ -88,6 +89,8 @@ describe('LeadDetalhe', () => {
     expect(conteudo).toContain('Score');
     expect(conteudo).toContain('82');
     expect(conteudo).toContain('Rua Central, 100');
+    expect(conteudo).toContain('Site oficial');
+    expect(conteudo).toContain('https://padariacentral.example/');
     expect(conteudo).toContain('12.345.678/0001-90');
     expect(conteudo).toContain('Padaria Central Ltda');
     expect(conteudo).toContain('(27) 3333-4444');
@@ -182,6 +185,7 @@ describe('LeadDetalhe', () => {
       nome: null,
       categoria: null,
       enderecoFormatado: null,
+      website: null,
       telefone: null,
       latitude: null,
       longitude: null,

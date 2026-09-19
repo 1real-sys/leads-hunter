@@ -61,6 +61,7 @@ class LeadControllerTest {
             .andExpect(jsonPath("$[0].uf").value("ES"))
             .andExpect(jsonPath("$[0].idhm").value(0.845))
             .andExpect(jsonPath("$[0].idhmReferencia").value(2010))
+            .andExpect(jsonPath("$[0].website").value("https://padariacentral.example/"))
             .andExpect(jsonPath("$[0].whatsappUrl")
                 .value("https://wa.me/5527999990000"));
 
@@ -215,6 +216,7 @@ class LeadControllerTest {
             "Padaria Central Ltda",
             CategoriaNegocio.PADARIA,
             "Rua Central, 100",
+            "https://padariacentral.example/",
             "(27) 99999-0000",
             "5527999990000",
             "https://wa.me/5527999990000",

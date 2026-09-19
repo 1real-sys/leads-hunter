@@ -27,6 +27,7 @@ const DETALHE: BuscaDetalheResponse = {
       nome: 'Zeta Farmácia',
       categoria: 'FARMACIA',
       enderecoFormatado: 'Rua Sete, 80',
+      website: 'https://zetafarmacia.example/',
       cnpj: '12345678000190',
       telefone: '(27) 99999-0000',
       whatsappUrl: 'https://wa.me/5527999990000',

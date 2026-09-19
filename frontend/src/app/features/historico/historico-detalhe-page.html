@@ -230,6 +230,13 @@
                       <strong>{{ lead.nome || 'Lead #' + lead.id }}</strong>
                       <span>{{ rotuloCategoria(lead.categoria) }}</span>
                       <span>{{ lead.enderecoFormatado || 'Endereço não informado' }}</span>
+                      @if (lead.website; as website) {
+                        <a [href]="website" target="_blank" rel="noopener noreferrer"
+                          >Site oficial</a
+                        >
+                      } @else {
+                        <span>Site não informado</span>
+                      }
                       <span>{{ cnpjExibido(lead.cnpj) }}</span>
                       @if (lead.razaoSocial) {
                         <span>Razão social: {{ lead.razaoSocial }}</span>

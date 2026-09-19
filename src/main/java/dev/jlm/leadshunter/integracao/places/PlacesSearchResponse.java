@@ -13,6 +13,7 @@ public record PlacesSearchResponse(
         String nome,
         CategoriaNegocio categoria,
         String enderecoFormatado,
+        String website,
         String telefone,
         BigDecimal latitude,
         BigDecimal longitude,
@@ -40,6 +41,7 @@ public record PlacesSearchResponse(
                 nome,
                 categoria,
                 enderecoFormatado,
+                null,
                 telefone,
                 latitude,
                 longitude,
@@ -48,6 +50,37 @@ public record PlacesSearchResponse(
                 businessStatus,
                 tipos,
                 null
+            );
+        }
+
+        public PlaceResult(
+            String googlePlaceId,
+            String nome,
+            CategoriaNegocio categoria,
+            String enderecoFormatado,
+            String telefone,
+            java.math.BigDecimal latitude,
+            java.math.BigDecimal longitude,
+            java.math.BigDecimal ratingGoogle,
+            Integer totalReviews,
+            String businessStatus,
+            List<String> tipos,
+            EnderecoEstruturado enderecoEstruturado
+        ) {
+            this(
+                googlePlaceId,
+                nome,
+                categoria,
+                enderecoFormatado,
+                null,
+                telefone,
+                latitude,
+                longitude,
+                ratingGoogle,
+                totalReviews,
+                businessStatus,
+                tipos,
+                enderecoEstruturado
             );
         }
     }

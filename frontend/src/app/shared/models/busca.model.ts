@@ -27,6 +27,7 @@ export interface LeadEncontradoResponse {
   nome: string | null;
   categoria: CategoriaNegocio | null;
   enderecoFormatado: string | null;
+  website?: string | null;
   telefone: string | null;
   whatsappUrl: string | null;
   score: number | null;
@@ -61,6 +62,7 @@ export interface LeadHistoricoResponse {
   nome: string | null;
   categoria: CategoriaNegocio | null;
   enderecoFormatado: string | null;
+  website?: string | null;
   cnpj?: string | null;
   razaoSocial?: string | null;
   telefone: string | null;

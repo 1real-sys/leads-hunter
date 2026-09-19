@@ -131,6 +131,9 @@ class PlacesApiClientTest {
             .andExpect(header("X-Goog-FieldMask", org.hamcrest.Matchers.containsString(
                 "places.addressComponents"
             )))
+            .andExpect(header("X-Goog-FieldMask", org.hamcrest.Matchers.containsString(
+                "places.websiteUri"
+            )))
             .andRespond(withStatus(HttpStatus.OK)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body("{\"places\":[]}"));

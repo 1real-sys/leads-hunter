@@ -9,6 +9,7 @@ export interface LeadResponse {
   razaoSocial?: string | null;
   categoria: CategoriaNegocio | null;
   enderecoFormatado: string | null;
+  website?: string | null;
   telefone: string | null;
   telefoneNormalizado: string | null;
   whatsappUrl: string | null;

@@ -32,6 +32,9 @@ public class Lead {
     @Column(name = "endereco_formatado", length = 255)
     private String enderecoFormatado;
 
+    @Column(length = 2048)
+    private String website;
+
     @Column(length = 8)
     private String cep;
 

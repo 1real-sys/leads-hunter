@@ -261,8 +261,16 @@
 
 .historico-detalhe__identity strong,
 .historico-detalhe__identity span,
+.historico-detalhe__identity a,
 .historico-detalhe__contact span {
   display: block;
+}
+
+.historico-detalhe__identity a {
+  margin-top: var(--space-2);
+  color: var(--accent-strong);
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .historico-detalhe__identity span,

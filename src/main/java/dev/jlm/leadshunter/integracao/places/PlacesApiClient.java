@@ -21,6 +21,7 @@ public class PlacesApiClient {
         "places.id",
         "places.displayName",
         "places.formattedAddress",
+        "places.websiteUri",
         "places.addressComponents",
         "places.internationalPhoneNumber",
         "places.nationalPhoneNumber",
@@ -192,6 +193,7 @@ public class PlacesApiClient {
         String id,
         DisplayName displayName,
         String formattedAddress,
+        String websiteUri,
         String internationalPhoneNumber,
         String nationalPhoneNumber,
         Location location,
@@ -206,17 +208,18 @@ public class PlacesApiClient {
             DisplayName displayName,
             String formattedAddress,
             String internationalPhoneNumber,
-            String nationalPhoneNumber,
-            Location location,
-            Double rating,
-            Integer userRatingCount,
-            String businessStatus,
-            List<String> types
-        ) {
+        String nationalPhoneNumber,
+        Location location,
+        Double rating,
+        Integer userRatingCount,
+        String businessStatus,
+        List<String> types
+    ) {
             this(
                 id,
                 displayName,
                 formattedAddress,
+                null,
                 internationalPhoneNumber,
                 nationalPhoneNumber,
                 location,
@@ -225,6 +228,35 @@ public class PlacesApiClient {
                 businessStatus,
                 types,
                 null
+            );
+        }
+
+        Place(
+            String id,
+            DisplayName displayName,
+            String formattedAddress,
+            String internationalPhoneNumber,
+            String nationalPhoneNumber,
+            Location location,
+            Double rating,
+            Integer userRatingCount,
+            String businessStatus,
+            List<String> types,
+            List<AddressComponent> addressComponents
+        ) {
+            this(
+                id,
+                displayName,
+                formattedAddress,
+                null,
+                internationalPhoneNumber,
+                nationalPhoneNumber,
+                location,
+                rating,
+                userRatingCount,
+                businessStatus,
+                types,
+                addressComponents
             );
         }
     }

@@ -22,6 +22,7 @@ class PlacesResponseMapperTest {
             "place-123",
             new DisplayName("Doces da Ana", "pt-BR"),
             "Rua das Flores, 10",
+            "https://docesana.example/",
             "+55 27 3333-4444",
             "(27) 3333-4444",
             new Location(-25.4284, -49.2733),
@@ -65,6 +66,7 @@ class PlacesResponseMapperTest {
             );
         assertThat(response.places().getFirst().latitude()).isEqualByComparingTo("-25.4284");
         assertThat(response.places().getFirst().longitude()).isEqualByComparingTo("-49.2733");
+        assertThat(response.places().getFirst().website()).isEqualTo("https://docesana.example/");
         assertThat(response.places().getFirst().enderecoEstruturado())
             .isEqualTo(new PlacesSearchResponse.EnderecoEstruturado(
                 "80420063",

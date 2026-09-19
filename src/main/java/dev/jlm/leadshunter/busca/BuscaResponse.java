@@ -23,10 +23,23 @@ public record BuscaResponse(
         String nome,
         CategoriaNegocio categoria,
         String enderecoFormatado,
+        String website,
         String telefone,
         String whatsappUrl,
         Integer score,
         String temperatura
     ) {
+        public LeadEncontradoResponse(
+            Long id,
+            String nome,
+            CategoriaNegocio categoria,
+            String enderecoFormatado,
+            String telefone,
+            String whatsappUrl,
+            Integer score,
+            String temperatura
+        ) {
+            this(id, nome, categoria, enderecoFormatado, null, telefone, whatsappUrl, score, temperatura);
+        }
     }
 }

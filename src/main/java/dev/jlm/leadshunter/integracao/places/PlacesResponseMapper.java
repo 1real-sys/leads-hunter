@@ -30,6 +30,7 @@ public class PlacesResponseMapper {
             place.displayName() != null ? place.displayName().text() : null,
             inferirCategoria(place.types()),
             place.formattedAddress(),
+            place.websiteUri(),
             selecionarTelefone(place),
             toBigDecimal(place.location() != null ? place.location().latitude() : null),
             toBigDecimal(place.location() != null ? place.location().longitude() : null),

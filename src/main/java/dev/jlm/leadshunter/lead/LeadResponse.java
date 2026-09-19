@@ -11,6 +11,7 @@ public record LeadResponse(
     String razaoSocial,
     CategoriaNegocio categoria,
     String enderecoFormatado,
+    String website,
     String telefone,
     String telefoneNormalizado,
     String whatsappUrl,
@@ -32,6 +33,65 @@ public record LeadResponse(
     LocalDateTime atualizadoEm
 ) {
 
+    public LeadResponse(
+        Long id,
+        String googlePlaceId,
+        String nome,
+        String cnpj,
+        String razaoSocial,
+        CategoriaNegocio categoria,
+        String enderecoFormatado,
+        String telefone,
+        String telefoneNormalizado,
+        String whatsappUrl,
+        BigDecimal latitude,
+        BigDecimal longitude,
+        String municipioCodigoIbge,
+        String municipioNome,
+        String uf,
+        BigDecimal idhm,
+        Short idhmReferencia,
+        BigDecimal ratingGoogle,
+        Integer totalReviews,
+        Integer score,
+        Temperatura temperatura,
+        StatusFunil status,
+        String observacoes,
+        LocalDateTime ultimoContatoEm,
+        LocalDateTime criadoEm,
+        LocalDateTime atualizadoEm
+    ) {
+        this(
+            id,
+            googlePlaceId,
+            nome,
+            cnpj,
+            razaoSocial,
+            categoria,
+            enderecoFormatado,
+            null,
+            telefone,
+            telefoneNormalizado,
+            whatsappUrl,
+            latitude,
+            longitude,
+            municipioCodigoIbge,
+            municipioNome,
+            uf,
+            idhm,
+            idhmReferencia,
+            ratingGoogle,
+            totalReviews,
+            score,
+            temperatura,
+            status,
+            observacoes,
+            ultimoContatoEm,
+            criadoEm,
+            atualizadoEm
+        );
+    }
+
     public static LeadResponse from(Lead lead, WhatsAppLinkGenerator whatsAppLinkGenerator) {
         return new LeadResponse(
             lead.getId(),
@@ -41,6 +101,7 @@ public record LeadResponse(
             lead.getRazaoSocial(),
             lead.getCategoria(),
             lead.getEnderecoFormatado(),
+            lead.getWebsite(),
             lead.getTelefone(),
             lead.getTelefoneNormalizado(),
             whatsAppLinkGenerator.gerar(lead.getTelefoneNormalizado()),

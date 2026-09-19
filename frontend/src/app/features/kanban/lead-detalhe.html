@@ -92,6 +92,7 @@
         @if (
           item.telefone ||
           item.enderecoFormatado ||
+          item.website ||
           (item.latitude !== null && item.longitude !== null) ||
           localidade() ||
           idhmApresentacao() ||
@@ -116,6 +117,16 @@
                   <dd>{{ endereco }}</dd>
                 </div>
               }
+              <div class="lead-detalhe-panel__website">
+                <dt>Site oficial</dt>
+                <dd>
+                  @if (item.website; as website) {
+                    <a [href]="website" target="_blank" rel="noopener noreferrer">{{ website }}</a>
+                  } @else {
+                    <span class="lead-detalhe-panel__sem-valor">Site não informado</span>
+                  }
+                </dd>
+              </div>
               <div class="lead-detalhe-panel__cnpj">
                 <dt>CNPJ</dt>
                 <dd>

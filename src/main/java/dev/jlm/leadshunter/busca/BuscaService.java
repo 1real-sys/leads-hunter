@@ -178,6 +178,7 @@ public class BuscaService {
         atualizarSePresente(place.nome(), lead::setNome);
         atualizarSePresente(place.categoria(), lead::setCategoria);
         atualizarSePresente(place.enderecoFormatado(), lead::setEnderecoFormatado);
+        atualizarSePresente(place.website(), lead::setWebsite);
         atualizarEnderecoEstruturado(lead, place.enderecoEstruturado());
         atualizarSePresente(place.latitude(), lead::setLatitude);
         atualizarSePresente(place.longitude(), lead::setLongitude);
@@ -318,6 +319,7 @@ public class BuscaService {
             lead.getNome(),
             lead.getCategoria(),
             lead.getEnderecoFormatado(),
+            lead.getWebsite(),
             lead.getCnpj(),
             lead.getRazaoSocial(),
             lead.getTelefone(),
@@ -343,6 +345,7 @@ public class BuscaService {
                 lead.getNome(),
                 lead.getCategoria(),
                 lead.getEnderecoFormatado(),
+                lead.getWebsite(),
                 lead.getTelefone(),
                 whatsAppLinkGenerator.gerar(lead.getTelefoneNormalizado()),
                 lead.getScore(),

@@ -204,6 +204,7 @@ class BuscaControllerTest {
                 "Padaria Central",
                 CategoriaNegocio.PADARIA,
                 "Rua Sete, 100",
+                "https://padariacentral.example/",
                 "12345678000190",
                 "Padaria Central LTDA",
                 "(27) 99999-0000",
@@ -223,6 +224,7 @@ class BuscaControllerTest {
             .andExpect(jsonPath("$.leads[0].id").value(35))
             .andExpect(jsonPath("$.leads[0].cnpj").value("12345678000190"))
             .andExpect(jsonPath("$.leads[0].razaoSocial").value("Padaria Central LTDA"))
+            .andExpect(jsonPath("$.leads[0].website").value("https://padariacentral.example/"))
             .andExpect(jsonPath("$.leads[0].scoreNaBusca").value(55))
             .andExpect(jsonPath("$.leads[0].temperaturaNaBusca").value("MORNO"))
             .andExpect(jsonPath("$.leads[0].status").value("CONTATADO"))
