@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -53,6 +54,79 @@ class LeitorPaginaCandidataTest {
                 + "</body></html>").getBytes(StandardCharsets.UTF_8)));
         assertThat(leitor.ler(URI.create("https://www.instagram.com/multishowcastelo"))).get().asString()
             .contains("wa.me/5528999146676").contains("Multishow Castelo");
+    }
+
+    @Test
+    void deveExtrairLinksDeInstagramAbsolutosEProtocolRelative() {
+        var leitor = leitorQueDevolve(new LeitorPaginaCandidata.Resposta(200, "text/html",
+            ("<html><body><a href=\"https://www.instagram.com/Perfil/?utm_source=site\">Instagram</a>"
+                + "<a href=\"//instagram.com/outro.perfil\">Outro</a>"
+                + "<a href=\"https://instagram.com/perfil/p/123\">Publicação</a>"
+                + "<a href=\"https://instagram.com/perfil/reel/123\">Reel</a>"
+                + "<link rel=\"me\" href=\"https://instagram.com/perfil\"></body></html>")
+                .getBytes(StandardCharsets.UTF_8)));
+
+        assertThat(leitor.lerPagina(URI.create("https://exemplo.com/contato"))).get()
+            .extracting(PaginaLida::links)
+            .isEqualTo(List.of(
+                URI.create("https://www.instagram.com/perfil"),
+                URI.create("https://www.instagram.com/outro.perfil")
+            ));
+    }
+
+    @Test
+    void deveExtrairLinksDeAtributosDinamicosEJsonEmbutido() {
+        var leitor = leitorQueDevolve(new LeitorPaginaCandidata.Resposta(200, "text/html",
+            ("<html><body>"
+                + "<button data-href=\"https://www.instagram.com/petz/\">Instagram</button>"
+                + "<script type=\"application/json\">"
+                + "{\"instagram\":\"https:\\/\\/instagram.com\\/petz_\"}"
+                + "</script>"
+                + "</body></html>").getBytes(StandardCharsets.UTF_8)));
+
+        assertThat(leitor.lerPagina(URI.create("https://exemplo.com"))).get()
+            .extracting(PaginaLida::links)
+            .isEqualTo(List.of(
+                URI.create("https://www.instagram.com/petz"),
+                URI.create("https://www.instagram.com/petz_")
+            ));
+    }
+
+    @Test
+    void deveDescartarLinksDeInstagramParaDestinoPrivadoOuNaoPerfil() {
+        var leitor = leitorQueDevolve(new LeitorPaginaCandidata.Resposta(200, "text/html",
+            ("<html><body><a href=\"http://127.0.0.1/perfil\">Privado</a>"
+                + "<a href=\"https://instagram.com/perfil/p/123\">Publicação</a>"
+                + "<a href=\"https://instagram.com/perfilvalido\">Perfil</a></body></html>")
+                .getBytes(StandardCharsets.UTF_8)));
+
+        assertThat(leitor.lerPagina(URI.create("https://exemplo.com"))).get()
+            .extracting(PaginaLida::links)
+            .isEqualTo(List.of(URI.create("https://www.instagram.com/perfilvalido")));
+    }
+
+    @Test
+    void deveManterTextoEIndicarQuandoNaoHaLinks() {
+        var leitor = leitorQueDevolve(new LeitorPaginaCandidata.Resposta(200, "text/html",
+            "<html><body>Telefone (28) 3542-1440</body></html>".getBytes(StandardCharsets.UTF_8)));
+
+        assertThat(leitor.lerPagina(URI.create("https://exemplo.com"))).get()
+            .satisfies(pagina -> {
+                assertThat(pagina.texto()).contains("Telefone (28) 3542-1440");
+                assertThat(pagina.links()).isEmpty();
+            });
+    }
+
+    @Test
+    void deveRetornarPaginaComLinksMesmoSemTexto() {
+        var leitor = leitorQueDevolve(new LeitorPaginaCandidata.Resposta(200, "text/html",
+            "<html><body><a href=\"https://instagram.com/perfil\"></a></body></html>"
+                .getBytes(StandardCharsets.UTF_8)));
+
+        assertThat(leitor.lerPagina(URI.create("https://exemplo.com"))).get()
+            .extracting(PaginaLida::links)
+            .isEqualTo(List.of(URI.create("https://www.instagram.com/perfil")));
+        assertThat(leitor.ler(URI.create("https://exemplo.com"))).isEmpty();
     }
 
     @Test

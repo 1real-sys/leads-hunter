@@ -12,9 +12,13 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -32,6 +36,10 @@ public class LeitorPaginaCandidata {
 
     static final int TAMANHO_MAXIMO_TEXTO = 120_000;
     private static final int TAMANHO_MAXIMO_SCRIPT = 40_000;
+    private static final Pattern URL_INSTAGRAM_EMBUTIDA = Pattern.compile(
+        "(?i)(?:(?:https?:)?//)(?:www\\.|m\\.)?instagram\\.com/[a-z0-9._]{1,30}"
+            + "(?:/[a-z0-9._-]+)*"
+    );
     private static final Set<String> HOSTS_BLOQUEADOS = Set.of("localhost", "metadata.google.internal");
     private static final Set<String> CONTEUDOS_ACEITOS = Set.of(
         "text/html", "text/plain", "application/xhtml+xml", "application/xml", "application/json"
@@ -52,15 +60,27 @@ public class LeitorPaginaCandidata {
 
     private final Transporte transporte;
     private final VerificadorDestino verificador;
+    private final UrlCandidatoCanonicalizer canonicalizer;
     private final long timeoutMs;
     private final int maxBytes;
 
     @Autowired
     public LeitorPaginaCandidata(
+        UrlCandidatoCanonicalizer canonicalizer,
         @Value("${pesquisa-inteligente.pagina.timeout-ms:10000}") long timeoutMs,
         @Value("${pesquisa-inteligente.pagina.max-bytes:524288}") int maxBytes
     ) {
-        this(new TransporteJdk(), LeitorPaginaCandidata::destinoPublico, timeoutMs, maxBytes);
+        this(new TransporteJdk(), LeitorPaginaCandidata::destinoPublico, canonicalizer, timeoutMs, maxBytes);
+    }
+
+    public LeitorPaginaCandidata(long timeoutMs, int maxBytes) {
+        this(
+            new TransporteJdk(),
+            LeitorPaginaCandidata::destinoPublico,
+            new UrlCandidatoCanonicalizer(),
+            timeoutMs,
+            maxBytes
+        );
     }
 
     LeitorPaginaCandidata(
@@ -69,21 +89,52 @@ public class LeitorPaginaCandidata {
         long timeoutMs,
         int maxBytes
     ) {
+        this(
+            transporte,
+            verificador,
+            new UrlCandidatoCanonicalizer(),
+            timeoutMs,
+            maxBytes
+        );
+    }
+
+    LeitorPaginaCandidata(
+        Transporte transporte,
+        VerificadorDestino verificador,
+        UrlCandidatoCanonicalizer canonicalizer,
+        long timeoutMs,
+        int maxBytes
+    ) {
+        if (transporte == null || verificador == null || canonicalizer == null) {
+            throw new IllegalArgumentException("Dependências do leitor de página são obrigatórias");
+        }
         if (timeoutMs < 500 || maxBytes < 1_024 || maxBytes > 8_388_608) {
             throw new IllegalArgumentException("Configuração inválida do leitor de página");
         }
         this.transporte = transporte;
         this.verificador = verificador;
+        this.canonicalizer = canonicalizer;
         this.timeoutMs = timeoutMs;
         this.maxBytes = maxBytes;
     }
 
     static LeitorPaginaCandidata nenhum() {
         return new LeitorPaginaCandidata(
-            (uri, timeout, limites) -> new Resposta(0, null, new byte[0]), uri -> false, 1_000, 1_024);
+            (uri, timeout, limites) -> new Resposta(0, null, new byte[0]),
+            uri -> false,
+            new UrlCandidatoCanonicalizer(),
+            1_000,
+            1_024
+        );
     }
 
     public Optional<String> ler(URI url) {
+        return lerPagina(url)
+            .filter(pagina -> !pagina.texto().isBlank())
+            .map(PaginaLida::texto);
+    }
+
+    public Optional<PaginaLida> lerPagina(URI url) {
         if (url == null || !verificador.permitido(url)) {
             return Optional.empty();
         }
@@ -94,8 +145,7 @@ public class LeitorPaginaCandidata {
                 || !tipoAceito(resposta.tipoConteudo())) {
                 return Optional.empty();
             }
-            String texto = extrairTexto(new String(resposta.corpo(), StandardCharsets.UTF_8));
-            return texto.isBlank() ? Optional.empty() : Optional.of(texto);
+            return extrairPagina(new String(resposta.corpo(), StandardCharsets.UTF_8), url);
         } catch (IOException | InterruptedException | RuntimeException exception) {
             if (exception instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
@@ -112,7 +162,7 @@ public class LeitorPaginaCandidata {
         return CONTEUDOS_ACEITOS.contains(base);
     }
 
-    private String extrairTexto(String html) {
+    private Optional<PaginaLida> extrairPagina(String html, URI pagina) {
         Document documento = Jsoup.parse(html);
         StringBuilder texto = new StringBuilder();
         for (Element meta : documento.select(
@@ -131,7 +181,52 @@ public class LeitorPaginaCandidata {
         if (documento.body() != null) {
             anexar(texto, documento.body().text());
         }
-        return texto.toString().strip();
+        List<URI> links = pagina == null ? List.of() : extrairLinks(documento, pagina);
+        String textoExtraido = texto.toString().strip();
+        if (textoExtraido.isBlank() && links.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new PaginaLida(textoExtraido, links));
+    }
+
+    private List<URI> extrairLinks(Document documento, URI pagina) {
+        Set<URI> links = new LinkedHashSet<>();
+        for (Element elemento : documento.select(
+            "a[href], link[rel~=me][href], [data-href], [data-url], [data-link], [onclick]")) {
+            String href = elemento.attr("href");
+            adicionarHref(links, pagina, href);
+            adicionarUrlsEmbutidas(links, pagina, elemento.attr("data-href"));
+            adicionarUrlsEmbutidas(links, pagina, elemento.attr("data-url"));
+            adicionarUrlsEmbutidas(links, pagina, elemento.attr("data-link"));
+            adicionarUrlsEmbutidas(links, pagina, elemento.attr("onclick"));
+        }
+        // SPAs frequentemente deixam o ícone social em JSON/estado inicial, sem um href.
+        // O canonicalizer continua sendo a única porta de entrada para aceitar o perfil.
+        adicionarUrlsEmbutidas(links, pagina, documento.html());
+        return List.copyOf(links);
+    }
+
+    private void adicionarHref(Set<URI> links, URI pagina, String href) {
+        if (href == null || href.isBlank()) {
+            return;
+        }
+        try {
+            URI absoluto = pagina.resolve(href.strip());
+            canonicalizer.canonicalizar(absoluto, TipoPesquisaWeb.INSTAGRAM)
+                .ifPresent(links::add);
+        } catch (IllegalArgumentException exception) {
+            // Um href malformado não pode interromper a leitura das demais evidências.
+        }
+    }
+
+    private void adicionarUrlsEmbutidas(Set<URI> links, URI pagina, String valor) {
+        if (valor == null || valor.isBlank()) {
+            return;
+        }
+        Matcher matcher = URL_INSTAGRAM_EMBUTIDA.matcher(valor.replace("\\/", "/"));
+        while (matcher.find()) {
+            adicionarHref(links, pagina, matcher.group());
+        }
     }
 
     private void anexar(StringBuilder texto, String trecho) {
