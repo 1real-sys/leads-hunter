@@ -17,6 +17,11 @@ public class IsolatedTestDatabaseInitializer implements ApplicationContextInitia
     @Override
     public void initialize(ConfigurableApplicationContext context) {
         var environment = context.getEnvironment();
+        if (environment.getProperty("cnpjLive", Boolean.class, false)) {
+            // O diagnóstico opt-in precisa da base local real; a própria classe
+            // de teste desliga Flyway, força conexão read-only e neutraliza workers.
+            return;
+        }
         String original = environment.getProperty("spring.datasource.url");
         if (original == null) return; // Contextos sem banco continuam sem banco.
         String server = serverUrl(original);

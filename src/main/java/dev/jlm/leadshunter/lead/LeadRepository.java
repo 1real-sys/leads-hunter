@@ -29,4 +29,16 @@ public interface LeadRepository extends JpaRepository<Lead, Long>, JpaSpecificat
         @Param("ultimoId") Long ultimoId,
         Pageable pageable
     );
+
+    @Query("""
+        SELECT lead
+        FROM Lead lead
+        WHERE lead.cnpj IS NULL
+          AND lead.id > :ultimoId
+        ORDER BY lead.id
+        """)
+    List<Lead> buscarSemCnpjAposId(
+        @Param("ultimoId") Long ultimoId,
+        Pageable pageable
+    );
 }
