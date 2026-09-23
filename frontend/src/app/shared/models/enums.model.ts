@@ -27,3 +27,7 @@ export type StatusFunil = (typeof STATUS_FUNIL)[number];
 export const TEMPERATURAS = ['QUENTE', 'MORNO', 'FRIO'] as const;
 
 export type Temperatura = (typeof TEMPERATURAS)[number];
+
+export const CNPJ_ORIGENS = ['ENDERECO_EXATO', 'NOME_ENDERECO'] as const;
+
+export type CnpjOrigem = (typeof CNPJ_ORIGENS)[number];

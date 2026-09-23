@@ -1,5 +1,5 @@
 import { LocalDateTimeString } from './date.model';
-import { CategoriaNegocio, StatusFunil, Temperatura } from './enums.model';
+import { CategoriaNegocio, CnpjOrigem, StatusFunil, Temperatura } from './enums.model';
 
 export interface BuscaRequest {
   enderecoBase?: string | null;
@@ -65,6 +65,7 @@ export interface LeadHistoricoResponse {
   website?: string | null;
   cnpj?: string | null;
   razaoSocial?: string | null;
+  cnpjOrigem?: CnpjOrigem | null;
   telefone: string | null;
   whatsappUrl: string | null;
   scoreNaBusca: number | null;

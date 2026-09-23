@@ -424,6 +424,7 @@ Retorna um `BuscaDetalheResponse`. Os leads são ordenados por `scoreNaBusca` de
       "website": "https://padariacentral.example/",
       "cnpj": "12345678000190",
       "razaoSocial": "Padaria Central LTDA",
+      "cnpjOrigem": "ENDERECO_EXATO",
       "telefone": "(27) 99999-0000",
       "whatsappUrl": "https://wa.me/5527999990000",
       "scoreNaBusca": 55,
@@ -436,7 +437,7 @@ Retorna um `BuscaDetalheResponse`. Os leads são ordenados por `scoreNaBusca` de
 }
 ```
 
-Uma busca existente sem vínculos retorna `leads: []`. `whatsappUrl` é `null` quando não existe telefone normalizado brasileiro válido. `cnpj` e `razaoSocial` refletem os valores atuais do `Lead`, com os 14 dígitos da unidade e o nome empresarial quando houver correspondência segura; ficam `null` quando ela não existir.
+Uma busca existente sem vínculos retorna `leads: []`. `whatsappUrl` é `null` quando não existe telefone normalizado brasileiro válido. `cnpj` e `razaoSocial` refletem os valores atuais do `Lead`, com os 14 dígitos da unidade e o nome empresarial quando houver correspondência segura; ficam `null` quando ela não existir. `cnpjOrigem` informa `ENDERECO_EXATO` ou `NOME_ENDERECO` quando o CNPJ foi preenchido nesta versão; permanece `null` para CNPJs históricos sem proveniência registrada.
 
 ### Status HTTP
 
@@ -523,6 +524,7 @@ Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores 
     "nome": "Padaria Central",
     "cnpj": "12345678000190",
     "razaoSocial": "Padaria Central Ltda",
+    "cnpjOrigem": "ENDERECO_EXATO",
     "categoria": "PADARIA",
     "enderecoFormatado": "Rua Central, 100",
     "website": "https://padariacentral.example/",
@@ -549,7 +551,7 @@ Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores 
 ]
 ```
 
-Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um link manual e fica `null` quando o telefone normalizado é ausente ou inválido. `cnpj` contém os 14 dígitos da unidade e `razaoSocial` contém o nome empresarial somente quando a correspondência local foi confiável; ambos ficam `null` quando não há identificação segura. A correspondência depende do subset local de CNPJ carregado: como a carga mensal é manual (o `R__` inicial é um placeholder vazio), `cnpj`/`razaoSocial` permanecem `null` enquanto não houver base carregada para o município do lead. Data-base e confiança da correspondência permanecem internas. Os cinco campos geográficos ficam `null` para leads ainda não enriquecidos ou sem correspondência no dataset municipal.
+Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um link manual e fica `null` quando o telefone normalizado é ausente ou inválido. `cnpj` contém os 14 dígitos da unidade e `razaoSocial` contém o nome empresarial somente quando a correspondência local foi confiável; ambos ficam `null` quando não há identificação segura. `cnpjOrigem` é anulável e informa se o preenchimento veio de endereço exato ou do caminho de nome e endereço; CNPJs históricos podem não ter origem. A correspondência depende do subset local de CNPJ carregado: como a carga mensal é manual (o `R__` inicial é um placeholder vazio), `cnpj`/`razaoSocial` permanecem `null` enquanto não houver base carregada para o município do lead. Data-base e confiança da correspondência permanecem internas. Os cinco campos geográficos ficam `null` para leads ainda não enriquecidos ou sem correspondência no dataset municipal.
 
 ### Status HTTP
 
@@ -613,6 +615,7 @@ Retorna somente os leads da página solicitada, ordenados por score decrescente,
       "nome": "Padaria Central",
       "cnpj": "12345678000190",
       "razaoSocial": "Padaria Central Ltda",
+      "cnpjOrigem": "ENDERECO_EXATO",
       "categoria": "PADARIA",
       "enderecoFormatado": "Rua Central, 100",
       "website": "https://padariacentral.example/",
@@ -696,6 +699,7 @@ Retorna um `LeadResponse` com a mesma estrutura apresentada em `GET /api/leads`.
   "nome": "Padaria Central",
   "cnpj": "12345678000190",
   "razaoSocial": "Padaria Central Ltda",
+  "cnpjOrigem": "ENDERECO_EXATO",
   "categoria": "PADARIA",
   "enderecoFormatado": "Rua Central, 100",
   "website": "https://padariacentral.example/",
@@ -796,6 +800,7 @@ Persiste somente os campos não nulos recebidos e retorna o `LeadResponse` compl
   "nome": "Padaria Central",
   "cnpj": "12345678000190",
   "razaoSocial": "Padaria Central Ltda",
+  "cnpjOrigem": "ENDERECO_EXATO",
   "categoria": "PADARIA",
   "enderecoFormatado": "Rua Central, 100",
   "website": "https://padariacentral.example/",

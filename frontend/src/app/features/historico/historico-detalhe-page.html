@@ -258,6 +258,9 @@
                         <span>Site não informado</span>
                       }
                       <span>{{ cnpjExibido(lead.cnpj) }}</span>
+                      @if (lead.cnpj) {
+                        <span>Origem do CNPJ: {{ rotuloCnpjOrigem(lead.cnpjOrigem) }}</span>
+                      }
                       @if (lead.razaoSocial) {
                         <span>Razão social: {{ lead.razaoSocial }}</span>
                       }

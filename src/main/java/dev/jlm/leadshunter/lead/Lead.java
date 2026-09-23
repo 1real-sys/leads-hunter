@@ -1,5 +1,6 @@
 package dev.jlm.leadshunter.lead;
 
+import dev.jlm.leadshunter.cnpj.CnpjOrigem;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -61,6 +62,10 @@ public class Lead {
 
     @Column(name = "cnpj_confianca", precision = 5, scale = 4)
     private BigDecimal cnpjConfianca;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cnpj_origem", length = 30)
+    private CnpjOrigem cnpjOrigem;
 
     @Column(length = 30)
     private String telefone;

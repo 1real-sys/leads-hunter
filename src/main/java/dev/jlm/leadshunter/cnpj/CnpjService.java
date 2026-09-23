@@ -612,12 +612,14 @@ public class CnpjService {
             lead.setCnpjCorrespondidoEm(LocalDateTime.now());
             lead.setCnpjDataBase(dataBase);
             lead.setCnpjConfianca(confianca);
+            lead.setCnpjOrigem(origem);
         }
 
         public void atualizarMetadados(Lead lead) {
             lead.setCnpjCorrespondidoEm(LocalDateTime.now());
             lead.setCnpjDataBase(dataBase);
             lead.setCnpjConfianca(confianca);
+            lead.setCnpjOrigem(origem);
         }
     }
 

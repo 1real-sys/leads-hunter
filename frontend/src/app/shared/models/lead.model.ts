@@ -1,5 +1,5 @@
 import { LocalDateTimeString } from './date.model';
-import { CategoriaNegocio, StatusFunil, Temperatura } from './enums.model';
+import { CategoriaNegocio, CnpjOrigem, StatusFunil, Temperatura } from './enums.model';
 
 export interface LeadResponse {
   id: number;
@@ -7,6 +7,7 @@ export interface LeadResponse {
   nome: string | null;
   cnpj?: string | null;
   razaoSocial?: string | null;
+  cnpjOrigem?: CnpjOrigem | null;
   categoria: CategoriaNegocio | null;
   enderecoFormatado: string | null;
   website?: string | null;

@@ -1,5 +1,6 @@
 package dev.jlm.leadshunter.busca;
 
+import dev.jlm.leadshunter.cnpj.CnpjOrigem;
 import dev.jlm.leadshunter.lead.CategoriaNegocio;
 import dev.jlm.leadshunter.lead.StatusFunil;
 import dev.jlm.leadshunter.lead.Temperatura;
@@ -27,6 +28,7 @@ public record BuscaDetalheResponse(
         String website,
         String cnpj,
         String razaoSocial,
+        CnpjOrigem cnpjOrigem,
         String telefone,
         String whatsappUrl,
         Integer scoreNaBusca,
@@ -42,6 +44,7 @@ public record BuscaDetalheResponse(
             String enderecoFormatado,
             String cnpj,
             String razaoSocial,
+            CnpjOrigem cnpjOrigem,
             String telefone,
             String whatsappUrl,
             Integer scoreNaBusca,
@@ -58,6 +61,42 @@ public record BuscaDetalheResponse(
                 null,
                 cnpj,
                 razaoSocial,
+                cnpjOrigem,
+                telefone,
+                whatsappUrl,
+                scoreNaBusca,
+                temperaturaNaBusca,
+                status,
+                observacoes,
+                ultimoContatoEm
+            );
+        }
+
+        public LeadHistoricoResponse(
+            Long id,
+            String nome,
+            CategoriaNegocio categoria,
+            String enderecoFormatado,
+            String website,
+            String cnpj,
+            String razaoSocial,
+            String telefone,
+            String whatsappUrl,
+            Integer scoreNaBusca,
+            Temperatura temperaturaNaBusca,
+            StatusFunil status,
+            String observacoes,
+            LocalDateTime ultimoContatoEm
+        ) {
+            this(
+                id,
+                nome,
+                categoria,
+                enderecoFormatado,
+                website,
+                cnpj,
+                razaoSocial,
+                null,
                 telefone,
                 whatsappUrl,
                 scoreNaBusca,

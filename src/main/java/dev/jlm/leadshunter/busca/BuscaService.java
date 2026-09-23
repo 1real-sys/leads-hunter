@@ -280,6 +280,7 @@ public class BuscaService {
         lead.setCnpjCorrespondidoEm(null);
         lead.setCnpjDataBase(null);
         lead.setCnpjConfianca(null);
+        lead.setCnpjOrigem(null);
     }
 
     private boolean codigoMunicipioValido(String valor) {
@@ -332,6 +333,7 @@ public class BuscaService {
             lead.getWebsite(),
             lead.getCnpj(),
             lead.getRazaoSocial(),
+            lead.getCnpjOrigem(),
             lead.getTelefone(),
             whatsAppLinkGenerator.gerar(lead.getTelefoneNormalizado()),
             buscaLead.getScoreNaBusca(),

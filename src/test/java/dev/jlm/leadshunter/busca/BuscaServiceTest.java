@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 import dev.jlm.leadshunter.bloqueio.NomeBloqueadoService;
+import dev.jlm.leadshunter.cnpj.CnpjOrigem;
 import dev.jlm.leadshunter.cnpj.CnpjService;
 import dev.jlm.leadshunter.geo.MunicipioInfo;
 import dev.jlm.leadshunter.geo.MunicipioService;
@@ -344,6 +345,33 @@ class BuscaServiceTest {
         assertThat(lead.getCnpjCorrespondidoEm()).isNull();
         assertThat(lead.getCnpjDataBase()).isNull();
         assertThat(lead.getCnpjConfianca()).isNull();
+    }
+
+    @Test
+    void deveLimparCnpjQuandoNovaCompetenciaApontarOutroCnpj() {
+        Lead lead = leadComCnpjDaCompetenciaAnterior("place-cnpj-divergente");
+        lead.setCnpjOrigem(CnpjOrigem.ENDERECO_EXATO);
+        prepararNovaCapturaDoLead(lead);
+        when(cnpjService.buscarDataBaseAtual("3205309"))
+            .thenReturn(Optional.of(LocalDate.of(2026, 9, 8)));
+        when(cnpjService.corresponderParaRevalidacao(lead)).thenReturn(Optional.of(
+            new CnpjService.Correspondencia(
+                "23681920000118",
+                "CB VILA VELHA COMERCIO DE ALIMENTOS LTDA",
+                LocalDate.of(2026, 9, 8),
+                new BigDecimal("0.9500"),
+                CnpjOrigem.ENDERECO_EXATO
+            )
+        ));
+
+        criarService().criar(criarRequestPadaria());
+
+        assertThat(lead.getCnpj()).isNull();
+        assertThat(lead.getRazaoSocial()).isNull();
+        assertThat(lead.getCnpjCorrespondidoEm()).isNull();
+        assertThat(lead.getCnpjDataBase()).isNull();
+        assertThat(lead.getCnpjConfianca()).isNull();
+        assertThat(lead.getCnpjOrigem()).isNull();
     }
 
     @Test

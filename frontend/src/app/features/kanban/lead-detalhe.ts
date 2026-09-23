@@ -17,6 +17,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
 import { LeadApi } from '../../core/api/lead-api';
 import { AtualizarLeadRequest, LeadResponse } from '../../shared/models/lead.model';
+import { CnpjOrigem } from '../../shared/models/enums.model';
 import { formatarCnpj } from '../../shared/utils/cnpj';
 import { classificarIdhm, formatarIdhm } from '../../shared/utils/idhm';
 import { ROTULOS_CATEGORIA, ROTULOS_TEMPERATURA, obterRotuloStatus } from './kanban.model';
@@ -47,6 +48,12 @@ export class LeadDetalhe {
   protected readonly razaoSocialApresentacao = computed(
     () => this.lead().razaoSocial?.trim() || null,
   );
+  protected readonly cnpjOrigemApresentacao = computed(() => {
+    if (!this.lead().cnpj) {
+      return null;
+    }
+    return this.lead().cnpjOrigem ?? null;
+  });
   protected readonly localidade = computed(() => {
     const municipio = this.lead().municipioNome?.trim();
     const uf = this.lead().uf?.trim().toUpperCase();
@@ -66,6 +73,12 @@ export class LeadDetalhe {
   });
   protected readonly rotulosCategoria = ROTULOS_CATEGORIA;
   protected readonly rotulosTemperatura = ROTULOS_TEMPERATURA;
+
+  protected rotuloCnpjOrigem(origem: CnpjOrigem | null): string {
+    if (origem === 'ENDERECO_EXATO') return 'Endereço exato';
+    if (origem === 'NOME_ENDERECO') return 'Nome e endereço';
+    return 'Origem não informada';
+  }
 
   protected readonly editando = signal(false);
   protected readonly salvando = signal(false);

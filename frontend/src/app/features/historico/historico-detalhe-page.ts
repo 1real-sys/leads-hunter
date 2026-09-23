@@ -15,7 +15,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
 import { BuscaApi } from '../../core/api/busca-api';
 import { BuscaDetalheResponse } from '../../shared/models/busca.model';
-import { CategoriaNegocio, StatusFunil, Temperatura } from '../../shared/models/enums.model';
+import {
+  CategoriaNegocio,
+  CnpjOrigem,
+  StatusFunil,
+  Temperatura,
+} from '../../shared/models/enums.model';
 import { formatarCnpj } from '../../shared/utils/cnpj';
 import { separarObservacoesPesquisa } from '../../shared/utils/observacoes-pesquisa';
 import { PesquisaInformacoesStore } from './pesquisa-informacoes-store';
@@ -48,6 +53,11 @@ const ROTULOS_TEMPERATURA: Readonly<Record<Temperatura, string>> = {
   QUENTE: 'Quente',
   MORNO: 'Morno',
   FRIO: 'Frio',
+};
+
+const ROTULOS_CNPJ_ORIGEM: Readonly<Record<CnpjOrigem, string>> = {
+  ENDERECO_EXATO: 'Endereço exato',
+  NOME_ENDERECO: 'Nome e endereço',
 };
 
 @Component({
@@ -222,6 +232,12 @@ export class HistoricoDetalhePage {
 
   protected cnpjExibido(cnpj: string | null | undefined): string {
     return formatarCnpj(cnpj) ?? 'CNPJ não encontrado';
+  }
+
+  protected rotuloCnpjOrigem(origem: CnpjOrigem | null | undefined): string {
+    return origem === undefined || origem === null
+      ? 'Origem não informada'
+      : ROTULOS_CNPJ_ORIGEM[origem];
   }
 
   private obterIdValido(valor: string): number | null {

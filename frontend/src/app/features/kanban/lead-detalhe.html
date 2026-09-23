@@ -137,6 +137,12 @@
                   }
                 </dd>
               </div>
+              @if (cnpjFormatado()) {
+                <div class="lead-detalhe-panel__cnpj-origem">
+                  <dt>Origem do CNPJ</dt>
+                  <dd>{{ rotuloCnpjOrigem(cnpjOrigemApresentacao()) }}</dd>
+                </div>
+              }
               <div class="lead-detalhe-panel__razao-social">
                 <dt>Razão social</dt>
                 <dd>
