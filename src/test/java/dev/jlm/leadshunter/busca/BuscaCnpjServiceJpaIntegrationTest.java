@@ -35,9 +35,10 @@ class BuscaCnpjServiceJpaIntegrationTest {
         jdbc.update("""
             INSERT INTO cnpj_estabelecimento
                 (cnpj, cnpj_base, nome_fantasia_normalizado, logradouro_normalizado,
-                 numero, bairro_normalizado, cep, municipio_codigo_ibge, uf, situacao_cadastral, data_base)
+                 numero, numero_normalizado, bairro_normalizado, cep,
+                 municipio_codigo_ibge, uf, situacao_cadastral, data_base)
             VALUES ('99999997000100', '99999997', 'empresa teste cnpj07', 'rua teste',
-                '7', '', '99999997', '9999997', 'ES', '02', '2026-09-08')
+                '7', '7', '', '99999997', '9999997', 'ES', '02', '2026-09-08')
             """);
         Busca busca = new Busca();
         busca.setCategoriasBuscadas("OUTROS");

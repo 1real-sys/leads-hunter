@@ -88,6 +88,11 @@ class GerarDatasetCnpjTest(unittest.TestCase):
             "CONVERT(X'615c620a63' USING utf8mb4)",
             cnpj.literal_sql("a\\b\nc"),
         )
+        self.assertEqual("48", cnpj.normalizar_numero("048"))
+        self.assertEqual("48A", cnpj.normalizar_numero("048A"))
+        self.assertEqual("000A", cnpj.normalizar_numero("000A"))
+        self.assertIsNone(cnpj.normalizar_numero("O"))
+        self.assertIsNone(cnpj.normalizar_numero("S/N"))
 
     def test_deve_filtrar_ativos_dos_municipios_e_gerar_saida_deterministica(self) -> None:
         manifesto = cnpj.carregar_manifesto(self.manifesto)

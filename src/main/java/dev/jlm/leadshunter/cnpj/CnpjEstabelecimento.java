@@ -51,6 +51,9 @@ public class CnpjEstabelecimento {
     @Column(length = 30)
     private String numero;
 
+    @Column(name = "numero_normalizado", length = 30)
+    private String numeroNormalizado;
+
     @Column(length = 120)
     private String bairro;
 

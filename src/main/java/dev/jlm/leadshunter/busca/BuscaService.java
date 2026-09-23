@@ -255,10 +255,20 @@ public class BuscaService {
             }
         }
 
-        Optional<CnpjService.Correspondencia> correspondenciaAtual = cnpjService
-            .corresponder(lead);
+        Optional<CnpjService.Correspondencia> correspondenciaAtual = possuiCnpj
+            ? cnpjService.corresponderParaRevalidacao(lead)
+            : cnpjService.corresponder(lead);
         if (correspondenciaAtual.isPresent()) {
-            correspondenciaAtual.get().preencherLead(lead);
+            CnpjService.Correspondencia correspondencia = correspondenciaAtual.get();
+            if (possuiCnpj && !lead.getCnpj().equals(correspondencia.cnpj())) {
+                limparCnpj(lead);
+                return;
+            }
+            if (possuiCnpj) {
+                correspondencia.atualizarMetadados(lead);
+            } else {
+                correspondencia.preencherLead(lead);
+            }
         } else if (possuiCnpj) {
             limparCnpj(lead);
         }

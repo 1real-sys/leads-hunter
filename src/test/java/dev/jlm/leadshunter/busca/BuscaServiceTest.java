@@ -308,10 +308,10 @@ class BuscaServiceTest {
         prepararNovaCapturaDoLead(lead);
         when(cnpjService.buscarDataBaseAtual("3205309"))
             .thenReturn(Optional.of(LocalDate.of(2026, 9, 8)));
-        when(cnpjService.corresponder(lead)).thenReturn(Optional.of(
+        when(cnpjService.corresponderParaRevalidacao(lead)).thenReturn(Optional.of(
             new CnpjService.Correspondencia(
                 "43869215000156",
-                "CB VITORIA COMERCIO DE ALIMENTOS LTDA",
+                "Razão nova não deve substituir a identidade",
                 LocalDate.of(2026, 9, 8),
                 new BigDecimal("0.9876")
             )
@@ -320,12 +320,13 @@ class BuscaServiceTest {
         criarService().criar(criarRequestPadaria());
 
         assertThat(lead.getCnpj()).isEqualTo("43869215000156");
+        assertThat(lead.getRazaoSocial()).isEqualTo("CB VITORIA COMERCIO DE ALIMENTOS LTDA");
         assertThat(lead.getCnpjDataBase()).isEqualTo(LocalDate.of(2026, 9, 8));
         assertThat(lead.getCnpjConfianca()).isEqualByComparingTo("0.9876");
         assertThat(lead.getCnpjCorrespondidoEm())
             .isAfter(LocalDateTime.of(2026, 8, 8, 10, 0));
         verify(cnpjService).buscarDataBaseAtual("3205309");
-        verify(cnpjService).corresponder(lead);
+        verify(cnpjService).corresponderParaRevalidacao(lead);
     }
 
     @Test
@@ -334,7 +335,7 @@ class BuscaServiceTest {
         prepararNovaCapturaDoLead(lead);
         when(cnpjService.buscarDataBaseAtual("3205309"))
             .thenReturn(Optional.of(LocalDate.of(2026, 9, 8)));
-        when(cnpjService.corresponder(lead)).thenReturn(Optional.empty());
+        when(cnpjService.corresponderParaRevalidacao(lead)).thenReturn(Optional.empty());
 
         criarService().criar(criarRequestPadaria());
 

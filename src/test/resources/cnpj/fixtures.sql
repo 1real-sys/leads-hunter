@@ -23,6 +23,7 @@ INSERT INTO cnpj_estabelecimento (
     logradouro,
     logradouro_normalizado,
     numero,
+    numero_normalizado,
     bairro,
     bairro_normalizado,
     cep,
@@ -33,19 +34,31 @@ INSERT INTO cnpj_estabelecimento (
 ) VALUES
     (
         '23502037000113', '23502037', NULL, '',
-        'RUA COMENDADOR ARAUJO', 'rua comendador araujo', '731',
+        'RUA COMENDADOR ARAUJO', 'rua comendador araujo', '731', '731',
         'BATEL', 'batel', '80420063', '4106902', 'PR', '02', '2026-09-08'
     ),
     (
         '23681920000118', '23681920', 'COCO BAMBU VILA VELHA',
         'coco bambu vila velha', 'AVENIDA DOUTOR OLIVIO LIRA',
-        'avenida doutor olivio lira', '353', 'PRAIA DA COSTA',
+        'avenida doutor olivio lira', '353', '353', 'PRAIA DA COSTA',
         'praia da costa', '29101950', '3205200', 'ES', '02', '2026-09-08'
     ),
     (
         '43869215000156', '43869215', NULL, '',
-        'RUA JOAO DA CRUZ', 'rua joao da cruz', '10',
+        'RUA JOAO DA CRUZ', 'rua joao da cruz', '10', '10',
         'PRAIA DO CANTO', 'praia do canto', '29055620',
+        '3205309', 'ES', '02', '2026-09-08'
+    ),
+    (
+        '43869215000157', '43869215', NULL, '',
+        'RUA DIAGNOSTICO', 'rua diagnostico', 'O', NULL,
+        'CENTRO', 'centro', '29999999',
+        '3205309', 'ES', '02', '2026-09-08'
+    ),
+    (
+        '43869215000158', '43869215', NULL, '',
+        'RUA DIAGNOSTICO', 'rua diagnostico', 'S/N', NULL,
+        'CENTRO', 'centro', '29999998',
         '3205309', 'ES', '02', '2026-09-08'
     )
 ON DUPLICATE KEY UPDATE
@@ -55,6 +68,7 @@ ON DUPLICATE KEY UPDATE
     logradouro = VALUES(logradouro),
     logradouro_normalizado = VALUES(logradouro_normalizado),
     numero = VALUES(numero),
+    numero_normalizado = VALUES(numero_normalizado),
     bairro = VALUES(bairro),
     bairro_normalizado = VALUES(bairro_normalizado),
     cep = VALUES(cep),

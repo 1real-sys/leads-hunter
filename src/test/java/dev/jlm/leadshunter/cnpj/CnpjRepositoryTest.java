@@ -64,4 +64,17 @@ class CnpjRepositoryTest {
         assertThat(estabelecimentoRepository.findDataBaseAtual("3205309", "02"))
             .contains(LocalDate.of(2026, 9, 8));
     }
+
+    @Test
+    void deveAgruparTodoNumeroBrutoDescartadoPelaNormalizacao() {
+        assertThat(estabelecimentoRepository.listarNumerosDescartados())
+            .extracting(
+                CnpjEstabelecimentoRepository.NumeroDescartadoContagem::getNumero,
+                CnpjEstabelecimentoRepository.NumeroDescartadoContagem::getQuantidade
+            )
+            .contains(
+                org.assertj.core.groups.Tuple.tuple("O", 1L),
+                org.assertj.core.groups.Tuple.tuple("S/N", 1L)
+            );
+    }
 }

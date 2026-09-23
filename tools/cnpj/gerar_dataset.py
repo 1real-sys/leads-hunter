@@ -46,7 +46,9 @@ MAXIMO_TRABALHADORES_AUTOMATICOS = 8
 TOTAL_MUNICIPIOS_IBGE = 5_570
 COLUNAS_MUNICIPIOS_IBGE = ["codigo_ibge", "nome", "uf"]
 PADRAO_NAO_ALFANUMERICO = re.compile(r"[^0-9a-z]+")
+PADRAO_NUMERO_NAO_ALFANUMERICO = re.compile(r"[^0-9A-Z]+")
 PADRAO_NAO_DIGITO = re.compile(r"\D")
+PADRAO_SOMENTE_DIGITOS = re.compile(r"[0-9]+")
 PADRAO_CNPJ = re.compile(r"\d{14}")
 PADRAO_CODIGO_IBGE = re.compile(r"\d{7}")
 PADRAO_UF = re.compile(r"[A-Za-z]{2}")
@@ -70,6 +72,23 @@ def normalizar_texto(valor: str | None) -> str:
 
 def somente_digitos(valor: str | None) -> str:
     return PADRAO_NAO_DIGITO.sub("", valor or "")
+
+
+def normalizar_numero(valor: str | None) -> str | None:
+    """Mirrors CnpjNumeroNormalizer.normalizar and the V9 SQL backfill."""
+    if valor is None or not valor.strip():
+        return None
+    compacto = PADRAO_NUMERO_NAO_ALFANUMERICO.sub(
+        "", valor.strip().upper()
+    )
+    if not compacto or not re.search(r"[0-9]", compacto):
+        return None
+    if PADRAO_SOMENTE_DIGITOS.fullmatch(compacto):
+        sem_zeros = compacto.lstrip("0")
+        return sem_zeros or "0"
+    if re.match(r"^0*[1-9]", compacto):
+        return re.sub(r"^0+", "", compacto)
+    return compacto
 
 
 def cnpj_valido(cnpj: str) -> bool:
@@ -496,6 +515,7 @@ def _extrair_estabelecimentos_arquivo(
             "logradouro": logradouro,
             "logradouroNormalizado": normalizar_texto(logradouro),
             "numero": registro[15].strip() or None,
+            "numeroNormalizado": normalizar_numero(registro[15]),
             "bairro": bairro,
             "bairroNormalizado": normalizar_texto(bairro),
             "cep": cep,
@@ -822,7 +842,8 @@ def escrever_migration_sql(dataset: dict[str, Any], destino: Path) -> None:
         "cnpj_estabelecimento",
         [
             "cnpj", "cnpj_base", "nome_fantasia", "nome_fantasia_normalizado",
-            "logradouro", "logradouro_normalizado", "numero", "bairro",
+            "logradouro", "logradouro_normalizado", "numero", "numero_normalizado",
+            "bairro",
             "bairro_normalizado", "cep", "municipio_codigo_ibge", "uf",
             "situacao_cadastral", "data_base",
         ],
@@ -835,6 +856,7 @@ def escrever_migration_sql(dataset: dict[str, Any], destino: Path) -> None:
             item["logradouro"],
             item["logradouroNormalizado"],
             item["numero"],
+            item["numeroNormalizado"],
             item["bairro"],
             item["bairroNormalizado"],
             item["cep"],
@@ -845,7 +867,8 @@ def escrever_migration_sql(dataset: dict[str, Any], destino: Path) -> None:
         ],
         [
             "cnpj_base", "nome_fantasia", "nome_fantasia_normalizado",
-            "logradouro", "logradouro_normalizado", "numero", "bairro",
+            "logradouro", "logradouro_normalizado", "numero", "numero_normalizado",
+            "bairro",
             "bairro_normalizado", "cep", "municipio_codigo_ibge", "uf",
             "situacao_cadastral", "data_base",
         ],
