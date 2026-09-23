@@ -2421,3 +2421,98 @@ Foi incluído um teste controlado com os dados da filial Petz, confirmando que o
 - `fluxo.md`
 - `features-pos-mvp/refinamento-site-oficial.md`
 - `HISTORICO_IMPLEMENTACOES.md`
+
+## 85. Refinamento da correspondência CNPJ por endereço exato — 19/09/2026
+
+Foi implementada a correspondência CNPJ por endereço exato com política fail-closed, normalização canônica de números, desempate nominal em `0,55` e avaliador puro compartilhado pela captura, pelo diagnóstico e pelo runner. A comparação mantém um adaptador legado versionado para medir o antes/depois, recusa consultas truncadas e preserva a revalidação sem troca silenciosa de identidade.
+
+O banco ganhou `numero_normalizado` na V9, com backfill e índices para os caminhos com e sem CEP, e `cnpj_origem` na V10, com `CHECK` explícito. O diagnóstico percorre leads distintos sem CNPJ e produz JSONL imutável com hash, competências, versões dos normalizadores e fingerprint da allowlist, além de CSV separado para revisão humana. O `--aplicar` é opt-in, limitado, idempotente e exige revisão `CERTO` com evidência, hash, competência, allowlist e reprodução do avaliador. A aplicação em massa não foi executada.
+
+`LeadResponse` e o detalhe do Histórico passaram a expor `cnpjOrigem`, com rótulos humanos no Kanban e no Histórico. CSV/XLSX e o `ScoringService` permaneceram fora da alteração. A validação passou com 517 testes backend, 11 testes opt-in ignorados, 239 testes frontend e 13 testes Python; os 24 testes direcionados do refinamento também passaram. A promoção manual e o `--aplicar` permanecem intencionalmente fora da execução.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchAplicacaoService.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchBackfillRunner.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchClassificacao.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchDiagnosticoService.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchEvaluator.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchPolicy.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchRelatorioLinha.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchRelatorioWriter.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjNumeroNormalizer.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjOrigem.java`
+- `src/main/resources/db/migration/V9__adicionar_numero_normalizado_cnpj.sql`
+- `src/main/resources/db/migration/V10__adicionar_origem_cnpj_lead.sql`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjMatchDiagnosticoLiveTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjMatchAplicacaoServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjMatchEvaluatorTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjMatchPolicyTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjMatchRelatorioWriterTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjNumeroNormalizerTest.java`
+
+**Modificados:**
+
+- `.gitignore`
+- `API.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `fluxo.md`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaDetalheResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjEstabelecimento.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjEstabelecimentoRepository.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjService.java`
+- `src/main/java/dev/jlm/leadshunter/lead/Lead.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadRepository.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadResponse.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaCnpjServiceJpaIntegrationTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjServiceTest.java`
+- `src/test/resources/cnpj/fixtures.sql`
+- `tools/cnpj/gerar_dataset.py`
+- `frontend/src/app/features/historico/historico-detalhe-page.html`
+- `frontend/src/app/features/historico/historico-detalhe-page.ts`
+- `frontend/src/app/features/kanban/lead-detalhe.html`
+- `frontend/src/app/features/kanban/lead-detalhe.ts`
+- `frontend/src/app/shared/models/busca.model.ts`
+- `frontend/src/app/shared/models/enums.model.ts`
+- `frontend/src/app/shared/models/lead.model.ts`
+
+## 86. Endurecimento da validação e promoção do CNPJ por endereço — 22/09/2026
+
+O diagnóstico opt-in passou a usar obrigatoriamente a base local configurada em modo somente leitura, sem Flyway e sem worker de startup. A execução agora falha se não houver leads avaliados ou se o caso 653 estiver ausente, eliminando o falso positivo anterior causado pelo catálogo de teste vazio e pelo skip condicional.
+
+O `--aplicar` passou a validar a revisão completa antes de consultar ou gravar leads. Qualquer `ERRADO`, linha ausente ou revisão inválida veta a promoção inteira; `INCONCLUSIVO` continua sem autorizar escrita e é contabilizado separadamente da cobertura conclusiva. A política também passou a distinguir municípios não configurados de lista municipal explicitamente vazia, preservando a precedência sobre UFs.
+
+O relatório JSONL passou a incluir o inventário agregado dos números brutos descartados dos estabelecimentos CNPJ, diferenciando sentinelas conhecidas de `NUMERO_DESCONHECIDO`. A validação terminou com 523 testes backend, 11 opt-in ignorados, 13 testes Python e 239 testes frontend, sem falhas ou erros; o diagnóstico live executou dois testes sem skip contra a base `leadsradar` em modo read-only. Nenhuma aplicação em massa foi executada.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjMatchAplicacaoBarreiraTest.java`
+
+**Modificados:**
+
+- `features-pos-mvp/refinamento-cnpj-match.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjEstabelecimentoRepository.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchAplicacaoService.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchBackfillRunner.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchDiagnosticoService.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchPolicy.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjMatchRelatorioWriter.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjNumeroNormalizer.java`
+- `src/main/java/dev/jlm/leadshunter/cnpj/CnpjService.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjMatchAplicacaoServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjMatchDiagnosticoLiveTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjMatchPolicyTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjMatchRelatorioWriterTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjRepositoryTest.java`
+- `src/test/java/dev/jlm/leadshunter/cnpj/CnpjServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/support/IsolatedTestDatabaseInitializer.java`
+- `src/test/resources/cnpj/fixtures.sql`
+- `tools/cnpj/test_gerar_dataset.py`

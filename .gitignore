@@ -40,6 +40,9 @@ tools/cnpj/cnpj-*.sql
 src/main/resources/cnpj/
 # O catalogo tools/cnpj/municipios-ibge.csv e os scripts sao versionados.
 
+# Relatórios operacionais do diagnóstico CNPJ (JSONL/CSV) ficam fora do Git.
+cnpj-match/
+
 ### Python ###
 __pycache__/
 *.py[cod]
