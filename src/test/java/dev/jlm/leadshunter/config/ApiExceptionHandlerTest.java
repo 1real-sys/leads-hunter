@@ -36,11 +36,14 @@ class ApiExceptionHandlerTest {
     @Mock
     private BuscaInformacoesExecucaoService buscaInformacoesExecucaoService;
 
+    @Mock
+    private dev.jlm.leadshunter.busca.BuscaEmailExecucaoService buscaEmailExecucaoService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new BuscaController(buscaService, buscaCnpjService, buscaInformacoesExecucaoService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new BuscaController(buscaService, buscaCnpjService, buscaInformacoesExecucaoService, buscaEmailExecucaoService))
             .setControllerAdvice(new ApiExceptionHandler())
             .build();
     }

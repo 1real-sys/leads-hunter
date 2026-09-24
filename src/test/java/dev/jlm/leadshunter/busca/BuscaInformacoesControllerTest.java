@@ -27,7 +27,8 @@ class BuscaInformacoesControllerTest {
     @BeforeEach
     void preparar() {
         mvc = MockMvcBuilders.standaloneSetup(new BuscaController(
-            mock(BuscaService.class), mock(BuscaCnpjService.class), service))
+            mock(BuscaService.class), mock(BuscaCnpjService.class), service,
+            mock(BuscaEmailExecucaoService.class)))
             .setControllerAdvice(new ApiExceptionHandler()).build();
     }
 

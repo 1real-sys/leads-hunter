@@ -24,6 +24,21 @@ public class BuscaController {
     private final BuscaService buscaService;
     private final BuscaCnpjService buscaCnpjService;
     private final BuscaInformacoesExecucaoService buscaInformacoesExecucaoService;
+    private final BuscaEmailExecucaoService buscaEmailExecucaoService;
+
+    @PostMapping("/{id}/emails")
+    public ResponseEntity<BuscaEmailResponse> buscarEmails(@PathVariable @Positive Long id) {
+        return ResponseEntity.accepted().cacheControl(CacheControl.noStore())
+            .location(URI.create("/api/buscas/" + id + "/emails"))
+            .body(buscaEmailExecucaoService.iniciar(id));
+    }
+
+    @GetMapping("/{id}/emails")
+    public ResponseEntity<BuscaEmailResponse> consultarEmails(@PathVariable @Positive Long id) {
+        return buscaEmailExecucaoService.consultar(id)
+            .map(resposta -> ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(resposta))
+            .orElseGet(() -> ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build());
+    }
 
     @PostMapping("/{id}/informacoes")
     public ResponseEntity<PesquisaInformacoesExecucaoResponse> buscarInformacoes(

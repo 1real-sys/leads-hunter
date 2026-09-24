@@ -4,6 +4,7 @@ import dev.jlm.leadshunter.bloqueio.NomeBloqueadoDuplicadoException;
 import dev.jlm.leadshunter.bloqueio.NomeBloqueadoInvalidoException;
 import dev.jlm.leadshunter.bloqueio.NomeBloqueadoNaoEncontradoException;
 import dev.jlm.leadshunter.busca.BuscaNaoEncontradaException;
+import dev.jlm.leadshunter.busca.BuscaEmailLimiteException;
 import dev.jlm.leadshunter.busca.PesquisaInformacoesLimiteException;
 import dev.jlm.leadshunter.geo.BboxInvalidoException;
 import dev.jlm.leadshunter.integracao.places.PlacesApiConfigurationException;
@@ -29,6 +30,13 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 @Slf4j
 public class ApiExceptionHandler {
+
+    @ExceptionHandler(BuscaEmailLimiteException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailLimite(
+        BuscaEmailLimiteException exception, HttpServletRequest request
+    ) {
+        return resposta(HttpStatus.TOO_MANY_REQUESTS, "EMAIL_LIMITE_EXCEDIDO", exception.getMessage(), request);
+    }
 
     @ExceptionHandler(PesquisaInformacoesLimiteException.class)
     public ResponseEntity<ApiErrorResponse> handlePesquisaLimite(
