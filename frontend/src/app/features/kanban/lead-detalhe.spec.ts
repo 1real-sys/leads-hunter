@@ -179,6 +179,19 @@ describe('LeadDetalhe', () => {
     expect(conteudo).toContain('WhatsApp indisponível');
   });
 
+  it('oferece mailto manual quando há e-mail e rótulo neutro quando ausente', async () => {
+    const comEmail = await renderizar({ ...LEAD_COMPLETO, email: 'contato@padariacentral.example' });
+    const link = comEmail.nativeElement.querySelector('a[href^="mailto:"]') as HTMLAnchorElement;
+    expect(link?.getAttribute('href')).toBe('mailto:contato@padariacentral.example');
+    expect(link.textContent).toContain('contato@padariacentral.example');
+
+    comEmail.destroy();
+    const semEmail = await renderizar({ ...LEAD_COMPLETO, email: null });
+    expect(semEmail.nativeElement.querySelector('a[href^="mailto:"]')).toBeNull();
+    expect(semEmail.nativeElement.querySelector('.lead-detalhe-panel__email')?.textContent)
+      .toContain('Não encontrado');
+  });
+
   it('aceita resposta anterior sem os campos novos e omite dados externos ausentes', async () => {
     const fixture = await renderizar({
       ...LEAD_COMPLETO,

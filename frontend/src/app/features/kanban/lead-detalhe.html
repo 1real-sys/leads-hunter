@@ -127,6 +127,16 @@
                   }
                 </dd>
               </div>
+              <div class="lead-detalhe-panel__email">
+                <dt>E-mail</dt>
+                <dd>
+                  @if (item.email; as email) {
+                    <a [href]="'mailto:' + email" [attr.aria-label]="'Enviar e-mail manual para ' + email">{{ email }}</a>
+                  } @else {
+                    <span class="lead-detalhe-panel__sem-valor">Não encontrado</span>
+                  }
+                </dd>
+              </div>
               <div class="lead-detalhe-panel__cnpj">
                 <dt>CNPJ</dt>
                 <dd>

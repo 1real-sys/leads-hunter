@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ApiErrorResponse } from '../../shared/models/api-error-response.model';
 import {
   BuscaDetalheResponse,
+  BuscaEmailResponse,
   BuscaRequest,
   BuscaResponse,
   BuscaResumoResponse,
@@ -138,6 +139,29 @@ describe('BuscaApi', () => {
     request.flush(DETALHE);
 
     expect(recebido).toEqual(DETALHE);
+  });
+
+  it('inicia e consulta a execução persistida de e-mails na rota tipada', () => {
+    const execucao: BuscaEmailResponse = {
+      id: 91, buscaId: 42, status: 'PENDENTE', criadoEm: '2026-09-23T10:00:00',
+      iniciadoEm: null, atualizadoEm: '2026-09-23T10:00:00', terminadoEm: null,
+      totalLeads: 2, progresso: 0, ignoradosJaComEmail: 0, ignoradosSemSite: 0,
+      processados: 0, encontrados: 0, semEmailElegivel: 0, descartadosDominioExterno: 0,
+      falhas: 0, erroCodigo: null, erroMensagem: null,
+    };
+    let iniciada: BuscaEmailResponse | undefined;
+    let consultada: BuscaEmailResponse | null | undefined;
+    api.iniciarEmails(42).subscribe((resposta) => (iniciada = resposta));
+    const post = httpTesting.expectOne(API_ROUTES.buscaEmails(42));
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toBeNull();
+    post.flush(execucao, { status: 202, statusText: 'Accepted' });
+    api.consultarEmails(42).subscribe((resposta) => (consultada = resposta));
+    const get = httpTesting.expectOne(API_ROUTES.buscaEmails(42));
+    expect(get.request.method).toBe('GET');
+    get.flush(execucao);
+    expect(iniciada).toEqual(execucao);
+    expect(consultada).toEqual(execucao);
   });
 
   it('propaga 404 ao consultar uma busca inexistente', () => {

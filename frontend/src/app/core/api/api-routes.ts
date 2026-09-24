@@ -6,6 +6,7 @@ export const API_ROUTES = {
   buscas: `${API_PREFIX}/buscas`,
   busca: (id: number) => `${API_PREFIX}/buscas/${id}`,
   buscaInformacoes: (id: number) => `${API_PREFIX}/buscas/${id}/informacoes`,
+  buscaEmails: (id: number) => `${API_PREFIX}/buscas/${id}/emails`,
   leads: `${API_PREFIX}/leads`,
   leadsPagina: `${API_PREFIX}/leads/pagina`,
   lead: (id: number) => `${API_PREFIX}/leads/${id}`,

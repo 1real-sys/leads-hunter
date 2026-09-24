@@ -8,6 +8,7 @@ import { API_ROUTES } from '../../core/api/api-routes';
 import { ApiErrorResponse } from '../../shared/models/api-error-response.model';
 import {
   BuscaDetalheResponse,
+  BuscaEmailResponse,
   PesquisaInformacoesExecucaoResponse,
 } from '../../shared/models/busca.model';
 import { HistoricoDetalhePage } from './historico-detalhe-page';
@@ -76,6 +77,27 @@ const EXECUCAO: PesquisaInformacoesExecucaoResponse = {
   erroMensagem: null,
 };
 
+const EXECUCAO_EMAIL: BuscaEmailResponse = {
+  id: 91,
+  buscaId: 42,
+  status: 'PENDENTE',
+  criadoEm: '2026-09-23T10:00:00',
+  iniciadoEm: null,
+  atualizadoEm: '2026-09-23T10:00:00',
+  terminadoEm: null,
+  totalLeads: 2,
+  progresso: 0,
+  ignoradosJaComEmail: 0,
+  ignoradosSemSite: 0,
+  processados: 0,
+  encontrados: 0,
+  semEmailElegivel: 0,
+  descartadosDominioExterno: 0,
+  falhas: 0,
+  erroCodigo: null,
+  erroMensagem: null,
+};
+
 const OBSERVACOES =
   'Retornar amanhã. <img src=x onerror=alert(1)>\nhttps://manual.example/\n\n' +
   '--- Pesquisa inteligente ---\nInstagram:\nhttps://www.instagram.com/padaria\n\n' +
@@ -103,12 +125,55 @@ describe('HistoricoDetalhePage', () => {
       expect(request.request.method).toBe('GET');
       request.flush(null, { status: 204, statusText: 'No Content' });
     });
+    httpTesting.match((request) => request.url.endsWith('/emails') && request.method === 'GET')
+      .forEach((request) => {
+        if (!request.cancelled) request.flush(null, { status: 204, statusText: 'No Content' });
+      });
     httpTesting.verify();
   });
 
   function botaoInformacoes(): HTMLButtonElement {
     return harness.routeNativeElement!.querySelector('[data-testid="buscar-informacoes"]')!;
   }
+
+  it('inicia busca de e-mails, acompanha progresso e recarrega o mailto ao concluir', async () => {
+    const page = await harness.navigateByUrl('/historico/42', HistoricoDetalhePage);
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush(DETALHE);
+    httpTesting.expectOne(API_ROUTES.buscaInformacoes(42))
+      .flush(null, { status: 204, statusText: 'No Content' });
+    const restauracao = httpTesting.expectOne(API_ROUTES.buscaEmails(42));
+    expect(restauracao.request.method).toBe('GET');
+    restauracao.flush(null, { status: 204, statusText: 'No Content' });
+    await harness.fixture.whenStable();
+
+    const botao = harness.routeNativeElement!.querySelector('[data-testid="buscar-emails"]') as HTMLButtonElement;
+    expect(botao.disabled).toBe(false);
+    expect(harness.routeNativeElement!.textContent).toContain('E-mail não encontrado');
+    botao.click();
+    await harness.fixture.whenStable();
+    expect(botao.disabled).toBe(true);
+    const inicio = httpTesting.expectOne(API_ROUTES.buscaEmails(42));
+    expect(inicio.request.method).toBe('POST');
+    inicio.flush(EXECUCAO_EMAIL);
+    await harness.fixture.whenStable();
+    expect(botao.disabled).toBe(true);
+    expect(harness.routeNativeElement!.textContent).toContain('0 de 2 leads');
+
+    page['emails'].retomar();
+    const progresso = httpTesting.expectOne(API_ROUTES.buscaEmails(42));
+    expect(progresso.request.method).toBe('GET');
+    progresso.flush({ ...EXECUCAO_EMAIL, status: 'CONCLUIDA', progresso: 2,
+      processados: 2, encontrados: 1, semEmailElegivel: 1, descartadosDominioExterno: 1 });
+    httpTesting.expectOne(API_ROUTES.busca(42)).flush({ ...DETALHE, leads: [
+      { ...DETALHE.leads[0], email: 'contato@zetafarmacia.example' }, DETALHE.leads[1],
+    ] });
+    await harness.fixture.whenStable();
+    expect(botao.disabled).toBe(false);
+    expect(harness.routeNativeElement!.textContent).toContain('1 leads tinham contato');
+    const mailto = harness.routeNativeElement!.querySelector('a[href^="mailto:"]') as HTMLAnchorElement;
+    expect(mailto?.getAttribute('href')).toBe('mailto:contato@zetafarmacia.example');
+    expect(page['emails'].execucao()?.status).toBe('CONCLUIDA');
+  });
 
   function toggleBrave(): HTMLButtonElement {
     return harness.routeNativeElement!.querySelector('[data-testid="usar-brave"]')!;
@@ -128,9 +193,10 @@ describe('HistoricoDetalhePage', () => {
       .map((elemento) => elemento.textContent?.trim());
     expect(acoes[0]).toBe('Voltar ao histórico');
     expect(acoes[1]).toBe('Buscar CNPJ');
-    expect(acoes[2]).toContain('Brave Search');
-    expect(acoes[2]).toContain('Ativado');
-    expect(acoes[3]).toBe('Buscar informações');
+    expect(acoes[2]).toBe('Buscar e-mails');
+    expect(acoes[3]).toContain('Brave Search');
+    expect(acoes[3]).toContain('Ativado');
+    expect(acoes[4]).toBe('Buscar informações');
     const site = harness.routeNativeElement!.querySelector(
       '.historico-detalhe__identity a[href="https://zetafarmacia.example/"]',
     ) as HTMLAnchorElement;
@@ -153,7 +219,7 @@ describe('HistoricoDetalhePage', () => {
     request.flush({ ...EXECUCAO, status: 'PENDENTE' });
     await harness.fixture.whenStable();
     expect(harness.routeNativeElement?.textContent).toContain('Aguardando a vez de pesquisar');
-    expect(harness.routeNativeElement?.querySelector('[role="status"]')?.textContent).toContain(
+    expect(harness.routeNativeElement?.textContent).toContain(
       '0 de 2 leads',
     );
   });
@@ -292,6 +358,7 @@ describe('HistoricoDetalhePage', () => {
     httpTesting.expectNone(API_ROUTES.buscaInformacoes(42));
     await harness.navigateByUrl('/historico/invalido', HistoricoDetalhePage);
     expect(botaoInformacoes().disabled).toBe(true);
+    httpTesting.match(API_ROUTES.buscaEmails(42));
     httpTesting.expectNone(() => true);
   });
 

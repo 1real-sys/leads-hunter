@@ -16,6 +16,16 @@
         {{ buscandoCnpj() ? 'Buscando CNPJ…' : 'Buscar CNPJ' }}
       </button>
       <button
+        class="historico-detalhe__back"
+        type="button"
+        data-testid="buscar-emails"
+        [disabled]="estado() !== 'success' || !emails.podeIniciar()"
+        [attr.aria-busy]="emails.ativa() || emails.iniciando()"
+        (click)="buscarEmails()"
+      >
+        {{ emails.ativa() || emails.iniciando() ? 'Buscando e-mails…' : 'Buscar e-mails' }}
+      </button>
+      <button
         class="historico-detalhe__brave-toggle"
         type="button"
         data-testid="usar-brave"
@@ -51,6 +61,39 @@
   </header>
 
   <div class="historico-detalhe__workspace">
+    <div class="historico-detalhe__pesquisa" aria-live="polite" aria-atomic="true" role="status">
+      @if (emails.iniciando()) {
+        <p>Iniciando busca de e-mails…</p>
+      } @else if (emails.consultando()) {
+        <p>Consultando o andamento da busca de e-mails…</p>
+      } @else if (emails.execucao(); as execucao) {
+        @if (emails.ativa()) {
+          <p><strong>Buscando e-mails…</strong> {{ execucao.progresso }} de
+            {{ execucao.totalLeads }} leads contabilizados.
+            {{ execucao.status === 'PENDENTE' ? 'Aguardando a vez de pesquisar.' : '' }}
+            Você pode sair desta página e acompanhar ao voltar.</p>
+        } @else {
+          <p><strong>Busca de e-mails encerrada.</strong>
+            {{ execucao.encontrados }} encontrados; {{ execucao.semEmailElegivel }} sem e-mail elegível;
+            {{ execucao.falhas }} falhas técnicas; {{ execucao.ignoradosJaComEmail }} já com e-mail;
+            {{ execucao.ignoradosSemSite }} sem site.
+            {{ execucao.descartadosDominioExterno }} leads tinham contato de domínio externo descartado.
+          </p>
+        }
+      }
+    </div>
+    @if (emails.execucao()?.status === 'FALHA') {
+      <p class="historico-detalhe__pesquisa-erro" role="alert">
+        A busca de e-mails teve falhas. {{ emails.execucao()?.erroMensagem }} Você pode tentar novamente.
+      </p>
+    }
+    @if (emails.erro()) {
+      <div class="historico-detalhe__pesquisa-erro" role="alert">
+        <p>{{ emails.erro() }} Consulte o andamento antes de iniciar outra busca.</p>
+        <button class="historico-detalhe__back" type="button"
+          [disabled]="emails.consultando()" (click)="emails.retomar()">Retomar acompanhamento</button>
+      </div>
+    }
     <div class="historico-detalhe__pesquisa" aria-live="polite" aria-atomic="true" role="status">
       @if (pesquisa.iniciando()) {
         <p>Iniciando busca de informações…</p>
@@ -219,7 +262,7 @@
               </h2>
             </div>
             <p class="historico-detalhe__snapshot-note">
-              Score e temperatura são valores preservados daquela execução. CNPJ, status,
+              Score e temperatura são valores preservados daquela execução. CNPJ, e-mail, status,
               observações e último contato refletem os dados atuais.
             </p>
           </header>
@@ -332,6 +375,13 @@
                         </a>
                       } @else {
                         <span>WhatsApp indisponível</span>
+                      }
+                      @if (lead.email; as email) {
+                        <a [href]="'mailto:' + email" [attr.aria-label]="'Enviar e-mail manual para ' + email">
+                          {{ email }}
+                        </a>
+                      } @else {
+                        <span>E-mail não encontrado</span>
                       }
                     </td>
                   </tr>

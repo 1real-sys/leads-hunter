@@ -2516,3 +2516,64 @@ O relatório JSONL passou a incluir o inventário agregado dos números brutos d
 - `src/test/java/dev/jlm/leadshunter/support/IsolatedTestDatabaseInitializer.java`
 - `src/test/resources/cnpj/fixtures.sql`
 - `tools/cnpj/test_gerar_dataset.py`
+
+## 87. Captura de e-mail no site oficial do lead — 23/09/2026
+
+As sprints EMAIL-00 a EMAIL-03 adicionaram e-mail ao `Lead`, aos contratos do Kanban e do Histórico e às exportações CSV/XLSX. A captura é iniciada por botão explícito no Histórico, com execução assíncrona persistida, acompanhamento do progresso e uma execução ativa por busca. O leitor usa até duas páginas do mesmo site oficial, exige confirmação de identidade por telefone, endereço numerado ou CNPJ sem conflito e só grava e-mail do host normalizado ou subdomínio. Contatos externos são contabilizados por lead sem armazenar os endereços rejeitados. Mudança do host do site invalida o e-mail anterior; falha de leitura não o apaga. O link `mailto:` é manual.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/main/resources/db/migration/V11__adicionar_email_lead.sql`
+- `src/main/resources/db/migration/V12__criar_busca_email_execucao.sql`
+- `src/main/java/dev/jlm/leadshunter/lead/EmailSiteHost.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/EmailLeadService.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaEmailExecucao.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaEmailExecucaoRepository.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaEmailExecucaoService.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaEmailLead.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaEmailLimiteException.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaEmailPersistencia.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaEmailProcessamento.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaEmailResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaEmailWorker.java`
+- `frontend/src/app/features/historico/busca-email-store.ts`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaEmailControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaEmailExecucaoJpaIntegrationTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/EmailLeadServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/lead/EmailSiteHostTest.java`
+
+**Modificados:**
+
+- `API.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `features-pos-mvp/refinamento-email-site-oficial.md`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaController.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaDetalheResponse.java`
+- `src/main/java/dev/jlm/leadshunter/busca/BuscaService.java`
+- `src/main/java/dev/jlm/leadshunter/config/ApiExceptionHandler.java`
+- `src/main/java/dev/jlm/leadshunter/exportacao/ExportService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/ClassificadorUrlService.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/LeitorPaginaCandidata.java`
+- `src/main/java/dev/jlm/leadshunter/integracao/pesquisa/PaginaLida.java`
+- `src/main/java/dev/jlm/leadshunter/lead/Lead.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadResponse.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaInformacoesControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/config/ApiExceptionHandlerTest.java`
+- `src/test/java/dev/jlm/leadshunter/exportacao/ExportServiceTest.java`
+- `src/test/java/dev/jlm/leadshunter/integracao/pesquisa/LeitorPaginaCandidataTest.java`
+- `frontend/src/app/core/api/api-routes.ts`
+- `frontend/src/app/core/api/busca-api.ts`
+- `frontend/src/app/core/api/busca-api.spec.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.html`
+- `frontend/src/app/features/historico/historico-detalhe-page.spec.ts`
+- `frontend/src/app/features/historico/historico-detalhe-page.ts`
+- `frontend/src/app/features/kanban/lead-detalhe.html`
+- `frontend/src/app/features/kanban/lead-detalhe.spec.ts`
+- `frontend/src/app/shared/models/busca.model.ts`
+- `frontend/src/app/shared/models/lead.model.ts`
+- `frontend/scripts/mvp-flow-smoke.mjs`

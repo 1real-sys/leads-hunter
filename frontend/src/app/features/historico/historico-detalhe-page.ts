@@ -24,6 +24,7 @@ import {
 import { formatarCnpj } from '../../shared/utils/cnpj';
 import { separarObservacoesPesquisa } from '../../shared/utils/observacoes-pesquisa';
 import { PesquisaInformacoesStore } from './pesquisa-informacoes-store';
+import { BuscaEmailStore } from './busca-email-store';
 
 type EstadoDetalhe = 'loading' | 'success' | 'empty' | 'invalid' | 'not-found' | 'error';
 
@@ -62,7 +63,7 @@ const ROTULOS_CNPJ_ORIGEM: Readonly<Record<CnpjOrigem, string>> = {
 
 @Component({
   imports: [RouterLink],
-  providers: [PesquisaInformacoesStore],
+  providers: [PesquisaInformacoesStore, BuscaEmailStore],
   selector: 'app-historico-detalhe-page',
   styleUrl: './historico-detalhe-page.scss',
   templateUrl: './historico-detalhe-page.html',
@@ -77,7 +78,9 @@ export class HistoricoDetalhePage {
   private carregamento?: Subscription;
   private cnpjRequest?: Subscription;
   private acompanhamentoIniciado = false;
+  private emailAcompanhamentoIniciado = false;
   protected readonly pesquisa = inject(PesquisaInformacoesStore);
+  protected readonly emails = inject(BuscaEmailStore);
   protected readonly erroAtualizacao = signal<string | null>(null);
 
   protected readonly detalhe = signal<BuscaDetalheResponse | null>(null);
@@ -107,11 +110,16 @@ export class HistoricoDetalhePage {
     this.pesquisa.finalizada
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.carregar(true));
+    this.emails.finalizada
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.carregar(true));
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       this.carregamento?.unsubscribe();
       this.cnpjRequest?.unsubscribe();
       this.pesquisa.limpar();
+      this.emails.limpar();
       this.acompanhamentoIniciado = false;
+      this.emailAcompanhamentoIniciado = false;
       this.buscaId.set(params.get('id') ?? '');
       this.buscaIdNumerico = this.obterIdValido(this.buscaId());
       this.detalhe.set(null);
@@ -143,6 +151,10 @@ export class HistoricoDetalhePage {
           if (!this.acompanhamentoIniciado) {
             this.acompanhamentoIniciado = true;
             this.pesquisa.acompanhar(detalhe.id);
+          }
+          if (!this.emailAcompanhamentoIniciado) {
+            this.emailAcompanhamentoIniciado = true;
+            this.emails.acompanhar(detalhe.id);
           }
         },
         error: (error: unknown) => {
@@ -191,6 +203,10 @@ export class HistoricoDetalhePage {
 
   protected buscarInformacoes(): void {
     if (this.estado() === 'success') this.pesquisa.iniciar();
+  }
+
+  protected buscarEmails(): void {
+    if (this.estado() === 'success') this.emails.iniciar();
   }
 
   protected alternarUsoBrave(): void {

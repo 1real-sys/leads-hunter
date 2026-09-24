@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   BuscaCnpjResponse,
   BuscaDetalheResponse,
+  BuscaEmailResponse,
   BuscaRequest,
   BuscaResponse,
   BuscaResumoResponse,
@@ -14,6 +15,14 @@ import { API_ROUTES } from './api-routes';
 @Service()
 export class BuscaApi {
   private readonly http = inject(HttpClient);
+
+  iniciarEmails(id: number): Observable<BuscaEmailResponse> {
+    return this.http.post<BuscaEmailResponse>(API_ROUTES.buscaEmails(id), null);
+  }
+
+  consultarEmails(id: number): Observable<BuscaEmailResponse | null> {
+    return this.http.get<BuscaEmailResponse | null>(API_ROUTES.buscaEmails(id));
+  }
 
   buscarInformacoes(
     id: number,

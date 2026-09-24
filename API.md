@@ -204,6 +204,39 @@ Em 15/09/2026, a API real confirmou `https://www.instagram.com/hortfrutcastelo` 
 
 Na verificação controlada de 13/09/2026 às 12:29, as três fontes bloquearam o acesso, com uma tentativa por fonte e sem retry. O novo smoke de captura real falhou corretamente: captura e precisão reais **não** foram comprovadas. A suíte automatizada e o pacote agora passam em MySQL temporário isolado; comandos e a pendência externa restante estão na INFO-01.7 de `features-pos-mvp/pesquisa-inteligente.md`.
 
+## POST /api/buscas/{id}/emails
+
+Inicia por clique explícito a captura de e-mails dos leads vinculados à busca. Retorna `202 Accepted`, `Cache-Control: no-store`, `Location: /api/buscas/{id}/emails` e a execução persistida, sem esperar a leitura dos sites. Se já houver execução `PENDENTE` ou `EM_ANDAMENTO` para a mesma busca, devolve a mesma execução. A unicidade também é garantida no MySQL. Uma execução encerrada pode ser seguida por outra somente após novo POST; leads com e-mail são ignorados.
+
+O worker processa uma busca por vez e admite uma em espera. O limite padrão é de 150 leads por busca (`pesquisa-email.execucao.max-leads`, de 1 a 1000). Capacidade ou volume excedidos retornam `429 EMAIL_LIMITE_EXCEDIDO`, sem criar trabalho. Busca inexistente retorna `404 BUSCA_NAO_ENCONTRADA`; ID inválido retorna `400` pelo tratamento centralizado.
+
+Cada lead sem e-mail tem o site oficial lido por HTTP, no máximo a página inicial e uma página de contato do mesmo host. Não há chamada ao Google ou Brave, redirecionamento, leitura de host privado nem envio de e-mail. O endereço só é gravado quando telefone, endereço numerado ou CNPJ confirmam o estabelecimento sem conflito nas páginas lidas, e o domínio do e-mail é o host normalizado do site ou subdomínio dele. E-mails de domínio-pai e de terceiros não são gravados. Falha de leitura não apaga e-mail anterior nem registra ausência conclusiva. Se o host do `website` mudar por atualização do Places, e-mail, data de captura e host de origem são invalidados.
+
+## GET /api/buscas/{id}/emails
+
+Retorna `200 OK` com a execução ativa ou a mais recente, sempre com `Cache-Control: no-store`; busca existente sem execução retorna `204 No Content`. A consulta não inicia trabalho nem acessa sites. Exemplo do DTO:
+
+```json
+{
+  "id": 7,
+  "buscaId": 10,
+  "status": "CONCLUIDA_COM_FALHAS",
+  "totalLeads": 18,
+  "progresso": 18,
+  "ignoradosJaComEmail": 3,
+  "ignoradosSemSite": 4,
+  "processados": 11,
+  "encontrados": 6,
+  "semEmailElegivel": 4,
+  "descartadosDominioExterno": 1,
+  "falhas": 1,
+  "erroCodigo": null,
+  "erroMensagem": null
+}
+```
+
+O DTO também contém `criadoEm`, `iniciadoEm`, `atualizadoEm` e `terminadoEm`. `progresso = ignoradosJaComEmail + ignoradosSemSite + processados`; `processados = encontrados + semEmailElegivel + falhas`. `descartadosDominioExterno` conta leads com ao menos um contato de domínio externo descartado, não endereços, e não expõe os contatos rejeitados. Estados: `PENDENTE`, `EM_ANDAMENTO`, `CONCLUIDA`, `CONCLUIDA_COM_FALHAS` e `FALHA`. Interrupção/reinício marca execuções ativas como `FALHA/EMAIL_INTERROMPIDO`, sem retry automático; erro interno/ocupação usam `EMAIL_ERRO_INTERNO`/`EMAIL_OCUPADO` com mensagens seguras. O GET de trabalho falho continua `200` com o estado persistido. A tela consulta o progresso a cada cinco segundos, permite retomar após erro de comunicação e recarrega o detalhe ao terminar.
+
 ## POST /api/buscas
 
 ### Objetivo
@@ -422,6 +455,7 @@ Retorna um `BuscaDetalheResponse`. Os leads são ordenados por `scoreNaBusca` de
       "categoria": "PADARIA",
       "enderecoFormatado": "Rua Sete, 100",
       "website": "https://padariacentral.example/",
+      "email": "contato@padariacentral.example",
       "cnpj": "12345678000190",
       "razaoSocial": "Padaria Central LTDA",
       "cnpjOrigem": "ENDERECO_EXATO",
@@ -437,7 +471,7 @@ Retorna um `BuscaDetalheResponse`. Os leads são ordenados por `scoreNaBusca` de
 }
 ```
 
-Uma busca existente sem vínculos retorna `leads: []`. `whatsappUrl` é `null` quando não existe telefone normalizado brasileiro válido. `cnpj` e `razaoSocial` refletem os valores atuais do `Lead`, com os 14 dígitos da unidade e o nome empresarial quando houver correspondência segura; ficam `null` quando ela não existir. `cnpjOrigem` informa `ENDERECO_EXATO` ou `NOME_ENDERECO` quando o CNPJ foi preenchido nesta versão; permanece `null` para CNPJs históricos sem proveniência registrada.
+Uma busca existente sem vínculos retorna `leads: []`. `whatsappUrl` é `null` quando não existe telefone normalizado brasileiro válido. `email` é o contato atual do `Lead` capturado no site oficial, ou `null` quando ainda não encontrado. `cnpj` e `razaoSocial` refletem os valores atuais do `Lead`, com os 14 dígitos da unidade e o nome empresarial quando houver correspondência segura; ficam `null` quando ela não existir. `cnpjOrigem` informa `ENDERECO_EXATO` ou `NOME_ENDERECO` quando o CNPJ foi preenchido nesta versão; permanece `null` para CNPJs históricos sem proveniência registrada.
 
 ### Status HTTP
 
@@ -528,6 +562,7 @@ Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores 
     "categoria": "PADARIA",
     "enderecoFormatado": "Rua Central, 100",
     "website": "https://padariacentral.example/",
+    "email": "contato@padariacentral.example",
     "telefone": "(27) 99999-0000",
     "telefoneNormalizado": "5527999990000",
     "whatsappUrl": "https://wa.me/5527999990000",
@@ -551,7 +586,7 @@ Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores 
 ]
 ```
 
-Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um link manual e fica `null` quando o telefone normalizado é ausente ou inválido. `cnpj` contém os 14 dígitos da unidade e `razaoSocial` contém o nome empresarial somente quando a correspondência local foi confiável; ambos ficam `null` quando não há identificação segura. `cnpjOrigem` é anulável e informa se o preenchimento veio de endereço exato ou do caminho de nome e endereço; CNPJs históricos podem não ter origem. A correspondência depende do subset local de CNPJ carregado: como a carga mensal é manual (o `R__` inicial é um placeholder vazio), `cnpj`/`razaoSocial` permanecem `null` enquanto não houver base carregada para o município do lead. Data-base e confiança da correspondência permanecem internas. Os cinco campos geográficos ficam `null` para leads ainda não enriquecidos ou sem correspondência no dataset municipal.
+Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um link manual e fica `null` quando o telefone normalizado é ausente ou inválido. `email` é anulável, capturado somente após ação explícita no site oficial com confirmação de identidade. `cnpj` contém os 14 dígitos da unidade e `razaoSocial` contém o nome empresarial somente quando a correspondência local foi confiável; ambos ficam `null` quando não há identificação segura. `cnpjOrigem` é anulável e informa se o preenchimento veio de endereço exato ou do caminho de nome e endereço; CNPJs históricos podem não ter origem. A correspondência depende do subset local de CNPJ carregado: como a carga mensal é manual (o `R__` inicial é um placeholder vazio), `cnpj`/`razaoSocial` permanecem `null` enquanto não houver base carregada para o município do lead. Data-base e confiança da correspondência permanecem internas. Os cinco campos geográficos ficam `null` para leads ainda não enriquecidos ou sem correspondência no dataset municipal.
 
 ### Status HTTP
 
@@ -854,9 +889,9 @@ As duas exportações usam a mesma consulta e a mesma ordenação de `GET /api/l
 
 As colunas, nesta ordem, são:
 
-`id`, `googlePlaceId`, `nome`, `cnpj`, `razaoSocial`, `categoria`, `enderecoFormatado`, `website`, `telefone`, `telefoneNormalizado`, `whatsappUrl`, `latitude`, `longitude`, `uf`, `municipioNome`, `idhm`, `ratingGoogle`, `totalReviews`, `score`, `temperatura`, `status`, `observacoes`, `ultimoContatoEm`, `criadoEm`, `atualizadoEm`.
+`id`, `googlePlaceId`, `nome`, `cnpj`, `razaoSocial`, `categoria`, `enderecoFormatado`, `website`, `email`, `telefone`, `telefoneNormalizado`, `whatsappUrl`, `latitude`, `longitude`, `uf`, `municipioNome`, `idhm`, `ratingGoogle`, `totalReviews`, `score`, `temperatura`, `status`, `observacoes`, `ultimoContatoEm`, `criadoEm`, `atualizadoEm`.
 
-O `website` é o `websiteUri` oficial capturado pela Google Places, quando disponível; pode ser `null` no JSON e fica vazio nas exportações. O CNPJ é serializado com os 14 dígitos; no XLSX, a célula é explicitamente textual e preserva eventuais zeros à esquerda. CNPJ e razão social ficam em branco quando o lead não possui correspondência segura.
+O `website` é o `websiteUri` oficial capturado pela Google Places, quando disponível; pode ser `null` no JSON e fica vazio nas exportações. `email` também é anulável/vazio na exportação e sua célula de texto recebe a neutralização de fórmulas já aplicada aos demais dados externos. O CNPJ é serializado com os 14 dígitos; no XLSX, a célula é explicitamente textual e preserva eventuais zeros à esquerda. CNPJ e razão social ficam em branco quando o lead não possui correspondência segura.
 
 ## GET /api/exportacao/leads.csv
 
@@ -892,7 +927,7 @@ Retorna bytes do arquivo, inclusive quando não há leads. Nesse caso, o CSV con
 Exemplo simplificado do conteúdo:
 
 ```csv
-id,googlePlaceId,nome,cnpj,razaoSocial,categoria,enderecoFormatado,website,telefone,telefoneNormalizado,whatsappUrl,latitude,longitude,uf,municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,status,observacoes,ultimoContatoEm,criadoEm,atualizadoEm
+id,googlePlaceId,nome,cnpj,razaoSocial,categoria,enderecoFormatado,website,email,telefone,telefoneNormalizado,whatsappUrl,latitude,longitude,uf,municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,status,observacoes,ultimoContatoEm,criadoEm,atualizadoEm
 15,place-15,Padaria Central,12345678000190,Padaria Central Ltda,PADARIA,"Rua Central, 100",https://padariacentral.example/,(27) 99999-0000,5527999990000,https://wa.me/5527999990000,-20.3155,-40.3128,ES,Vitória,0.845,4.8,120,95,QUENTE,CONTATADO,Retornar amanhã,2026-08-20T10:30,2026-08-19T09:00,2026-08-20T10:30
 ```
 
@@ -1131,6 +1166,8 @@ Controller
 | POST | `/api/buscas` | Executa uma busca de estabelecimentos, persiste o histórico e os leads. |
 | GET | `/api/buscas` | Lista o histórico de buscas. |
 | GET | `/api/buscas/{id}` | Consulta uma busca e os leads encontrados naquela execução. |
+| POST | `/api/buscas/{id}/emails` | Inicia ou recupera a execução ativa da captura de e-mails. |
+| GET | `/api/buscas/{id}/emails` | Consulta o progresso persistido da captura de e-mails. |
 | GET | `/api/leads` | Lista e filtra os leads persistidos. |
 | GET | `/api/leads/{id}` | Consulta um lead pelo ID. |
 | PATCH | `/api/leads/{id}` | Atualiza parcialmente status, observações e último contato. |
