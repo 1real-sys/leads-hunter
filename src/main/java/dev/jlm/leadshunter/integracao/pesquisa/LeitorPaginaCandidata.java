@@ -1,5 +1,6 @@
 package dev.jlm.leadshunter.integracao.pesquisa;
 
+import dev.jlm.leadshunter.lead.EmailSiteHost;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,6 +13,7 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -39,6 +41,12 @@ public class LeitorPaginaCandidata {
     private static final Pattern URL_INSTAGRAM_EMBUTIDA = Pattern.compile(
         "(?i)(?:(?:https?:)?//)(?:www\\.|m\\.)?instagram\\.com/[a-z0-9._]{1,30}"
             + "(?:/[a-z0-9._-]+)*"
+    );
+    private static final Pattern EMAIL = Pattern.compile(
+        "(?i)(?<![a-z0-9._%+\u002d])([a-z0-9._%+\u002d]{1,64}@[a-z0-9\u002d]+(?:\\.[a-z0-9\u002d]+)+)(?![a-z0-9\u002d])"
+    );
+    private static final Pattern CONTATO = Pattern.compile(
+        "(?iu)(?:contato|contact|fale[-\\s]?conosco|atendimento)"
     );
     private static final Set<String> HOSTS_BLOQUEADOS = Set.of("localhost", "metadata.google.internal");
     private static final Set<String> CONTEUDOS_ACEITOS = Set.of(
@@ -183,10 +191,48 @@ public class LeitorPaginaCandidata {
         }
         List<URI> links = pagina == null ? List.of() : extrairLinks(documento, pagina);
         String textoExtraido = texto.toString().strip();
-        if (textoExtraido.isBlank() && links.isEmpty()) {
+        List<String> emails = extrairEmails(documento, textoExtraido);
+        List<URI> contatos = pagina == null ? List.of() : extrairLinksContato(documento, pagina);
+        if (textoExtraido.isBlank() && links.isEmpty() && emails.isEmpty() && contatos.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(new PaginaLida(textoExtraido, links));
+        return Optional.of(new PaginaLida(textoExtraido, links, emails, contatos));
+    }
+
+    private List<String> extrairEmails(Document documento, String texto) {
+        Set<String> encontrados = new LinkedHashSet<>();
+        var trechos = new ArrayList<String>();
+        trechos.add(texto);
+        for (Element link : documento.select("a[href^=mailto:]")) {
+            String href = link.attr("href");
+            trechos.add(href.substring("mailto:".length()).split("\\?", 2)[0]);
+        }
+        for (String trecho : trechos) {
+            Matcher matcher = EMAIL.matcher(trecho);
+            while (matcher.find() && encontrados.size() < 50) {
+                String email = matcher.group(1).toLowerCase(Locale.ROOT);
+                if (email.length() <= 320) encontrados.add(email);
+            }
+        }
+        return List.copyOf(encontrados);
+    }
+
+    private List<URI> extrairLinksContato(Document documento, URI pagina) {
+        Set<URI> encontrados = new LinkedHashSet<>();
+        String host = EmailSiteHost.de(pagina.toString());
+        for (Element link : documento.select("a[href]")) {
+            if (!CONTATO.matcher(link.text() + " " + link.attr("href")).find()) continue;
+            try {
+                URI absoluto = pagina.resolve(link.attr("href").strip());
+                canonicalizer.canonicalizar(absoluto, TipoPesquisaWeb.SITE_PROPRIO)
+                    .filter(uri -> host != null && host.equals(EmailSiteHost.de(uri.toString())))
+                    .filter(uri -> !uri.equals(pagina))
+                    .ifPresent(encontrados::add);
+            } catch (IllegalArgumentException exception) {
+                // Link malformado não interrompe a leitura da página.
+            }
+        }
+        return List.copyOf(encontrados);
     }
 
     private List<URI> extrairLinks(Document documento, URI pagina) {

@@ -20,6 +20,35 @@ import org.springframework.stereotype.Service;
 @Service
 public class ClassificadorUrlService {
 
+    /** Confirma o site pelo mesmo telefone, endereço numerado ou CNPJ usado na pesquisa. */
+    EstadoIdentidadeEmail avaliarIdentidadeParaEmail(PesquisaLeadDados lead, List<PaginaLida> paginas) {
+        boolean confirmou = false;
+        for (PaginaLida pagina : paginas) {
+            String texto = pagina.texto();
+            var endereco = AnalisadorEnderecoPesquisa.analisar(lead, texto);
+            if (possuiConflitoCnpj(texto, lead.cnpj()) || conflitoLocalizacao(texto, lead)
+                || endereco.conflito() || conflitoDdd(texto, lead.telefoneNormalizado())
+                || possuiTelefoneDivergente(texto, lead.telefoneNormalizado())) {
+                return EstadoIdentidadeEmail.CONFLITO;
+            }
+            confirmou |= telefoneCompativel(texto, lead.telefoneNormalizado())
+                || cnpjCompativel(texto, lead.cnpj()) || endereco.numeroCompativel();
+        }
+        return confirmou ? EstadoIdentidadeEmail.CONFIRMADA : EstadoIdentidadeEmail.INCONCLUSIVA;
+    }
+
+    enum EstadoIdentidadeEmail { CONFLITO, CONFIRMADA, INCONCLUSIVA }
+
+    private boolean possuiTelefoneDivergente(String texto, String valor) {
+        String esperado = telefoneNacional(valor);
+        if (esperado.length() != 10 && esperado.length() != 11) return false;
+        Matcher matcher = TELEFONE_NO_TEXTO.matcher(texto);
+        while (matcher.find()) {
+            if (!telefoneNacional(matcher.group()).equals(esperado)) return true;
+        }
+        return false;
+    }
+
     private static final int PONTUACAO_MINIMA = 70;
     private static final int MARGEM_UNICIDADE = 15;
     private static final int MAXIMO_CONFIRMACOES = 2;

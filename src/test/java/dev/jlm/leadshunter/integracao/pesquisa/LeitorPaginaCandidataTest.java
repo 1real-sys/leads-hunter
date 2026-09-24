@@ -118,6 +118,24 @@ class LeitorPaginaCandidataTest {
     }
 
     @Test
+    void deveExtrairEmailsDoTextoJsonEMailtoEContatoSomenteDoMesmoHost() {
+        var leitor = leitorQueDevolve(new LeitorPaginaCandidata.Resposta(200, "text/html",
+            ("<html><body><script type=\"application/ld+json\">"
+                + "{\"email\":\"VENDAS@EXEMPLO.COM.BR\"}</script>"
+                + "<p>Fale em CONTATO@EXEMPLO.COM.BR.</p>"
+                + "<a href=\"mailto:Equipe@Exemplo.com.br?subject=Oi\">E-mail</a>"
+                + "<a href=\"/contato\">Contato</a>"
+                + "<a href=\"https://terceiro.com/contact\">Contact</a>"
+                + "<a href=\"http://127.0.0.1/contato\">Contato privado</a>"
+                + "</body></html>").getBytes(StandardCharsets.UTF_8)));
+
+        PaginaLida pagina = leitor.lerPagina(URI.create("https://www.exemplo.com.br/")).orElseThrow();
+        assertThat(pagina.emails()).containsExactlyInAnyOrder(
+            "vendas@exemplo.com.br", "contato@exemplo.com.br", "equipe@exemplo.com.br");
+        assertThat(pagina.linksContato()).containsExactly(URI.create("https://www.exemplo.com.br/contato"));
+    }
+
+    @Test
     void deveRetornarPaginaComLinksMesmoSemTexto() {
         var leitor = leitorQueDevolve(new LeitorPaginaCandidata.Resposta(200, "text/html",
             "<html><body><a href=\"https://instagram.com/perfil\"></a></body></html>"
