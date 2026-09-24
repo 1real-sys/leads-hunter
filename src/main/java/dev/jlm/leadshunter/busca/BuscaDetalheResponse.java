@@ -26,6 +26,7 @@ public record BuscaDetalheResponse(
         CategoriaNegocio categoria,
         String enderecoFormatado,
         String website,
+        String email,
         String cnpj,
         String razaoSocial,
         CnpjOrigem cnpjOrigem,
@@ -37,6 +38,18 @@ public record BuscaDetalheResponse(
         String observacoes,
         LocalDateTime ultimoContatoEm
     ) {
+        public LeadHistoricoResponse(
+            Long id, String nome, CategoriaNegocio categoria, String enderecoFormatado,
+            String website, String cnpj, String razaoSocial, CnpjOrigem cnpjOrigem,
+            String telefone, String whatsappUrl, Integer scoreNaBusca,
+            Temperatura temperaturaNaBusca, StatusFunil status, String observacoes,
+            LocalDateTime ultimoContatoEm
+        ) {
+            this(id, nome, categoria, enderecoFormatado, website, null, cnpj,
+                razaoSocial, cnpjOrigem, telefone, whatsappUrl, scoreNaBusca,
+                temperaturaNaBusca, status, observacoes, ultimoContatoEm);
+        }
+
         public LeadHistoricoResponse(
             Long id,
             String nome,
@@ -58,6 +71,7 @@ public record BuscaDetalheResponse(
                 nome,
                 categoria,
                 enderecoFormatado,
+                null,
                 null,
                 cnpj,
                 razaoSocial,
@@ -94,6 +108,7 @@ public record BuscaDetalheResponse(
                 categoria,
                 enderecoFormatado,
                 website,
+                null,
                 cnpj,
                 razaoSocial,
                 null,

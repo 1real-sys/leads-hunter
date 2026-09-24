@@ -8,6 +8,7 @@ import dev.jlm.leadshunter.integracao.places.PlacesApiClient;
 import dev.jlm.leadshunter.integracao.places.PlacesSearchRequest;
 import dev.jlm.leadshunter.integracao.places.PlacesSearchResponse;
 import dev.jlm.leadshunter.lead.CategoriaNegocio;
+import dev.jlm.leadshunter.lead.EmailSiteHost;
 import dev.jlm.leadshunter.lead.Lead;
 import dev.jlm.leadshunter.lead.LeadRepository;
 import dev.jlm.leadshunter.lead.StatusFunil;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -178,7 +180,16 @@ public class BuscaService {
         atualizarSePresente(place.nome(), lead::setNome);
         atualizarSePresente(place.categoria(), lead::setCategoria);
         atualizarSePresente(place.enderecoFormatado(), lead::setEnderecoFormatado);
-        atualizarSePresente(place.website(), lead::setWebsite);
+        if (place.website() != null && !place.website().isBlank()) {
+            String novoHost = EmailSiteHost.de(place.website());
+            String hostAnterior = EmailSiteHost.de(lead.getWebsite());
+            if (!Objects.equals(novoHost, hostAnterior)) {
+                lead.setEmail(null);
+                lead.setEmailCapturadoEm(null);
+                lead.setEmailOrigemHost(null);
+            }
+            lead.setWebsite(place.website());
+        }
         atualizarEnderecoEstruturado(lead, place.enderecoEstruturado());
         atualizarSePresente(place.latitude(), lead::setLatitude);
         atualizarSePresente(place.longitude(), lead::setLongitude);
@@ -331,6 +342,7 @@ public class BuscaService {
             lead.getCategoria(),
             lead.getEnderecoFormatado(),
             lead.getWebsite(),
+            lead.getEmail(),
             lead.getCnpj(),
             lead.getRazaoSocial(),
             lead.getCnpjOrigem(),

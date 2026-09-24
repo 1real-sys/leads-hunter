@@ -36,6 +36,15 @@ public class Lead {
     @Column(length = 2048)
     private String website;
 
+    @Column(length = 320)
+    private String email;
+
+    @Column(name = "email_capturado_em")
+    private LocalDateTime emailCapturadoEm;
+
+    @Column(name = "email_origem_host", length = 255)
+    private String emailOrigemHost;
+
     @Column(length = 8)
     private String cep;
 

@@ -11,6 +11,7 @@ export interface LeadResponse {
   categoria: CategoriaNegocio | null;
   enderecoFormatado: string | null;
   website?: string | null;
+  email?: string | null;
   telefone: string | null;
   telefoneNormalizado: string | null;
   whatsappUrl: string | null;

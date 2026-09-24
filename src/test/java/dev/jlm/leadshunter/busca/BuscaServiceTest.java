@@ -242,6 +242,9 @@ class BuscaServiceTest {
         leadExistente.setGooglePlaceId("place-existente");
         leadExistente.setNome("Nome antigo");
         leadExistente.setWebsite("https://site-conhecido.example/");
+        leadExistente.setEmail("contato@site-conhecido.example");
+        leadExistente.setEmailCapturadoEm(LocalDateTime.of(2026, 8, 11, 10, 0));
+        leadExistente.setEmailOrigemHost("site-conhecido.example");
         leadExistente.setStatus(StatusFunil.QUALIFICADO);
         leadExistente.setObservacoes("Cliente pediu retorno na sexta");
         leadExistente.setUltimoContatoEm(LocalDateTime.of(2026, 8, 10, 15, 30));
@@ -277,6 +280,8 @@ class BuscaServiceTest {
         verify(buscaLeadRepository, times(1)).save(any(BuscaLead.class));
         assertThat(leadExistente.getNome()).isEqualTo("Nome atualizado");
         assertThat(leadExistente.getWebsite()).isEqualTo("https://site-conhecido.example/");
+        assertThat(leadExistente.getEmail()).isEqualTo("contato@site-conhecido.example");
+        assertThat(leadExistente.getEmailOrigemHost()).isEqualTo("site-conhecido.example");
         assertThat(leadExistente.getRatingGoogle()).isEqualByComparingTo("4.5");
         assertThat(leadExistente.getStatus()).isEqualTo(StatusFunil.QUALIFICADO);
         assertThat(leadExistente.getObservacoes()).isEqualTo("Cliente pediu retorno na sexta");
@@ -301,6 +306,42 @@ class BuscaServiceTest {
         assertThat(response.leads()).hasSize(1);
         assertThat(response.leads().getFirst().score()).isEqualTo(95);
         assertThat(response.leads().getFirst().temperatura()).isEqualTo("QUENTE");
+    }
+
+    @Test
+    void deveInvalidarEmailQuandoPlacesMudaOHostDoSite() {
+        Lead existente = new Lead();
+        existente.setId(30L);
+        existente.setGooglePlaceId("place-email");
+        existente.setNome("Padaria Central");
+        existente.setWebsite("https://loja.example.com.br/antigo");
+        existente.setEmail("contato@loja.example.com.br");
+        existente.setEmailCapturadoEm(LocalDateTime.of(2026, 9, 20, 10, 0));
+        existente.setEmailOrigemHost("loja.example.com.br");
+        existente.setObservacoes("Anotação preservada");
+        var place = new PlacesSearchResponse.PlaceResult(
+            "place-email", "Padaria Central", CategoriaNegocio.PADARIA, "Rua Central, 100",
+            "https://novo.example.com.br/", null, new BigDecimal("-25.4300"),
+            new BigDecimal("-49.2700"), new BigDecimal("4.5"), 120, "OPERATIONAL",
+            List.of("bakery"), null);
+        when(placesApiClient.buscarProximos(any(PlacesSearchRequest.class)))
+            .thenReturn(new PlacesSearchResponse(List.of(place)));
+        when(buscaRepository.saveAndFlush(any(Busca.class))).thenAnswer(invocation -> {
+            Busca busca = invocation.getArgument(0);
+            busca.setId(11L);
+            busca.setCriadoEm(LocalDateTime.of(2026, 9, 23, 10, 0));
+            return busca;
+        });
+        when(leadRepository.findByGooglePlaceId("place-email")).thenReturn(Optional.of(existente));
+        when(leadRepository.save(existente)).thenReturn(existente);
+
+        criarService().criar(criarRequestPadaria());
+
+        assertThat(existente.getWebsite()).isEqualTo("https://novo.example.com.br/");
+        assertThat(existente.getEmail()).isNull();
+        assertThat(existente.getEmailCapturadoEm()).isNull();
+        assertThat(existente.getEmailOrigemHost()).isNull();
+        assertThat(existente.getObservacoes()).isEqualTo("Anotação preservada");
     }
 
     @Test

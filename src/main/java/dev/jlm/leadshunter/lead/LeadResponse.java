@@ -14,6 +14,7 @@ public record LeadResponse(
     CategoriaNegocio categoria,
     String enderecoFormatado,
     String website,
+    String email,
     String telefone,
     String telefoneNormalizado,
     String whatsappUrl,
@@ -34,6 +35,23 @@ public record LeadResponse(
     LocalDateTime criadoEm,
     LocalDateTime atualizadoEm
 ) {
+
+    public LeadResponse(
+        Long id, String googlePlaceId, String nome, String cnpj, String razaoSocial,
+        CnpjOrigem cnpjOrigem, CategoriaNegocio categoria, String enderecoFormatado,
+        String website, String telefone, String telefoneNormalizado, String whatsappUrl,
+        BigDecimal latitude, BigDecimal longitude, String municipioCodigoIbge,
+        String municipioNome, String uf, BigDecimal idhm, Short idhmReferencia,
+        BigDecimal ratingGoogle, Integer totalReviews, Integer score,
+        Temperatura temperatura, StatusFunil status, String observacoes,
+        LocalDateTime ultimoContatoEm, LocalDateTime criadoEm, LocalDateTime atualizadoEm
+    ) {
+        this(id, googlePlaceId, nome, cnpj, razaoSocial, cnpjOrigem, categoria,
+            enderecoFormatado, website, null, telefone, telefoneNormalizado, whatsappUrl,
+            latitude, longitude, municipioCodigoIbge, municipioNome, uf, idhm,
+            idhmReferencia, ratingGoogle, totalReviews, score, temperatura, status,
+            observacoes, ultimoContatoEm, criadoEm, atualizadoEm);
+    }
 
     public LeadResponse(
         Long id,
@@ -74,6 +92,7 @@ public record LeadResponse(
             categoria,
             enderecoFormatado,
             website,
+            null,
             telefone,
             telefoneNormalizado,
             whatsappUrl,
@@ -134,6 +153,7 @@ public record LeadResponse(
             categoria,
             enderecoFormatado,
             null,
+            null,
             telefone,
             telefoneNormalizado,
             whatsappUrl,
@@ -167,6 +187,7 @@ public record LeadResponse(
             lead.getCategoria(),
             lead.getEnderecoFormatado(),
             lead.getWebsite(),
+            lead.getEmail(),
             lead.getTelefone(),
             lead.getTelefoneNormalizado(),
             whatsAppLinkGenerator.gerar(lead.getTelefoneNormalizado()),

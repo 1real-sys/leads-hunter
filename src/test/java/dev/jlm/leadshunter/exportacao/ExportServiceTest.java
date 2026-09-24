@@ -38,9 +38,11 @@ class ExportServiceTest {
             "Padaria, \"Central\"",
             "12345678000190",
             "=2+2",
+            null,
             CategoriaNegocio.PADARIA,
             "Rua Um\n100",
             "https://padariacentral.example/",
+            "contato@padariacentral.example",
             "(27) 99999-0000",
             "5527999990000",
             "https://wa.me/5527999990000",
@@ -75,13 +77,13 @@ class ExportServiceTest {
 
         String csv = new String(arquivo, StandardCharsets.UTF_8);
         assertThat(csv).isEqualTo(
-            "id,googlePlaceId,nome,cnpj,razaoSocial,categoria,enderecoFormatado,website,telefone,"
+            "id,googlePlaceId,nome,cnpj,razaoSocial,categoria,enderecoFormatado,website,email,telefone,"
                 + "telefoneNormalizado,whatsappUrl,latitude,longitude,uf,"
                 + "municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,"
                 + "status,observacoes,ultimoContatoEm,"
                 + "criadoEm,atualizadoEm\r\n"
                 + "15,place-15,\"Padaria, \"\"Central\"\"\",12345678000190,'=2+2,PADARIA,"
-                + "\"Rua Um\n100\",https://padariacentral.example/,(27) 99999-0000,5527999990000,"
+                + "\"Rua Um\n100\",https://padariacentral.example/,contato@padariacentral.example,(27) 99999-0000,5527999990000,"
                 + "https://wa.me/5527999990000,-20.3155,-40.3128,ES,Vitória,0.845,4.8,120,95,"
                 + "QUENTE,CONTATADO,\"Retornar, amanhã\",2026-08-20T10:30,"
                 + "2026-08-19T09:00,2026-08-20T10:30\r\n"
@@ -100,7 +102,7 @@ class ExportServiceTest {
         String csv = new String(criarService().exportarLeads(null, null, null), StandardCharsets.UTF_8);
 
         assertThat(csv).isEqualTo(
-                "id,googlePlaceId,nome,cnpj,razaoSocial,categoria,enderecoFormatado,website,telefone,"
+                "id,googlePlaceId,nome,cnpj,razaoSocial,categoria,enderecoFormatado,website,email,telefone,"
                 + "telefoneNormalizado,whatsappUrl,latitude,longitude,uf,"
                 + "municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,"
                 + "status,observacoes,ultimoContatoEm,"
@@ -116,9 +118,11 @@ class ExportServiceTest {
             "Padaria Central",
             "12345678000190",
             "+2+2",
+            null,
             CategoriaNegocio.PADARIA,
             "Rua Central, 100",
             "https://padariacentral.example/",
+            "contato@padariacentral.example",
             "(27) 99999-0000",
             "5527999990000",
             "https://wa.me/5527999990000",
@@ -167,17 +171,20 @@ class ExportServiceTest {
             assertThat(sheet.getRow(0).getCell(7).getStringCellValue()).isEqualTo("website");
             assertThat(sheet.getRow(1).getCell(7).getStringCellValue())
                 .isEqualTo("https://padariacentral.example/");
-            assertThat(sheet.getRow(0).getCell(13).getStringCellValue()).isEqualTo("uf");
-            assertThat(sheet.getRow(0).getCell(14).getStringCellValue())
+            assertThat(sheet.getRow(0).getCell(8).getStringCellValue()).isEqualTo("email");
+            assertThat(sheet.getRow(1).getCell(8).getStringCellValue())
+                .isEqualTo("contato@padariacentral.example");
+            assertThat(sheet.getRow(0).getCell(14).getStringCellValue()).isEqualTo("uf");
+            assertThat(sheet.getRow(0).getCell(15).getStringCellValue())
                 .isEqualTo("municipioNome");
-            assertThat(sheet.getRow(0).getCell(15).getStringCellValue()).isEqualTo("idhm");
-            assertThat(sheet.getRow(1).getCell(13).getStringCellValue()).isEqualTo("ES");
-            assertThat(sheet.getRow(1).getCell(14).getStringCellValue()).isEqualTo("Vitória");
-            assertThat(sheet.getRow(1).getCell(15).getNumericCellValue()).isEqualTo(0.845D);
-            assertThat(sheet.getRow(1).getCell(18).getNumericCellValue()).isEqualTo(95D);
-            assertThat(sheet.getRow(1).getCell(20).getStringCellValue())
+            assertThat(sheet.getRow(0).getCell(16).getStringCellValue()).isEqualTo("idhm");
+            assertThat(sheet.getRow(1).getCell(14).getStringCellValue()).isEqualTo("ES");
+            assertThat(sheet.getRow(1).getCell(15).getStringCellValue()).isEqualTo("Vitória");
+            assertThat(sheet.getRow(1).getCell(16).getNumericCellValue()).isEqualTo(0.845D);
+            assertThat(sheet.getRow(1).getCell(19).getNumericCellValue()).isEqualTo(95D);
+            assertThat(sheet.getRow(1).getCell(21).getStringCellValue())
                 .isEqualTo("CONTATADO");
-            assertThat(DateUtil.isCellDateFormatted(sheet.getRow(1).getCell(22))).isTrue();
+            assertThat(DateUtil.isCellDateFormatted(sheet.getRow(1).getCell(23))).isTrue();
         }
         verify(leadService).listar(null, CategoriaNegocio.PADARIA, null);
     }

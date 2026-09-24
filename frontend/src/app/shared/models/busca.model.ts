@@ -63,6 +63,7 @@ export interface LeadHistoricoResponse {
   categoria: CategoriaNegocio | null;
   enderecoFormatado: string | null;
   website?: string | null;
+  email?: string | null;
   cnpj?: string | null;
   razaoSocial?: string | null;
   cnpjOrigem?: CnpjOrigem | null;
@@ -80,6 +81,30 @@ export interface BuscaCnpjResponse {
   ignoradosJaComCnpj: number;
   encontrados: number;
   semCorrespondencia: number;
+}
+
+export type BuscaEmailStatus =
+  'PENDENTE' | 'EM_ANDAMENTO' | 'CONCLUIDA' | 'CONCLUIDA_COM_FALHAS' | 'FALHA';
+
+export interface BuscaEmailResponse {
+  id: number;
+  buscaId: number;
+  status: BuscaEmailStatus;
+  criadoEm: LocalDateTimeString;
+  iniciadoEm: LocalDateTimeString | null;
+  atualizadoEm: LocalDateTimeString;
+  terminadoEm: LocalDateTimeString | null;
+  totalLeads: number;
+  progresso: number;
+  ignoradosJaComEmail: number;
+  ignoradosSemSite: number;
+  processados: number;
+  encontrados: number;
+  semEmailElegivel: number;
+  descartadosDominioExterno: number;
+  falhas: number;
+  erroCodigo: string | null;
+  erroMensagem: string | null;
 }
 
 export type PesquisaInformacoesStatus =
