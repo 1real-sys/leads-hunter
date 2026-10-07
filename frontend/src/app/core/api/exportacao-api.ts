@@ -38,6 +38,9 @@ function criarParametros(filtros: FiltrosLead): HttpParams {
   if (filtros.status !== undefined) {
     params = params.set('status', filtros.status);
   }
+  if (filtros.buscaId !== undefined) {
+    params = params.set('buscaId', filtros.buscaId);
+  }
   if (filtros.categoria !== undefined) {
     params = params.set('categoria', filtros.categoria);
   }

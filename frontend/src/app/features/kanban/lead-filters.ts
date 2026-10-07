@@ -7,10 +7,12 @@ import {
   TEMPERATURAS,
   Temperatura,
 } from '../../shared/models/enums.model';
+import { BuscaResumoResponse } from '../../shared/models/busca.model';
 import { ROTULOS_CATEGORIA, ROTULOS_STATUS, ROTULOS_TEMPERATURA } from './kanban.model';
 
 export interface FiltrosLeadForm {
   status: StatusFunil | null;
+  buscaId: number | null;
   categoria: CategoriaNegocio | null;
   temperatura: Temperatura | null;
 }
@@ -44,10 +46,30 @@ export class LeadFilters {
   readonly filtros = model.required<FiltrosLeadForm>();
   readonly carregando = input(false);
   readonly bloqueado = input(false);
+  readonly buscas = input<readonly BuscaResumoResponse[]>([]);
+  readonly carregandoBuscas = input(false);
+  readonly erroBuscas = input<string | null>(null);
+  readonly recarregarBuscas = output<void>();
   readonly aplicar = output<void>();
   readonly limpar = output<void>();
 
   protected readonly desabilitado = computed(() => this.carregando() || this.bloqueado());
+  protected readonly opcoesBuscas = computed(() => {
+    const opcoes = this.buscas().map((busca) => ({
+      valor: busca.id,
+      rotulo: `${busca.enderecoBase?.trim() || 'Endereço não informado'} — ${this.formatarData(busca.criadoEm)}`,
+    }));
+    const contagem = new Map<string, number>();
+    for (const opcao of opcoes) {
+      contagem.set(opcao.rotulo, (contagem.get(opcao.rotulo) ?? 0) + 1);
+    }
+    return opcoes.map((opcao) => ({
+      ...opcao,
+      rotulo: (contagem.get(opcao.rotulo) ?? 0) > 1
+        ? `${opcao.rotulo} (busca ${opcao.valor})`
+        : opcao.rotulo,
+    }));
+  });
 
   protected readonly opcoesStatus = criarOpcoes(STATUS_FUNIL, ROTULOS_STATUS);
   protected readonly opcoesCategoria = criarOpcoes(CATEGORIAS_NEGOCIO, ROTULOS_CATEGORIA);
@@ -61,6 +83,17 @@ export class LeadFilters {
   protected alterarCategoria(event: Event): void {
     const categoria = lerOpcao(valorSelect(event), CATEGORIAS_NEGOCIO);
     this.filtros.update((filtros) => ({ ...filtros, categoria }));
+  }
+
+  protected alterarBusca(event: Event): void {
+    const valor = Number(valorSelect(event));
+    const buscaId = this.buscas().some((busca) => busca.id === valor) ? valor : null;
+    this.filtros.update((filtros) => ({ ...filtros, buscaId }));
+  }
+
+  private formatarData(data: string): string {
+    const partes = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(data);
+    return partes === null ? data : `${partes[3]}/${partes[2]}/${partes[1]} às ${partes[4]}:${partes[5]}`;
   }
 
   protected alterarTemperatura(event: Event): void {

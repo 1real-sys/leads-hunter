@@ -16,11 +16,15 @@
       [(filtros)]="filtros"
       [carregando]="carregando()"
       [bloqueado]="movimentoEmAndamento()"
+      [buscas]="buscas()"
+      [carregandoBuscas]="carregandoBuscas()"
+      [erroBuscas]="erroBuscas()"
+      (recarregarBuscas)="carregarBuscas()"
       (aplicar)="aplicarFiltros()"
       (limpar)="limparFiltros()"
     />
 
-    <app-exportacao-leads [filtros]="filtrosParaExportacao()" />
+    <app-exportacao-leads [filtros]="filtrosAplicados()" />
   </div>
 
   <div class="kanban-page__workspace">

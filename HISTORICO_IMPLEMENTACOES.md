@@ -2577,3 +2577,30 @@ As sprints EMAIL-00 a EMAIL-03 adicionaram e-mail ao `Lead`, aos contratos do Ka
 - `frontend/src/app/shared/models/busca.model.ts`
 - `frontend/src/app/shared/models/lead.model.ts`
 - `frontend/scripts/mvp-flow-smoke.mjs`
+
+## 88. Filtro do Kanban por execução de busca — 07/10/2026
+
+Foi adicionado ao Kanban um seletor de buscas do Histórico entre Etapa e Categoria. Cada opção identifica uma execução pelo endereço base e pela data/hora, incluindo buscas sem endereço ou sem leads. A seleção filtra os vínculos `BuscaLead` sem duplicar leads e pode ser combinada com os filtros existentes; o Kanban e as exportações CSV/XLSX continuam usando os dados atuais dos leads. A exportação segue somente os filtros já aplicados ao quadro.
+
+### Arquivos envolvidos
+
+**Modificados:**
+
+- `API.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadController.java`
+- `src/main/java/dev/jlm/leadshunter/lead/LeadService.java`
+- `src/main/java/dev/jlm/leadshunter/exportacao/ExportController.java`
+- `src/main/java/dev/jlm/leadshunter/exportacao/ExportService.java`
+- `src/test/java/dev/jlm/leadshunter/lead/LeadControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/exportacao/ExportControllerTest.java`
+- `src/test/java/dev/jlm/leadshunter/busca/BuscaServiceJpaIntegrationTest.java`
+- `frontend/src/app/core/api/lead-api.ts`
+- `frontend/src/app/core/api/exportacao-api.ts`
+- `frontend/src/app/features/kanban/lead-filters.ts`
+- `frontend/src/app/features/kanban/lead-filters.html`
+- `frontend/src/app/features/kanban/lead-filters.scss`
+- `frontend/src/app/features/kanban/kanban-page.ts`
+- `frontend/src/app/features/kanban/kanban-page.html`
+- `frontend/src/app/features/kanban/kanban-page.spec.ts`

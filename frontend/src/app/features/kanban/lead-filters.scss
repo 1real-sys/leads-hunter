@@ -4,7 +4,7 @@
 
 .lead-filters {
   display: grid;
-  grid-template-columns: minmax(12rem, 1.25fr) repeat(3, minmax(9rem, 1fr)) auto;
+  grid-template-columns: minmax(12rem, 1.25fr) minmax(10rem, 1fr) minmax(15rem, 1.5fr) repeat(2, minmax(9rem, 1fr)) auto;
   gap: var(--space-3);
   align-items: end;
   padding: var(--space-3) var(--space-4);
@@ -28,12 +28,31 @@
 .lead-filters__field {
   display: grid;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .lead-filters__field label {
   color: var(--ink);
   font-size: var(--font-size-xs);
   font-weight: 800;
+}
+
+.lead-filters__hint {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+}
+
+.lead-filters__retry {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .lead-filters__field select {

@@ -7,6 +7,7 @@ import { ArquivoDownloader } from '../../core/browser/arquivo-downloader';
 import { ApiErrorResponse } from '../../shared/models/api-error-response.model';
 import { STATUS_FUNIL, StatusFunil } from '../../shared/models/enums.model';
 import { LeadResponse, PaginaLeadsResponse } from '../../shared/models/lead.model';
+import { BuscaResumoResponse } from '../../shared/models/busca.model';
 import { KanbanPage } from './kanban-page';
 
 const LEAD_QUENTE: LeadResponse = {
@@ -61,8 +62,9 @@ describe('KanbanPage', () => {
 
   afterEach(() => httpTesting.verify());
 
-  async function criarFixture() {
+  async function criarFixture(buscas: BuscaResumoResponse[] = []) {
     const fixture = TestBed.createComponent(KanbanPage);
+    httpTesting.expectOne(API_ROUTES.buscas).flush(buscas);
     await fixture.whenStable();
     return fixture;
   }
@@ -79,13 +81,14 @@ describe('KanbanPage', () => {
   function requisicaoPagina(
     status: StatusFunil,
     pagina = 0,
-    filtros: { categoria?: string; temperatura?: string } = {},
+    filtros: { categoria?: string; temperatura?: string; buscaId?: number } = {},
   ) {
     const categoria = filtros.categoria === undefined ? '' : `&categoria=${filtros.categoria}`;
     const temperatura =
       filtros.temperatura === undefined ? '' : `&temperatura=${filtros.temperatura}`;
+    const buscaId = filtros.buscaId === undefined ? '' : `&buscaId=${filtros.buscaId}`;
     return httpTesting.expectOne(
-      `${API_ROUTES.leadsPagina}?status=${status}&page=${pagina}&size=25${categoria}${temperatura}`,
+      `${API_ROUTES.leadsPagina}?status=${status}&page=${pagina}&size=25${categoria}${buscaId}${temperatura}`,
     );
   }
 
@@ -255,6 +258,7 @@ describe('KanbanPage', () => {
     );
     expect(fixture.componentInstance['filtros']()).toEqual({
       status: null,
+      buscaId: null,
       categoria: null,
       temperatura: null,
     });
@@ -469,12 +473,17 @@ describe('KanbanPage', () => {
     expect(fixture.componentInstance['leadSelecionado']()).toEqual(atualizado);
   });
 
-  it('exporta com os filtros selecionados sem trocar a paginação do quadro', async () => {
+  it('exporta somente com os filtros aplicados sem trocar a paginação do quadro', async () => {
     const fixture = await criarFixture();
     await concluirCargaInicial(fixture);
     selecionar(fixture, '#lead-status', 'QUALIFICADO');
     selecionar(fixture, '#lead-categoria', 'PADARIA');
     selecionar(fixture, '#lead-temperatura', 'QUENTE');
+    await fixture.whenStable();
+
+    aplicar(fixture);
+    requisicaoPagina('QUALIFICADO', 0, { categoria: 'PADARIA', temperatura: 'QUENTE' })
+      .flush(resposta([]));
     await fixture.whenStable();
 
     const exportar = [...fixture.nativeElement.querySelectorAll('button')].find(
@@ -492,5 +501,45 @@ describe('KanbanPage', () => {
     await fixture.whenStable();
 
     expect(arquivoDownloader.baixar).toHaveBeenCalledWith(expect.any(Blob), 'leads.csv');
+  });
+
+  it('distingue execuções pelo endereço e data e mantém exportação na última busca aplicada', async () => {
+    const buscas: BuscaResumoResponse[] = [
+      { id: 41, enderecoBase: 'Centro', latitude: -20, longitude: -40, raioKm: 2,
+        categorias: ['PADARIA'], totalEncontrados: 1, criadoEm: '2026-10-07T14:30:00' },
+      { id: 42, enderecoBase: 'Centro', latitude: -20, longitude: -40, raioKm: 2,
+        categorias: ['PADARIA'], totalEncontrados: 0, criadoEm: '2026-10-07T14:30:20' },
+      { id: 40, enderecoBase: 'Centro', latitude: -20, longitude: -40, raioKm: 2,
+        categorias: ['PADARIA'], totalEncontrados: 0, criadoEm: '2026-10-06T09:15:00' },
+      { id: 39, enderecoBase: null, latitude: -20, longitude: -40, raioKm: 2,
+        categorias: ['PADARIA'], totalEncontrados: 0, criadoEm: '2026-10-05T08:00:00' },
+    ];
+    const fixture = await criarFixture(buscas);
+    await concluirCargaInicial(fixture);
+    const opcoes = [...(fixture.nativeElement.querySelector('#lead-busca') as HTMLSelectElement).options]
+      .map((opcao) => opcao.textContent);
+    expect(opcoes).toEqual([
+      'Todas as buscas',
+      'Centro — 07/10/2026 às 14:30 (busca 41)',
+      'Centro — 07/10/2026 às 14:30 (busca 42)',
+      'Centro — 06/10/2026 às 09:15',
+      'Endereço não informado — 05/10/2026 às 08:00',
+    ]);
+
+    selecionar(fixture, '#lead-busca', '41');
+    aplicar(fixture);
+    for (const status of STATUS_FUNIL) {
+      requisicaoPagina(status, 0, { buscaId: 41 }).flush(resposta([]));
+    }
+    await fixture.whenStable();
+
+    selecionar(fixture, '#lead-busca', '40');
+    const exportar = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (button: HTMLButtonElement) => button.textContent?.trim() === 'Baixar CSV',
+    ) as HTMLButtonElement;
+    exportar.click();
+    httpTesting.expectOne(`${API_ROUTES.exportacaoLeadsCsv}?buscaId=41`)
+      .flush(new Blob(['id,nome\r\n']));
+    await fixture.whenStable();
   });
 });

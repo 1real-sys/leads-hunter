@@ -43,7 +43,7 @@ class LeadControllerTest {
 
     @Test
     void deveListarLeadsComFiltrosViaHttp() throws Exception {
-        when(leadService.listar(StatusFunil.CONTATADO, CategoriaNegocio.PADARIA, Temperatura.QUENTE))
+        when(leadService.listar(StatusFunil.CONTATADO, CategoriaNegocio.PADARIA, Temperatura.QUENTE, null))
             .thenReturn(List.of(criarResposta()));
 
         mockMvc.perform(get("/api/leads")
@@ -65,7 +65,7 @@ class LeadControllerTest {
             .andExpect(jsonPath("$[0].whatsappUrl")
                 .value("https://wa.me/5527999990000"));
 
-        verify(leadService).listar(StatusFunil.CONTATADO, CategoriaNegocio.PADARIA, Temperatura.QUENTE);
+        verify(leadService).listar(StatusFunil.CONTATADO, CategoriaNegocio.PADARIA, Temperatura.QUENTE, null);
     }
 
     @Test
@@ -74,6 +74,7 @@ class LeadControllerTest {
             StatusFunil.QUALIFICADO,
             CategoriaNegocio.PADARIA,
             Temperatura.QUENTE,
+            null,
             1,
             25
         )).thenReturn(new PaginaLeadsResponse(
@@ -99,6 +100,30 @@ class LeadControllerTest {
             .andExpect(jsonPath("$.tamanho").value(25))
             .andExpect(jsonPath("$.totalElementos").value(63))
             .andExpect(jsonPath("$.totalPaginas").value(3));
+    }
+
+    @Test
+    void deveRepassarBuscaIdNaConsultaPaginada() throws Exception {
+        when(leadService.listarPagina(StatusFunil.NOVO, null, null, 42L, 0, 25))
+            .thenReturn(new PaginaLeadsResponse(List.of(), 0, 25, 0, 0));
+
+        mockMvc.perform(get("/api/leads/pagina")
+                .param("status", "NOVO")
+                .param("buscaId", "42"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalElementos").value(0));
+
+        verify(leadService).listarPagina(StatusFunil.NOVO, null, null, 42L, 0, 25);
+    }
+
+    @Test
+    void deveRejeitarBuscaIdNaoPositivo() throws Exception {
+        mockMvc.perform(get("/api/leads/pagina")
+                .param("status", "NOVO")
+                .param("buscaId", "0"))
+            .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(leadService);
     }
 
     @Test

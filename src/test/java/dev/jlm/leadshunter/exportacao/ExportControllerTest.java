@@ -38,7 +38,8 @@ class ExportControllerTest {
         when(exportService.exportarLeads(
             StatusFunil.CONTATADO,
             CategoriaNegocio.PADARIA,
-            Temperatura.QUENTE
+            Temperatura.QUENTE,
+            null
         )).thenReturn(csv);
 
         mockMvc.perform(get("/api/exportacao/leads.csv")
@@ -57,7 +58,7 @@ class ExportControllerTest {
     @Test
     void deveAceitarExportacaoSemFiltros() throws Exception {
         byte[] csv = "id,nome\r\n".getBytes(StandardCharsets.UTF_8);
-        when(exportService.exportarLeads(null, null, null)).thenReturn(csv);
+        when(exportService.exportarLeads(null, null, null, null)).thenReturn(csv);
 
         mockMvc.perform(get("/api/exportacao/leads.csv"))
             .andExpect(status().isOk())
@@ -67,7 +68,7 @@ class ExportControllerTest {
     @Test
     void deveRetornarArquivoExcelComHeaderDeDownload() throws Exception {
         byte[] excel = new byte[] { 0x50, 0x4b, 0x03, 0x04 };
-        when(exportService.exportarLeadsExcel(null, null, null)).thenReturn(excel);
+        when(exportService.exportarLeadsExcel(null, null, null, null)).thenReturn(excel);
 
         mockMvc.perform(get("/api/exportacao/leads.xlsx"))
             .andExpect(status().isOk())
@@ -78,6 +79,21 @@ class ExportControllerTest {
                 "Content-Disposition",
                 containsString("attachment; filename=\"leads.xlsx\"")
             ))
+            .andExpect(content().bytes(excel));
+    }
+
+    @Test
+    void deveRepassarBuscaIdParaCsvEExcel() throws Exception {
+        byte[] csv = "id,nome\r\n".getBytes(StandardCharsets.UTF_8);
+        byte[] excel = new byte[] { 0x50, 0x4b };
+        when(exportService.exportarLeads(null, null, null, 42L)).thenReturn(csv);
+        when(exportService.exportarLeadsExcel(null, null, null, 42L)).thenReturn(excel);
+
+        mockMvc.perform(get("/api/exportacao/leads.csv").param("buscaId", "42"))
+            .andExpect(status().isOk())
+            .andExpect(content().bytes(csv));
+        mockMvc.perform(get("/api/exportacao/leads.xlsx").param("buscaId", "42"))
+            .andExpect(status().isOk())
             .andExpect(content().bytes(excel));
     }
 }

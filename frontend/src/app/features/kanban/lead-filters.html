@@ -21,6 +21,29 @@
   </div>
 
   <div class="lead-filters__field">
+    <label for="lead-busca">Endereço base de pesquisa</label>
+    <select
+      id="lead-busca"
+      name="buscaId"
+      [value]="filtros().buscaId ?? ''"
+      [disabled]="desabilitado() || carregandoBuscas() || erroBuscas() !== null"
+      (change)="alterarBusca($event)"
+    >
+      <option value="">Todas as buscas</option>
+      @for (opcao of opcoesBuscas(); track opcao.valor) {
+        <option [value]="opcao.valor">{{ opcao.rotulo }}</option>
+      }
+    </select>
+    @if (carregandoBuscas()) {
+      <span class="lead-filters__hint" role="status">Carregando buscas...</span>
+    }
+    @if (erroBuscas(); as mensagem) {
+      <span class="lead-filters__hint" role="alert">{{ mensagem }}</span>
+      <button type="button" class="lead-filters__retry" (click)="recarregarBuscas.emit()">Tentar novamente</button>
+    }
+  </div>
+
+  <div class="lead-filters__field">
     <label for="lead-categoria">Categoria</label>
     <select
       id="lead-categoria"

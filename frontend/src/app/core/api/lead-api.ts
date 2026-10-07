@@ -11,6 +11,7 @@ import { API_ROUTES } from './api-routes';
 
 export interface FiltrosLead {
   status?: StatusFunil;
+  buscaId?: number;
   categoria?: CategoriaNegocio;
   temperatura?: Temperatura;
 }
@@ -31,6 +32,9 @@ export class LeadApi {
     if (filtros.status !== undefined) {
       params = params.set('status', filtros.status);
     }
+    if (filtros.buscaId !== undefined) {
+      params = params.set('buscaId', filtros.buscaId);
+    }
     if (filtros.categoria !== undefined) {
       params = params.set('categoria', filtros.categoria);
     }
@@ -49,6 +53,9 @@ export class LeadApi {
 
     if (consulta.categoria !== undefined) {
       params = params.set('categoria', consulta.categoria);
+    }
+    if (consulta.buscaId !== undefined) {
+      params = params.set('buscaId', consulta.buscaId);
     }
     if (consulta.temperatura !== undefined) {
       params = params.set('temperatura', consulta.temperatura);

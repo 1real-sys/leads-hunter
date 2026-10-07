@@ -521,7 +521,7 @@ Após o POST, consulte `GET /api/buscas/{id}` para obter os dados atuais. O bot�
 
 ### Objetivo
 
-Lista os leads persistidos e permite filtrar simultaneamente por status do funil, categoria e temperatura.
+Lista os leads persistidos e permite filtrar simultaneamente por status do funil, categoria, temperatura e execução de busca.
 
 ### Autenticação
 
@@ -534,8 +534,9 @@ Público atualmente. Autenticação ainda não foi implementada.
 | Query | `status` | `StatusFunil` | Não | Filtra por `NOVO`, `QUALIFICADO`, `CONTATADO`, `GANHO` ou `PERDIDO`. |
 | Query | `categoria` | `CategoriaNegocio` | Não | Filtra por um dos valores de categoria documentados no início. |
 | Query | `temperatura` | `Temperatura` | Não | Filtra por `QUENTE`, `MORNO` ou `FRIO`. |
+| Query | `buscaId` | `Long` positivo | Não | Inclui somente leads vinculados à execução indicada em `busca_lead`. |
 
-Os filtros fazem correspondência exata e podem ser combinados. Um valor desconhecido falha na conversão e retorna 400.
+Os filtros fazem correspondência exata e podem ser combinados. `buscaId` inexistente retorna lista vazia; zero ou negativo retorna 400. Os atributos do lead são os atuais, inclusive quando a busca é antiga.
 
 - **Path params:** nenhum.
 - **Headers relevantes:** nenhum.
@@ -604,7 +605,7 @@ Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um li
 Controller
 → converte os filtros opcionais
 → delega ao `LeadService`
-→ monta uma consulta por exemplo com os filtros não nulos
+→ monta uma consulta por exemplo sem `buscaId` ou uma consulta parametrizada com vínculo à busca
 → consulta e ordena os leads
 → calcula `whatsappUrl` a partir do telefone normalizado
 → retorna a lista de `LeadResponse`.
@@ -626,6 +627,7 @@ Público atualmente. Autenticação ainda não foi implementada.
 | Query | `status` | `StatusFunil` | Sim | Seleciona uma das cinco etapas reais do funil. |
 | Query | `categoria` | `CategoriaNegocio` | Não | Aplica o filtro exato de categoria à coluna consultada. |
 | Query | `temperatura` | `Temperatura` | Não | Aplica o filtro exato de temperatura à coluna consultada. |
+| Query | `buscaId` | `Long` positivo | Não | Restringe a coluna aos leads vinculados à execução indicada. |
 | Query | `page` | inteiro | Não | Índice da página iniciado em zero. O padrão é `0`; aceita valores de `0` a `10000`. |
 | Query | `size` | inteiro | Não | Quantidade por página. O padrão é `25`; aceita valores de `1` a `25`. |
 
@@ -695,7 +697,7 @@ Sem correspondências, retorna `200 OK` com `leads` vazio, `totalElementos` igua
 Controller
 → valida status, página e tamanho
 → delega ao `LeadService`
-→ monta a consulta por exemplo com status e filtros opcionais
+→ monta a consulta por exemplo ou com vínculo à busca, conforme os filtros
 → pagina e ordena no banco
 → calcula `whatsappUrl` para os registros retornados
 → devolve conteúdo e metadados da página.
@@ -910,6 +912,7 @@ Público atualmente. Autenticação ainda não foi implementada.
 | Query | `status` | `StatusFunil` | Não | Filtra pelo status exato. |
 | Query | `categoria` | `CategoriaNegocio` | Não | Filtra pela categoria exata. |
 | Query | `temperatura` | `Temperatura` | Não | Filtra pela temperatura exata. |
+| Query | `buscaId` | `Long` positivo | Não | Exporta somente leads vinculados à execução indicada, com dados atuais. |
 
 Os filtros podem ser combinados. Valores desconhecidos ou com capitalização diferente dos enums retornam 400.
 
@@ -976,6 +979,7 @@ Público atualmente. Autenticação ainda não foi implementada.
 | Query | `status` | `StatusFunil` | Não | Filtra pelo status exato. |
 | Query | `categoria` | `CategoriaNegocio` | Não | Filtra pela categoria exata. |
 | Query | `temperatura` | `Temperatura` | Não | Filtra pela temperatura exata. |
+| Query | `buscaId` | `Long` positivo | Não | Exporta somente leads vinculados à execução indicada, com dados atuais. |
 
 Os filtros podem ser combinados. Valores desconhecidos ou com capitalização diferente dos enums retornam 400.
 

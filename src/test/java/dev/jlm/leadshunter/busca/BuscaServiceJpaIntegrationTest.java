@@ -11,6 +11,8 @@ import dev.jlm.leadshunter.integracao.places.PlacesSearchResponse;
 import dev.jlm.leadshunter.lead.CategoriaNegocio;
 import dev.jlm.leadshunter.lead.Lead;
 import dev.jlm.leadshunter.lead.LeadRepository;
+import dev.jlm.leadshunter.lead.LeadService;
+import dev.jlm.leadshunter.exportacao.ExportService;
 import dev.jlm.leadshunter.lead.StatusFunil;
 import dev.jlm.leadshunter.lead.Temperatura;
 import java.math.BigDecimal;
@@ -46,10 +48,38 @@ class BuscaServiceJpaIntegrationTest {
     private LeadRepository leadRepository;
 
     @Autowired
+    private LeadService leadService;
+
+    @Autowired
+    private ExportService exportService;
+
+    @Autowired
     private NomeBloqueadoService nomeBloqueadoService;
 
     @MockitoBean
     private PlacesApiClient placesApiClient;
+
+    @Test
+    void deveFiltrarKanbanEExportacaoPelaExecucaoMesmoComEnderecoRepetido() {
+        when(placesApiClient.buscarProximos(any()))
+            .thenReturn(new PlacesSearchResponse(List.of(primeiroPlace("Primeira execução"))))
+            .thenReturn(new PlacesSearchResponse(List.of(segundoPlace())));
+
+        BuscaResponse primeira = buscaService.criar(criarRequest("Centro", "-22.1011", "-43.1011"));
+        BuscaResponse segunda = buscaService.criar(criarRequest("Centro", "-22.2022", "-43.2022"));
+        var primeiroLead = leadService.listar(null, null, null, primeira.id());
+        var segundoLead = leadService.listar(null, null, null, segunda.id());
+
+        assertThat(primeiroLead).singleElement().extracting("nome").isEqualTo("Primeira execução");
+        assertThat(segundoLead).singleElement().extracting("nome").isEqualTo("Restaurante Secundário");
+        assertThat(leadService.listarPagina(StatusFunil.NOVO, null, null, primeira.id(), 0, 25)
+            .totalElementos()).isEqualTo(1);
+        assertThat(leadService.listarPagina(StatusFunil.NOVO, CategoriaNegocio.RESTAURANTE,
+            null, primeira.id(), 0, 25).totalElementos()).isZero();
+        assertThat(new String(exportService.exportarLeads(null, null, null, primeira.id())))
+            .contains("Primeira execução")
+            .doesNotContain("Restaurante Secundário");
+    }
 
     @Test
     void devePersistirRelacionamentoNNPreservarDadosComerciaisESalvarSnapshotHistorico() {

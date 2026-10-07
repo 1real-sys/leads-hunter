@@ -3,6 +3,7 @@ package dev.jlm.leadshunter.exportacao;
 import dev.jlm.leadshunter.lead.CategoriaNegocio;
 import dev.jlm.leadshunter.lead.StatusFunil;
 import dev.jlm.leadshunter.lead.Temperatura;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -35,7 +36,8 @@ public class ExportController {
     public ResponseEntity<byte[]> exportarLeads(
         @RequestParam(required = false) StatusFunil status,
         @RequestParam(required = false) CategoriaNegocio categoria,
-        @RequestParam(required = false) Temperatura temperatura
+        @RequestParam(required = false) Temperatura temperatura,
+        @RequestParam(required = false) @Min(1) Long buscaId
     ) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(CSV_MEDIA_TYPE);
@@ -44,7 +46,7 @@ public class ExportController {
             .build());
         return ResponseEntity.ok()
             .headers(headers)
-            .body(exportService.exportarLeads(status, categoria, temperatura));
+            .body(exportService.exportarLeads(status, categoria, temperatura, buscaId));
     }
 
     @GetMapping(
@@ -54,7 +56,8 @@ public class ExportController {
     public ResponseEntity<byte[]> exportarLeadsExcel(
         @RequestParam(required = false) StatusFunil status,
         @RequestParam(required = false) CategoriaNegocio categoria,
-        @RequestParam(required = false) Temperatura temperatura
+        @RequestParam(required = false) Temperatura temperatura,
+        @RequestParam(required = false) @Min(1) Long buscaId
     ) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(XLSX_MEDIA_TYPE);
@@ -63,6 +66,6 @@ public class ExportController {
             .build());
         return ResponseEntity.ok()
             .headers(headers)
-            .body(exportService.exportarLeadsExcel(status, categoria, temperatura));
+            .body(exportService.exportarLeadsExcel(status, categoria, temperatura, buscaId));
     }
 }

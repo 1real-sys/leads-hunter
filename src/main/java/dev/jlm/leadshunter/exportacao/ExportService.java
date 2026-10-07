@@ -66,7 +66,17 @@ public class ExportService {
         CategoriaNegocio categoria,
         Temperatura temperatura
     ) {
-        List<LeadResponse> leads = listarLeads(status, categoria, temperatura);
+        return exportarLeads(status, categoria, temperatura, null);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportarLeads(
+        StatusFunil status,
+        CategoriaNegocio categoria,
+        Temperatura temperatura,
+        Long buscaId
+    ) {
+        List<LeadResponse> leads = listarLeads(status, categoria, temperatura, buscaId);
         StringBuilder csv = new StringBuilder(CABECALHO).append("\r\n");
 
         for (LeadResponse lead : leads) {
@@ -84,7 +94,17 @@ public class ExportService {
         CategoriaNegocio categoria,
         Temperatura temperatura
     ) {
-        List<LeadResponse> leads = listarLeads(status, categoria, temperatura);
+        return exportarLeadsExcel(status, categoria, temperatura, null);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportarLeadsExcel(
+        StatusFunil status,
+        CategoriaNegocio categoria,
+        Temperatura temperatura,
+        Long buscaId
+    ) {
+        List<LeadResponse> leads = listarLeads(status, categoria, temperatura, buscaId);
 
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream output = new ByteArrayOutputStream()) {
@@ -130,9 +150,12 @@ public class ExportService {
     private List<LeadResponse> listarLeads(
         StatusFunil status,
         CategoriaNegocio categoria,
-        Temperatura temperatura
+        Temperatura temperatura,
+        Long buscaId
     ) {
-        return leadService.listar(status, categoria, temperatura);
+        return buscaId == null
+            ? leadService.listar(status, categoria, temperatura)
+            : leadService.listar(status, categoria, temperatura, buscaId);
     }
 
     private CellStyle criarEstiloCabecalho(Workbook workbook) {

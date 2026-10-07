@@ -11,8 +11,10 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { getApiErrorMessage } from '../../core/api/api-error-message';
+import { BuscaApi } from '../../core/api/busca-api';
 import { FiltrosLead, LeadApi } from '../../core/api/lead-api';
 import { STATUS_FUNIL } from '../../shared/models/enums.model';
+import { BuscaResumoResponse } from '../../shared/models/busca.model';
 import { LeadResponse } from '../../shared/models/lead.model';
 import { ExportacaoLeads } from './exportacao-leads';
 import { KanbanBoard } from './kanban-board';
@@ -29,6 +31,7 @@ import {
 
 const FILTROS_INICIAIS: FiltrosLeadForm = {
   status: null,
+  buscaId: null,
   categoria: null,
   temperatura: null,
 };
@@ -36,6 +39,7 @@ const FILTROS_INICIAIS: FiltrosLeadForm = {
 function paraFiltrosApi(filtros: FiltrosLeadForm): FiltrosLead {
   return {
     ...(filtros.status !== null ? { status: filtros.status } : {}),
+    ...(filtros.buscaId !== null ? { buscaId: filtros.buscaId } : {}),
     ...(filtros.categoria !== null ? { categoria: filtros.categoria } : {}),
     ...(filtros.temperatura !== null ? { temperatura: filtros.temperatura } : {}),
   };
@@ -49,11 +53,15 @@ function paraFiltrosApi(filtros: FiltrosLeadForm): FiltrosLead {
 })
 export class KanbanPage {
   private readonly leadApi = inject(LeadApi);
+  private readonly buscaApi = inject(BuscaApi);
   private readonly destroyRef = inject(DestroyRef);
   private filtrosDaUltimaConsulta: FiltrosLead = {};
 
   protected readonly filtros = signal<FiltrosLeadForm>({ ...FILTROS_INICIAIS });
-  protected readonly filtrosParaExportacao = computed(() => paraFiltrosApi(this.filtros()));
+  protected readonly filtrosAplicados = signal<FiltrosLead>({});
+  protected readonly buscas = signal<readonly BuscaResumoResponse[]>([]);
+  protected readonly carregandoBuscas = signal(false);
+  protected readonly erroBuscas = signal<string | null>(null);
   protected readonly colunas = signal<readonly ColunaKanban[]>(criarColunasKanban());
   protected readonly totalLeads = computed(() =>
     this.colunas().reduce((total, coluna) => total + coluna.totalLeads, 0),
@@ -80,6 +88,27 @@ export class KanbanPage {
       }
     });
     this.consultar({});
+    this.carregarBuscas();
+  }
+
+  protected carregarBuscas(): void {
+    if (this.carregandoBuscas()) {
+      return;
+    }
+    this.carregandoBuscas.set(true);
+    this.erroBuscas.set(null);
+    this.buscaApi.listarHistorico()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (buscas) => {
+          this.buscas.set(buscas);
+          this.carregandoBuscas.set(false);
+        },
+        error: (error: unknown) => {
+          this.erroBuscas.set(`Não foi possível carregar as buscas. ${getApiErrorMessage(error)}`);
+          this.carregandoBuscas.set(false);
+        },
+      });
   }
 
   protected aplicarFiltros(): void {
@@ -187,6 +216,7 @@ export class KanbanPage {
     }
 
     this.filtrosDaUltimaConsulta = filtros;
+    this.filtrosAplicados.set(filtros);
     this.mensagemMovimento.set(null);
     this.erroMovimento.set(null);
 

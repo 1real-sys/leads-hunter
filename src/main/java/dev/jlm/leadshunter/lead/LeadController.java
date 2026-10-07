@@ -24,9 +24,10 @@ public class LeadController {
     public List<LeadResponse> listar(
         @RequestParam(required = false) StatusFunil status,
         @RequestParam(required = false) CategoriaNegocio categoria,
-        @RequestParam(required = false) Temperatura temperatura
+        @RequestParam(required = false) Temperatura temperatura,
+        @RequestParam(required = false) @Min(1) Long buscaId
     ) {
-        return leadService.listar(status, categoria, temperatura);
+        return leadService.listar(status, categoria, temperatura, buscaId);
     }
 
     @GetMapping("/pagina")
@@ -34,10 +35,11 @@ public class LeadController {
         @RequestParam StatusFunil status,
         @RequestParam(required = false) CategoriaNegocio categoria,
         @RequestParam(required = false) Temperatura temperatura,
+        @RequestParam(required = false) @Min(1) Long buscaId,
         @RequestParam(defaultValue = "0") @Min(0) @Max(10_000) int page,
         @RequestParam(defaultValue = "25") @Min(1) @Max(25) int size
     ) {
-        return leadService.listarPagina(status, categoria, temperatura, page, size);
+        return leadService.listarPagina(status, categoria, temperatura, buscaId, page, size);
     }
 
     @GetMapping("/{id}")
