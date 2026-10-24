@@ -10,11 +10,9 @@ Esta documentação descreve somente a API REST existente no backend atual.
 - **Formato das respostas JSON:** objetos ou listas diretas, sem envelope comum. Campos sem valor podem aparecer como `null`. Datas e horas usam o formato ISO-8601 local, por exemplo `2026-08-22T10:30:00`, sem fuso horário.
 - **Autenticação:** ainda não foi implementada. O projeto não possui Spring Security nem configuração de autenticação/autorização; portanto, todos os endpoints documentados estão públicos e não exigem header `Authorization`.
 - **Paginação:** `GET /api/leads/pagina` possui paginação por status para o Kanban. As demais listagens e exportações continuam processando todos os registros que correspondem aos filtros.
-- **Rate limiting:** existe apenas sobre chamadas externas reais à Google Places feitas durante `POST /api/buscas`. Por padrão, o bucket em memória permite 10 chamadas e repõe essa capacidade gradualmente em 60 segundos. Um resultado atendido pelo cache não consome o limite. Os demais endpoints não possuem rate limiting próprio.
+- **Rate limiting:** o bucket em memória limita somente chamadas externas reais à Google Places feitas durante `POST /api/buscas`. Por padrão, permite 10 chamadas e repõe essa capacidade gradualmente em 60 segundos; cache hit não consome o limite. As ações de pesquisa e e-mail têm limites próprios de volume e capacidade do worker, descritos em suas rotas.
 - **Cache de buscas:** o resultado externo da Google é mantido em memória por 30 minutos, com até 100 entradas por padrão. A chave considera latitude e longitude arredondadas para quatro casas decimais, raio e categorias distintas ordenadas; `enderecoBase` não participa da chave. Mesmo em cache hit, uma nova busca e seus vínculos com leads são persistidos.
-- **Pesquisa inteligente:** tem worker próprio, uma execução em processamento e uma aguardando, limite padrão de 150 leads e bloqueio de duplicatas por busca. A fonte é a API oficial do Brave Search (`BRAVE_SEARCH_API_KEY`). O scraping Bing → Google → DuckDuckGo → Brave permanece no código, desativado por padrão. Sem chave, a pesquisa retorna indisponível. A execução pode desativar o Brave pelo campo `usarBrave`; nesse caso, somente evidências já disponíveis, incluindo o site oficial salvo, são avaliadas. Não consome API da Google nem Places.
-
-Quando um lead possui `website` capturado pelo Google Places, a pesquisa inteligente canonicaliza a URL, abre somente essa página pública e usa o texto como evidência. Links de perfis Instagram encontrados nela são candidatos do mesmo classificador de identidade; se o site ou um desses perfis confirmar o lead, nenhuma consulta ao Brave é feita. A página oficial conta no limite de três páginas abertas por lead, a abertura não segue redirecionamentos e destinos privados são recusados. Sites ausentes, inválidos ou sem confirmação seguem o fluxo normal de até três consultas ao Brave.
+- **Pesquisa inteligente:** tem worker próprio, uma execução em processamento e uma aguardando, limite padrão de 150 leads e bloqueio de duplicatas por busca. A fonte é a API oficial do Brave Search (`BRAVE_SEARCH_API_KEY`). O scraping Bing → Google → DuckDuckGo → Brave permanece no código, desativado por padrão. Sem chave, a descoberta pelo Brave fica indisponível. A execução pode desativar o Brave pelo campo `usarBrave`; nesse caso, somente evidências já disponíveis, incluindo o site oficial salvo, são avaliadas. Não consome API da Google nem Places.
 
 ## Formato padrão dos erros
 
@@ -42,8 +40,8 @@ Os códigos atualmente previstos são:
 
 | Código | Status | Situação |
 |---|---:|---|
-| `VALIDACAO_INVALIDA` | 400 | Bean Validation rejeitou o request body. |
-| `REQUISICAO_INVALIDA` | 400 | Corpo ausente/malformado, enum inválido no JSON ou path/query param com tipo inválido. |
+| `VALIDACAO_INVALIDA` | 400 | Restrições de validação do corpo ou dos parâmetros foram violadas. |
+| `REQUISICAO_INVALIDA` | 400 | Corpo ausente/malformado, enum ou parâmetro inválido, ou `bbox` inválido. |
 | `BLOQUEIO_INVALIDO` | 400 | O termo informado não atende às regras de tamanho após a normalização. |
 | `TERMO_BLOQUEADO_DUPLICADO` | 400 | Já existe um bloqueio equivalente após normalização. |
 | `BUSCA_NAO_ENCONTRADA` | 404 | O ID de busca não existe. |
@@ -51,6 +49,7 @@ Os códigos atualmente previstos são:
 | `BLOQUEIO_NAO_ENCONTRADO` | 404 | O ID de bloqueio não existe. |
 | `GOOGLE_PLACES_RATE_LIMIT` | 429 | O limite local temporário de chamadas externas foi atingido. |
 | `PESQUISA_LIMITE_EXCEDIDO` | 429 | Worker indisponível/ocupado ou busca acima do limite configurado de leads. Nenhuma nova execução é criada. |
+| `EMAIL_LIMITE_EXCEDIDO` | 429 | Worker de e-mails ocupado ou busca acima do limite configurado de leads. |
 | `GOOGLE_PLACES_QUOTA_EXCEEDED` | 429 | A Google informou que a cota externa foi excedida. |
 | `GOOGLE_PLACES_INVALID_RESPONSE` | 502 | A resposta externa não pôde ser interpretada com segurança. |
 | `GOOGLE_PLACES_REQUEST_REJECTED` | 502 | A Google rejeitou a consulta com outro erro HTTP 4xx. |
@@ -68,13 +67,13 @@ Os valores são enviados exatamente como abaixo, em maiúsculas.
 - `StatusFunil`: `NOVO`, `QUALIFICADO`, `CONTATADO`, `GANHO`, `PERDIDO`.
 - `Temperatura`: `QUENTE`, `MORNO`, `FRIO`.
 
-# Bloqueios por nome
+## Bloqueios por nome
 
 Os termos desta área são persistidos no banco e comparados com o nome de cada estabelecimento já retornado pela Google. A normalização remove acentos, converte para minúsculas e desconsidera espaços nas bordas. A correspondência é por trecho: cadastrar `Supermercados BH` bloqueia, por exemplo, `Supermercados BH Centro`.
 
 O bloqueio é aplicado somente depois da chamada externa e da deduplicação por `googlePlaceId`. Portanto, não reduz chamadas nem consumo da Google, não solicita resultados adicionais e não remove retroativamente leads de buscas anteriores.
 
-## GET /api/bloqueios
+### GET /api/bloqueios
 
 Lista os termos bloqueados na ordem de criação e, em caso de empate, por ID. Uma lista sem cadastros retorna `200 OK` com `[]`.
 
@@ -88,7 +87,7 @@ Lista os termos bloqueados na ordem de criação e, em caso de empate, por ID. U
 ]
 ```
 
-## POST /api/bloqueios
+### POST /api/bloqueios
 
 Cadastra um termo e retorna o registro persistido com `201 Created`.
 
@@ -100,165 +99,23 @@ Cadastra um termo e retorna o registro persistido com `201 Created`.
 
 `termo` é obrigatório. Depois de remover os espaços das bordas, deve conter de 3 a 120 caracteres. A unicidade considera a versão normalizada, de modo que variações apenas de acento, caixa ou espaços retornam `400 TERMO_BLOQUEADO_DUPLICADO`. Payload inválido retorna `400 VALIDACAO_INVALIDA`; uma inconsistência detectada somente pelo serviço retorna `400 BLOQUEIO_INVALIDO`.
 
-## DELETE /api/bloqueios/{id}
+### DELETE /api/bloqueios/{id}
 
 Remove o termo identificado pelo ID e retorna `204 No Content`. O bloqueio deixa de valer nas próximas buscas; leads que já existem permanecem inalterados. Um ID inexistente retorna `404 BLOQUEIO_NAO_ENCONTRADO`, e um valor que não pode ser convertido para `Long` retorna `400 REQUISICAO_INVALIDA`.
 
-# Buscas
+## Buscas
 
-## POST /api/buscas/{id}/informacoes
+### POST /api/buscas
 
-Inicia manualmente a pesquisa de Instagram e site próprio somente dos leads vinculados à busca. Recebe ID positivo no caminho e um body opcional para controlar a fonte complementar:
-
-```json
-{
-  "usarBrave": true
-}
-```
-
-`usarBrave` inicia como `true` quando omitido, preservando clientes antigos. Quando enviado como `false`, a execução não chama a API do Brave nem faz consultas de descoberta; ela ainda pode validar o site oficial e links já extraídos dentro dos limites existentes. Retorna `202 Accepted`, `Cache-Control: no-store`, `Location: /api/buscas/{id}/informacoes` e o DTO da execução persistida, sem aguardar o acesso à internet.
-
-```json
-{
-  "id": 42,
-  "buscaId": 10,
-  "status": "PENDENTE",
-  "usarBrave": true,
-  "criadoEm": "2026-09-12T14:00:00",
-  "iniciadoEm": null,
-  "atualizadoEm": "2026-09-12T14:00:00",
-  "terminadoEm": null,
-  "totalLeads": 25,
-  "progresso": 0,
-  "processados": 0,
-  "ignoradosJaCompletos": 0,
-  "comInstagram": 0,
-  "comSite": 0,
-  "comAmbos": 0,
-  "semInformacoes": 0,
-  "falhas": 0,
-  "erroCodigo": null,
-  "erroMensagem": null
-}
-```
-
-Pedidos concorrentes para a mesma busca retornam a execução ativa com `202`, sem criar outra varredura. Quando ela termina, um novo POST pode criar nova execução. Leads cujo bloco automático já contenha os dois links válidos são ignorados. Observações manuais são preservadas; falha técnica não equivale a ausência de resultado.
-
-O executor admite uma execução em processamento e uma em espera. O limite padrão é de 150 leads vinculados à busca, ajustável por `pesquisa-inteligente.execucao.max-leads` entre 1 e 1000. Acima do limite ou sem capacidade local, retorna `429 PESQUISA_LIMITE_EXCEDIDO`; o pedido não cria registro nem é reenfileirado automaticamente. A execução ativa da mesma busca é retornada mesmo quando todas as vagas estão ocupadas.
-
-## GET /api/buscas/{id}/informacoes
-
-Retorna `200 OK` com o mesmo DTO, escolhendo a execução ativa ou, na ausência dela, a mais recente por ID. Uma busca existente sem execução retorna `204 No Content`. As respostas usam `Cache-Control: no-store`. A consulta não inicia pesquisa nem acessa a fonte externa.
-
-`progresso` é a quantidade de leads contabilizados: `processados + ignoradosJaCompletos + falhas`, não um percentual. `processados` conta resultados conclusivos, inclusive ausência; `comInstagram` e `comSite` incluem os casos com ambos. Os contadores de links se referem aos leads processados, não aos ignorados. Após bloqueio/circuito aberto, leads restantes sem os dois links são contabilizados como falhas sem novo acesso externo.
-
-Estados:
-
-| Estado | Significado |
-| --- | --- |
-| `PENDENTE` | Registro confirmado, aguardando o worker local. |
-| `EM_ANDAMENTO` | Progresso persistido após cada lead. |
-| `CONCLUIDA` | Todos contabilizados sem falhas, inclusive busca vazia. |
-| `CONCLUIDA_COM_FALHAS` | Há falhas e ao menos um resultado conclusivo ou lead já completo. |
-| `FALHA` | Falha total, erro inesperado ou interrupção da aplicação. Pode preservar progresso parcial. |
-
-O GET de uma execução com falha continua retornando `200`: a consulta ao recurso funcionou; a falha do trabalho aparece em `status`, `erroCodigo` e `erroMensagem`. Não é possível alterar retroativamente o HTTP `202` após o worker iniciar.
-
-| `erroCodigo` persistido | Situação |
-| --- | --- |
-| `PESQUISA_BLOQUEADA` | Limite de requisições/bloqueio da fonte; interrompe novas consultas do lote. |
-| `PESQUISA_TIMEOUT` | Tempo limite excedido. |
-| `PESQUISA_FORMATO_INVALIDO` | Resposta de pesquisa não reconhecida. |
-| `PESQUISA_INDISPONIVEL` | Falha de rede ou indisponibilidade externa. |
-| `PESQUISA_OCUPADA` | Fila local indisponível ou rejeição no despacho. |
-| `PESQUISA_INTERROMPIDA` | Reinício/encerramento interrompeu o trabalho. |
-| `PESQUISA_ERRO_INTERNO` | Não foi possível concluir por falha interna. |
-
-O erro registrado é o último erro técnico identificado; mensagens são predefinidas, sem HTML, SQL, credenciais ou exceções internas. Resultados já confirmados permanecem salvos. No reinício, execuções pendentes/em andamento viram `FALHA/PESQUISA_INTERROMPIDA`; não são retomadas automaticamente. Esse mecanismo pressupõe uma única instância local da aplicação.
-
-Ambas as rotas retornam `404 BUSCA_NAO_ENCONTRADA` para busca inexistente; IDs não numéricos retornam `400 REQUISICAO_INVALIDA`, e IDs zero/negativos retornam `400 VALIDACAO_INVALIDA`. Falhas inesperadas ao atender o HTTP usam `500 ERRO_INTERNO`, conforme o contrato centralizado. A pesquisa não exige autenticação no estágio local atual do projeto.
-
-O refinamento de filiais preserva a URL da página confirmada no bloco de observações. A marca pode corresponder ao domínio sem incluir o município do nome da filial, mantendo a exigência de confirmação independente. Endereços equiparam tipos de logradouro abreviados e por extenso e associam o número à mesma ocorrência; divergências de logradouro vetam o candidato. No Instagram, uma divergência limitada ao número do imóvel pode ser revalidada por telefone exato, mesmo logradouro e município no mesmo trecho. Também pode ser resolvida por nome exato, username com até duas edições, mesmo logradouro/município e número vizinho com diferença máxima de dois. Município presente apenas no nome/título não vale como localização. Para sites próprios, o número divergente continua vetando a página. A consolidação de conflitos ocorre por página antes da seleção por site, evitando que uma lista nacional de lojas invalide uma filial confirmada. O contrato HTTP permanece igual.
-
-Desde 14/09/2026, Instagram com nome comercial alternativo pode ser confirmado por marca distintiva compartilhada e telefone, CNPJ ou Place ID exato no conteúdo público, preservando os vetos de identidade e a margem entre candidatos. Se as consultas iniciais não confirmarem Instagram, houver telefone válido e perfis relacionados ainda sem confirmação, são feitas até duas consultas adicionais por usuário do perfil e telefone, totalizando no máximo cinco por lead. A lista de perfis é fixada antes dessas consultas, sem encadear novas descobertas. Referências em resultados de sites podem confirmar um perfil já descoberto quando um mesmo trecho/bloco contém endereço exato com número, telefone exato e referência explícita a um único perfil. A fonte não é automaticamente aceita como site próprio. Termos da consulta não servem como evidência; nenhum perfil/site candidato é acessado.
-
-### Acompanhamento no Histórico e evidência integrada
-
-Ao abrir `/historico/:id`, o frontend consulta o estado persistido antes de liberar `Buscar informações`. Enquanto houver execução ativa, agenda o próximo GET cinco segundos após a resposta anterior, sem sobreposição, com timeout de 15 segundos por requisição. Sair da tela interrompe somente esse acompanhamento, não o worker. Reabrir recupera a execução ativa ou o último resultado.
-
-Erro de comunicação não significa que o POST falhou antes de iniciar o trabalho: a tela exige `Retomar acompanhamento` via GET, sem repetir automaticamente o POST. Conclusão recarrega o detalhe para exibir as observações persistidas; falhas parciais/totais e erro na recarga preservam os resultados já visíveis. URLs HTTP/HTTPS válidas e rotuladas dentro do bloco automático completo viram links em nova aba, sem interpretar HTML manual.
-
-Em 13/09/2026, `PesquisaInformacoesE2eTest` validou o botão Angular, HTTP real, worker, parser/classificador e MySQL juntos, simulando apenas a navegação externa com HTML local. Cobriu ambos os links, somente Instagram, somente site, ausência conclusiva, bloqueio, lead já completo, isolamento entre históricos e saída/retorno à rota. Não houve interação com `PlacesApiClient`.
-
-Após autorização, o fluxo passou a tentar Google → DuckDuckGo → Brave. Somente bloqueio, timeout, indisponibilidade ou formato inválido acionam a próxima fonte. Resultado conclusivo vazio não dispara fallback, e fila local ocupada não multiplica trabalho. O mesmo classificador conservador valida os candidatos; nenhum perfil/site candidato é acessado. Se todas as fontes estiverem indisponíveis, o lead entra em falhas com `PESQUISA_INDISPONIVEL`, sem alterar suas observações nem gravar ausência conclusiva. Fontes em cooldown são puladas sem acesso à rede. Os códigos HTTP e o DTO não mudaram.
-
-Em 13/09/2026, a **API oficial do Brave Search** passou a ser a fonte efetiva. `BravePesquisaApiClient` chama `GET https://api.search.brave.com/res/v1/web/search` com `X-Subscription-Token`, `country=BR`, `search_lang=pt-br`, timeout e leitura limitada. São duas consultas iniciais (`nome município UF` e `nome município UF instagram`) e, apenas se necessário, uma terceira de Instagram sem município. Os candidatos de todas as consultas são aproveitados para ambos os tipos, preservando a análise de ambiguidades e conflitos. O cliente solicita até cinco trechos extras por URL e desativa correção ortográfica, operadores e decoração de texto. Nome/handle iguais não bastam: a aceitação exige localização independente ou identificador forte. Divergências explícitas de município/UF, CNPJ e DDD não podem ser ocultadas por repetições do resultado; DDD admite confirmação por CNPJ/Place ID. Domínio-base precisa ter relação com o nome, inclusive genérico. Não há navegação a candidatos nem mudanças nos DTOs REST.
-
-O scraping Bing → Google → DuckDuckGo → Brave permanece disponível apenas com `PESQUISA_SCRAPING_HABILITADO=true`. Sem chave e sem scraping, a execução retorna `PESQUISA_INDISPONIVEL`. Na API Brave: `429` → `PESQUISA_BLOQUEADA`; `401/403/5xx` → `PESQUISA_INDISPONIVEL`; JSON inválido ou fora do contrato → `PESQUISA_FORMATO_INVALIDO`; timeout → `PESQUISA_TIMEOUT`. Falha técnica preserva observações, sem gravar ausência conclusiva.
-
-O primeiro refinamento foi medido com 40 chamadas reais somente leitura, em sete leads e consultas controladas, além de replay local. As novas evidências revelaram endereço em Viamão/RS para um site antes associado a Castelo/ES e DDD divergente para um Instagram. Nenhuma URL daquela amostra foi suficientemente corroborada; não se trata de indisponibilidade da API nem prova de inexistência dos perfis. As observações antigas não foram corrigidas retroativamente. Naquela etapa, o pacote passou com 327 testes aprovados e seis opt-in não habilitados.
-
-As validações posteriores confirmaram o site da Petz Vila Velha e, em 14/09/2026, o perfil `https://www.instagram.com/centraldecomprasmichel` para o Supermercado Michel. Neste último caso, a execução real consumiu cinco consultas e o replay foi versionado como fixture offline. O refinamento de nomes alternativos passou em 154 testes direcionados, na suíte completa com 418 testes (412 aprovados e seis opt-in ignorados) e no empacotamento após a suíte. A precisão/cobertura geral continua dependendo de amostra rotulada maior; os experimentos estão em `features-pos-mvp/refinamento-pesquisa.md`.
-
-Em 15/09/2026, a API real confirmou `https://www.instagram.com/hortfrutcastelo` em duas consultas e nenhum site. O refinamento separa município do nome comercial, reconhece usernames com até duas edições somente quando acompanhado pelo conjunto restrito de nome exato, mesma rua/cidade e número vizinho, e mantém conflitos explícitos como veto. A suíte completa passou com 446 testes (440 aprovados e seis opt-in ignorados), seguida do empacotamento.
-
-Na verificação controlada de 13/09/2026 às 12:29, as três fontes bloquearam o acesso, com uma tentativa por fonte e sem retry. O novo smoke de captura real falhou corretamente: captura e precisão reais **não** foram comprovadas. A suíte automatizada e o pacote agora passam em MySQL temporário isolado; comandos e a pendência externa restante estão na INFO-01.7 de `features-pos-mvp/pesquisa-inteligente.md`.
-
-## POST /api/buscas/{id}/emails
-
-Inicia por clique explícito a captura de e-mails dos leads vinculados à busca. Retorna `202 Accepted`, `Cache-Control: no-store`, `Location: /api/buscas/{id}/emails` e a execução persistida, sem esperar a leitura dos sites. Se já houver execução `PENDENTE` ou `EM_ANDAMENTO` para a mesma busca, devolve a mesma execução. A unicidade também é garantida no MySQL. Uma execução encerrada pode ser seguida por outra somente após novo POST; leads com e-mail são ignorados.
-
-O worker processa uma busca por vez e admite uma em espera. O limite padrão é de 150 leads por busca (`pesquisa-email.execucao.max-leads`, de 1 a 1000). Capacidade ou volume excedidos retornam `429 EMAIL_LIMITE_EXCEDIDO`, sem criar trabalho. Busca inexistente retorna `404 BUSCA_NAO_ENCONTRADA`; ID inválido retorna `400` pelo tratamento centralizado.
-
-Cada lead sem e-mail tem o site oficial lido por HTTP, no máximo a página inicial e uma página de contato do mesmo host. Não há chamada ao Google ou Brave, redirecionamento, leitura de host privado nem envio de e-mail. O endereço só é gravado quando telefone, endereço numerado ou CNPJ confirmam o estabelecimento sem conflito nas páginas lidas, e o domínio do e-mail é o host normalizado do site ou subdomínio dele. E-mails de domínio-pai e de terceiros não são gravados. Falha de leitura não apaga e-mail anterior nem registra ausência conclusiva. Se o host do `website` mudar por atualização do Places, e-mail, data de captura e host de origem são invalidados.
-
-## GET /api/buscas/{id}/emails
-
-Retorna `200 OK` com a execução ativa ou a mais recente, sempre com `Cache-Control: no-store`; busca existente sem execução retorna `204 No Content`. A consulta não inicia trabalho nem acessa sites. Exemplo do DTO:
-
-```json
-{
-  "id": 7,
-  "buscaId": 10,
-  "status": "CONCLUIDA_COM_FALHAS",
-  "totalLeads": 18,
-  "progresso": 18,
-  "ignoradosJaComEmail": 3,
-  "ignoradosSemSite": 4,
-  "processados": 11,
-  "encontrados": 6,
-  "semEmailElegivel": 4,
-  "descartadosDominioExterno": 1,
-  "falhas": 1,
-  "erroCodigo": null,
-  "erroMensagem": null
-}
-```
-
-O DTO também contém `criadoEm`, `iniciadoEm`, `atualizadoEm` e `terminadoEm`. `progresso = ignoradosJaComEmail + ignoradosSemSite + processados`; `processados = encontrados + semEmailElegivel + falhas`. `descartadosDominioExterno` conta leads com ao menos um contato de domínio externo descartado, não endereços, e não expõe os contatos rejeitados. Estados: `PENDENTE`, `EM_ANDAMENTO`, `CONCLUIDA`, `CONCLUIDA_COM_FALHAS` e `FALHA`. Interrupção/reinício marca execuções ativas como `FALHA/EMAIL_INTERROMPIDO`, sem retry automático; erro interno/ocupação usam `EMAIL_ERRO_INTERNO`/`EMAIL_OCUPADO` com mensagens seguras. O GET de trabalho falho continua `200` com o estado persistido. A tela consulta o progresso a cada cinco segundos, permite retomar após erro de comunicação e recarrega o detalhe ao terminar.
-
-## POST /api/buscas
-
-### Objetivo
+#### Objetivo
 
 Executa uma busca de estabelecimentos próximos usando a Google Places API, ou reutiliza um resultado externo recente do cache. A operação sempre registra um novo histórico, deduplica os resultados pelo `googlePlaceId`, ignora nomes correspondentes aos bloqueios cadastrados, calcula score e temperatura e relaciona à busca somente os leads permitidos.
 
 Um lead novo começa com status `NOVO`. Quando um lead já existente reaparece, os dados externos e o scoring podem ser atualizados, mas `status`, `observacoes` e `ultimoContatoEm` são preservados.
 
-### Autenticação
+#### Request body
 
-Público atualmente. Autenticação ainda não foi implementada.
-
-### Parâmetros
-
-- **Path params:** nenhum.
-- **Query params:** nenhum.
-- **Header relevante:** `Content-Type: application/json` para o request body.
-- **Header de autenticação:** nenhum.
-
-### Request body
-
-DTO real: `BuscaRequest`.
+Envie `Content-Type: application/json` com `BuscaRequest`:
 
 ```json
 {
@@ -278,7 +135,7 @@ DTO real: `BuscaRequest`.
 | `raioKm` | inteiro | Sim | Raio em quilômetros. Deve ser maior que zero e no máximo `20`. |
 | `categorias` | array de `CategoriaNegocio` | Sim | Deve conter pelo menos um item e não aceita itens `null`. Não existe limite explícito de quantidade, e categorias repetidas não são rejeitadas pelo DTO. |
 
-### Resultado esperado
+#### Resultado esperado
 
 Retorna um `BuscaResponse` com o ID da busca persistida, os parâmetros recebidos, a quantidade bruta de estabelecimentos retornada pela integração e os leads únicos persistidos.
 
@@ -313,7 +170,7 @@ Retorna um `BuscaResponse` com o ID da busca persistida, os parâmetros recebido
 
 O máximo solicitado à Google por chamada é 20 estabelecimentos. Uma resposta externa vazia é aceita: a busca é persistida com `totalEncontrados: 0`, `totalBloqueados: 0` e `leads: []`. A contagem de bloqueados pertence apenas ao retorno imediato; o histórico conserva `totalEncontrados` e os vínculos dos leads efetivamente persistidos.
 
-### Status HTTP
+#### Status HTTP
 
 - `201 Created` — busca processada e persistida. O controller não adiciona header `Location`.
 - `400 Bad Request` — validação falhou, o JSON está ausente/malformado ou contém valor de enum desconhecido.
@@ -322,59 +179,15 @@ O máximo solicitado à Google por chamada é 20 estabelecimentos. Uma resposta 
 - `503 Service Unavailable` — chave da Google ausente/rejeitada, falha de rede ou serviço externo indisponível.
 - `500 Internal Server Error` — falha inesperada de processamento ou persistência.
 
-### Possíveis erros
+### GET /api/buscas
 
-- Coordenadas ausentes ou fora dos limites geográficos.
-- Raio ausente, zero, negativo ou superior a 20 km.
-- Lista de categorias ausente, vazia, com item `null` ou com nome de enum desconhecido.
-- Corpo ausente ou JSON inválido.
-- Variável `GOOGLE_PLACES_API_KEY` ausente, vazia ou chave sem permissão.
-- Rate limit local ou cota externa esgotados.
-- Google Places indisponível, consulta rejeitada ou resposta inválida.
-- Estabelecimento externo sem `googlePlaceId`; nesse caso ocorre erro interno e a transação é revertida.
-- Falha inesperada no banco; a operação transacional é revertida.
-
-### Fluxo interno resumido
-
-Controller
-→ desserializa e valida `BuscaRequest`
-→ delega ao `BuscaService`
-→ monta chave e consulta o cache
-→ em cache miss, valida configuração, consome o rate limit e chama Google Places
-→ normaliza a resposta externa
-→ persiste o histórico da busca
-→ deduplica estabelecimentos por `googlePlaceId`
-→ carrega os termos ativos e ignora nomes bloqueados
-→ cria ou atualiza leads preservando os dados comerciais
-→ normaliza telefone e calcula score/temperatura
-→ persiste os vínculos `BuscaLead` com o snapshot do scoring
-→ retorna `BuscaResponse` com HTTP 201.
-
-## GET /api/buscas
-
-### Objetivo
+#### Objetivo
 
 Lista o histórico de buscas já persistidas, da mais recente para a mais antiga. Não consulta cache nem Google Places.
 
-### Autenticação
+#### Resultado esperado
 
-Público atualmente. Autenticação ainda não foi implementada.
-
-### Parâmetros
-
-- **Path params:** nenhum.
-- **Query params:** nenhum.
-- **Headers relevantes:** nenhum.
-
-Não há paginação ou limite de quantidade.
-
-### Request body
-
-Não possui.
-
-### Resultado esperado
-
-Retorna uma lista de `BuscaResumoResponse`:
+Retorna uma lista de `BuscaResumoResponse`, sem paginação ou limite de quantidade:
 
 ```json
 [
@@ -393,48 +206,24 @@ Retorna uma lista de `BuscaResumoResponse`:
 
 Sem histórico, retorna `200 OK` com `[]`.
 
-### Status HTTP
+#### Status HTTP
 
 - `200 OK` — histórico retornado, inclusive quando vazio.
 - `500 Internal Server Error` — falha inesperada na consulta ou conversão dos dados persistidos.
 
-### Possíveis erros
+### GET /api/buscas/{id}
 
-- Falha de acesso ao banco.
-- Categorias persistidas em formato incompatível com `CategoriaNegocio`, tratadas como erro interno.
-
-### Fluxo interno resumido
-
-Controller
-→ delega ao `BuscaService`
-→ consulta todas as buscas ordenadas por `criadoEm` decrescente
-→ converte as categorias persistidas para enums
-→ retorna a lista de `BuscaResumoResponse`.
-
-## GET /api/buscas/{id}
-
-### Objetivo
+#### Objetivo
 
 Retorna o detalhe de uma busca já persistida e os leads relacionados a ela. O score e a temperatura vêm do snapshot gravado naquela execução; status, observações, último contato e demais dados do estabelecimento refletem o estado atual do lead.
 
-### Autenticação
-
-Público atualmente. Autenticação ainda não foi implementada.
-
-### Parâmetros
+#### Parâmetros
 
 | Local | Nome | Tipo | Obrigatório | Finalidade e validações |
 |---|---|---|---:|---|
 | Path | `id` | inteiro de 64 bits (`Long`) | Sim | Identificador da busca. Não possui validação explícita de valor positivo. Um número sem registro correspondente retorna 404. |
 
-- **Query params:** nenhum.
-- **Headers relevantes:** nenhum.
-
-### Request body
-
-Não possui.
-
-### Resultado esperado
+#### Resultado esperado
 
 Retorna um `BuscaDetalheResponse`. Os leads são ordenados por `scoreNaBusca` decrescente.
 
@@ -473,30 +262,14 @@ Retorna um `BuscaDetalheResponse`. Os leads são ordenados por `scoreNaBusca` de
 
 Uma busca existente sem vínculos retorna `leads: []`. `whatsappUrl` é `null` quando não existe telefone normalizado brasileiro válido. `email` é o contato atual do `Lead` capturado no site oficial, ou `null` quando ainda não encontrado. `cnpj` e `razaoSocial` refletem os valores atuais do `Lead`, com os 14 dígitos da unidade e o nome empresarial quando houver correspondência segura; ficam `null` quando ela não existir. `cnpjOrigem` informa `ENDERECO_EXATO` ou `NOME_ENDERECO` quando o CNPJ foi preenchido nesta versão; permanece `null` para CNPJs históricos sem proveniência registrada.
 
-### Status HTTP
+#### Status HTTP
 
 - `200 OK` — detalhe retornado.
 - `400 Bad Request` — `id` não pôde ser convertido para `Long`.
 - `404 Not Found` — busca não encontrada (`BUSCA_NAO_ENCONTRADA`).
 - `500 Internal Server Error` — falha inesperada na consulta ou conversão dos dados.
 
-### Possíveis erros
-
-- ID textual, decimal ou fora do formato aceito para `Long`.
-- Nenhuma busca existente com o ID informado.
-- Falha de acesso ao banco ou dados históricos incompatíveis com os enums atuais.
-
-### Fluxo interno resumido
-
-Controller
-→ converte o path param
-→ delega ao `BuscaService`
-→ carrega a busca ou lança `BuscaNaoEncontradaException`
-→ consulta os vínculos e os leads associados
-→ combina scoring histórico com dados comerciais atuais
-→ retorna `BuscaDetalheResponse`.
-
-## POST /api/buscas/{id}/cnpj
+### POST /api/buscas/{id}/cnpj
 
 Tenta identificar localmente o CNPJ dos leads vinculados à busca por `BuscaLead` que possuem `cnpj = null`. Leads já preenchidos são ignorados, mesmo que sua competência seja antiga. A ação não chama Google, Receita ou outras APIs, não cria uma busca e não possui novo rate limit. Endpoint público no estágio atual do MVP, sem autenticação.
 
@@ -513,21 +286,110 @@ O parâmetro `id` deve ser convertível para `Long`; não há request body nem q
 
 `totalLeads` conta os vínculos persistidos, não o total bruto capturado pela Google. As outras três contagens somam esse total. Sem município/endereço suficiente, sem candidato confiável ou com ambiguidade, o lead permanece sem CNPJ. Quando há correspondência, a transação persiste CNPJ, razão social, data da correspondência, competência e confiança. Dados comerciais e snapshots permanecem intactos. Repetir a ação ignora os leads anteriormente preenchidos. Falhas inesperadas usam o tratamento padrão de erro `500` da API.
 
-Após o POST, consulte `GET /api/buscas/{id}` para obter os dados atuais. O botão **Buscar CNPJ**, à direita de **Voltar ao histórico**, faz essa atualização automaticamente e mostra o resumo. CNPJ e razão social também ficam disponíveis nos demais contratos de lead e exportações.
+Após o POST, consulte `GET /api/buscas/{id}` para obter os dados atuais. CNPJ e razão social também aparecem nos contratos de lead e nas exportações.
 
-# Leads
+### POST /api/buscas/{id}/informacoes
 
-## GET /api/leads
+Inicia por ação explícita a pesquisa de site próprio e Instagram dos leads vinculados à busca. O ID deve ser positivo. O corpo é opcional:
 
-### Objetivo
+```json
+{"usarBrave": true}
+```
+
+`usarBrave` ausente ou `null` equivale a `true`. Com `false`, a execução não consulta o Brave: usa somente o site oficial já salvo e links encontrados nas páginas permitidas. A resposta é `202 Accepted`, com `Location: /api/buscas/{id}/informacoes`, `Cache-Control: no-store` e o estado persistido da execução:
+
+```json
+{
+  "id": 42,
+  "buscaId": 10,
+  "status": "PENDENTE",
+  "criadoEm": "2026-09-12T14:00:00",
+  "iniciadoEm": null,
+  "atualizadoEm": "2026-09-12T14:00:00",
+  "terminadoEm": null,
+  "totalLeads": 25,
+  "progresso": 0,
+  "processados": 0,
+  "ignoradosJaCompletos": 0,
+  "comInstagram": 0,
+  "comSite": 0,
+  "comAmbos": 0,
+  "semInformacoes": 0,
+  "falhas": 0,
+  "erroCodigo": null,
+  "erroMensagem": null,
+  "usarBrave": true
+}
+```
+
+Se já houver execução `PENDENTE` ou `EM_ANDAMENTO` para a busca, o POST retorna essa execução com `202`, sem criar outra. Uma execução encerrada permite novo POST. Leads com ambos os links válidos são ignorados; falha técnica não grava ausência conclusiva nem altera observações manuais.
+
+O worker admite uma execução em processamento e uma aguardando. O limite padrão é de 150 leads vinculados à busca, configurável entre 1 e 1.000. Volume ou capacidade excedidos retornam `429 PESQUISA_LIMITE_EXCEDIDO`, sem criar execução. Busca inexistente retorna `404 BUSCA_NAO_ENCONTRADA`; ID não numérico ou não positivo retorna `400`.
+
+A pesquisa consulta a API oficial do Brave no máximo três vezes por lead e abre no máximo três páginas candidatas para confirmar telefone, endereço ou CNPJ. O site oficial salvo é avaliado primeiro e sua leitura conta nesse teto. Não há scraping de motores de busca no fluxo padrão, acesso a destinos privados ou seguimento de redirecionamentos. Candidatos sem confirmação de identidade são recusados. A pesquisa não chama a Google Places. Quando `usarBrave=true` e a fonte de descoberta está indisponível, os leads que dependem dela registram falha técnica; a leitura do site oficial salvo continua possível.
+
+### GET /api/buscas/{id}/informacoes
+
+Consulta a execução ativa ou, na ausência dela, a mais recente. Retorna `200 OK` com o mesmo DTO e `Cache-Control: no-store`; busca existente sem execução retorna `204 No Content`. A consulta não inicia trabalho. Busca inexistente retorna `404 BUSCA_NAO_ENCONTRADA`; ID inválido retorna `400`.
+
+`progresso = processados + ignoradosJaCompletos + falhas`; é uma contagem, não um percentual. `processados` inclui resultados conclusivos com ou sem links. `comInstagram` e `comSite` incluem os casos com ambos.
+
+| Estado | Significado |
+| --- | --- |
+| `PENDENTE` | Aguardando o worker local. |
+| `EM_ANDAMENTO` | Processamento iniciado. |
+| `CONCLUIDA` | Todos os leads contabilizados sem falhas. |
+| `CONCLUIDA_COM_FALHAS` | Houve falhas e ao menos um resultado conclusivo ou lead já completo. |
+| `FALHA` | Falha total, inesperada ou interrupção; pode haver progresso parcial. |
+
+Falha do trabalho aparece no DTO com HTTP `200`, pois o GET foi atendido. `erroCodigo` pode ser `PESQUISA_BLOQUEADA`, `PESQUISA_TIMEOUT`, `PESQUISA_FORMATO_INVALIDO`, `PESQUISA_INDISPONIVEL`, `PESQUISA_OCUPADA`, `PESQUISA_INTERROMPIDA` ou `PESQUISA_ERRO_INTERNO`. Reinício marca execuções ativas como interrompidas; não há retomada automática. Resultados já confirmados permanecem salvos.
+
+### POST /api/buscas/{id}/emails
+
+Inicia por ação explícita a captura de e-mails dos leads vinculados à busca. Não recebe corpo. Retorna `202 Accepted`, `Location: /api/buscas/{id}/emails`, `Cache-Control: no-store` e o DTO persistido, sem aguardar a leitura dos sites. Uma execução ativa da mesma busca é retornada com `202`; depois de encerrada, outro POST pode iniciar nova execução. Leads que já têm e-mail são ignorados.
+
+O worker processa uma busca por vez e admite uma em espera. O limite padrão é de 150 leads por busca, configurável entre 1 e 1.000. Volume ou capacidade excedidos retornam `429 EMAIL_LIMITE_EXCEDIDO`. Busca inexistente retorna `404 BUSCA_NAO_ENCONTRADA`; ID inválido retorna `400`.
+
+Para cada lead sem e-mail, a ação lê somente o site oficial (`websiteUri`): a página inicial e, se necessário, uma página de contato do mesmo host. Telefone, endereço numerado ou CNPJ devem confirmar o estabelecimento sem conflito. Somente e-mails do host normalizado ou de seus subdomínios são gravados; domínio-pai e terceiros são recusados. Não há chamada à Google ou ao Brave, redirecionamento, acesso a host privado ou envio de e-mail. Falha de leitura não apaga um e-mail existente nem registra ausência conclusiva. Quando uma atualização do Places muda o host do site salvo, e-mail, data e host de origem são invalidados.
+
+### GET /api/buscas/{id}/emails
+
+Consulta a execução ativa ou, na ausência dela, a mais recente. Retorna `200 OK` com `Cache-Control: no-store`; busca existente sem execução retorna `204 No Content`. O GET não inicia trabalho nem acessa sites. Busca inexistente retorna `404 BUSCA_NAO_ENCONTRADA`; ID inválido retorna `400`.
+
+```json
+{
+  "id": 7,
+  "buscaId": 10,
+  "status": "CONCLUIDA_COM_FALHAS",
+  "criadoEm": "2026-09-12T14:00:00",
+  "iniciadoEm": "2026-09-12T14:00:01",
+  "atualizadoEm": "2026-09-12T14:01:30",
+  "terminadoEm": "2026-09-12T14:01:30",
+  "totalLeads": 18,
+  "progresso": 18,
+  "ignoradosJaComEmail": 3,
+  "ignoradosSemSite": 4,
+  "processados": 11,
+  "encontrados": 6,
+  "semEmailElegivel": 4,
+  "descartadosDominioExterno": 1,
+  "falhas": 1,
+  "erroCodigo": null,
+  "erroMensagem": null
+}
+```
+
+`progresso = ignoradosJaComEmail + ignoradosSemSite + processados`; `processados = encontrados + semEmailElegivel + falhas`. `descartadosDominioExterno` conta leads com ao menos um contato de domínio externo recusado, não endereços. Estados: `PENDENTE`, `EM_ANDAMENTO`, `CONCLUIDA`, `CONCLUIDA_COM_FALHAS` e `FALHA`. Interrupção/reinício marca execuções ativas como `FALHA/EMAIL_INTERROMPIDO`, sem retry automático. Erros internos podem aparecer como `EMAIL_ERRO_INTERNO` ou `EMAIL_OCUPADO`. O GET de uma execução falha continua retornando `200`.
+
+## Leads
+
+### GET /api/leads
+
+#### Objetivo
 
 Lista os leads persistidos e permite filtrar simultaneamente por status do funil, categoria, temperatura e execução de busca.
 
-### Autenticação
-
-Público atualmente. Autenticação ainda não foi implementada.
-
-### Parâmetros
+#### Parâmetros
 
 | Local | Nome | Tipo | Obrigatório | Finalidade e validações |
 |---|---|---|---:|---|
@@ -538,16 +400,9 @@ Público atualmente. Autenticação ainda não foi implementada.
 
 Os filtros fazem correspondência exata e podem ser combinados. `buscaId` inexistente retorna lista vazia; zero ou negativo retorna 400. Os atributos do lead são os atuais, inclusive quando a busca é antiga.
 
-- **Path params:** nenhum.
-- **Headers relevantes:** nenhum.
-
 Não há paginação nem limite de quantidade.
 
-### Request body
-
-Não possui.
-
-### Resultado esperado
+#### Resultado esperado
 
 Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores nulos no final; em empate, por nome crescente, com nomes nulos no final; persistindo o empate, por ID crescente.
 
@@ -589,38 +444,19 @@ Retorna uma lista de `LeadResponse`, ordenada por score decrescente, com scores 
 
 Sem correspondências, retorna `200 OK` com `[]`. `whatsappUrl` é somente um link manual e fica `null` quando o telefone normalizado é ausente ou inválido. `email` é anulável, capturado somente após ação explícita no site oficial com confirmação de identidade. `cnpj` contém os 14 dígitos da unidade e `razaoSocial` contém o nome empresarial somente quando a correspondência local foi confiável; ambos ficam `null` quando não há identificação segura. `cnpjOrigem` é anulável e informa se o preenchimento veio de endereço exato ou do caminho de nome e endereço; CNPJs históricos podem não ter origem. A correspondência depende do subset local de CNPJ carregado: como a carga mensal é manual (o `R__` inicial é um placeholder vazio), `cnpj`/`razaoSocial` permanecem `null` enquanto não houver base carregada para o município do lead. Data-base e confiança da correspondência permanecem internas. Os cinco campos geográficos ficam `null` para leads ainda não enriquecidos ou sem correspondência no dataset municipal.
 
-### Status HTTP
+#### Status HTTP
 
 - `200 OK` — lista retornada, inclusive quando vazia.
 - `400 Bad Request` — algum filtro não corresponde ao enum esperado.
 - `500 Internal Server Error` — falha inesperada na consulta ou no mapeamento.
 
-### Possíveis erros
+### GET /api/leads/pagina
 
-- `status`, `categoria` ou `temperatura` com valor desconhecido ou capitalização diferente dos enums.
-- Falha de acesso ao banco.
-
-### Fluxo interno resumido
-
-Controller
-→ converte os filtros opcionais
-→ delega ao `LeadService`
-→ monta uma consulta por exemplo sem `buscaId` ou uma consulta parametrizada com vínculo à busca
-→ consulta e ordena os leads
-→ calcula `whatsappUrl` a partir do telefone normalizado
-→ retorna a lista de `LeadResponse`.
-
-## GET /api/leads/pagina
-
-### Objetivo
+#### Objetivo
 
 Retorna uma página de leads de um único status para permitir paginação independente por coluna no Kanban. O endpoint legado `GET /api/leads` permanece inalterado para os fluxos que precisam da lista completa.
 
-### Autenticação
-
-Público atualmente. Autenticação ainda não foi implementada.
-
-### Parâmetros
+#### Parâmetros
 
 | Local | Nome | Tipo | Obrigatório | Finalidade e validações |
 |---|---|---|---:|---|
@@ -631,182 +467,70 @@ Público atualmente. Autenticação ainda não foi implementada.
 | Query | `page` | inteiro | Não | Índice da página iniciado em zero. O padrão é `0`; aceita valores de `0` a `10000`. |
 | Query | `size` | inteiro | Não | Quantidade por página. O padrão é `25`; aceita valores de `1` a `25`. |
 
-- **Path params:** nenhum.
-- **Headers relevantes:** nenhum.
 - Os filtros podem ser combinados e são aplicados no banco antes da paginação.
 
-### Request body
-
-Não possui.
-
-### Resultado esperado
+#### Resultado esperado
 
 Retorna somente os leads da página solicitada, ordenados por score decrescente, nome crescente e ID crescente como desempate estável. `totalElementos` informa o total real do status após os filtros, não apenas a quantidade da página atual.
 
 ```json
 {
-  "leads": [
-    {
-      "id": 35,
-      "googlePlaceId": "place-35",
-      "nome": "Padaria Central",
-      "cnpj": "12345678000190",
-      "razaoSocial": "Padaria Central Ltda",
-      "cnpjOrigem": "ENDERECO_EXATO",
-      "categoria": "PADARIA",
-      "enderecoFormatado": "Rua Central, 100",
-      "website": "https://padariacentral.example/",
-      "telefone": "(27) 99999-0000",
-      "telefoneNormalizado": "5527999990000",
-      "whatsappUrl": "https://wa.me/5527999990000",
-      "latitude": -20.3155,
-      "longitude": -40.3128,
-      "municipioCodigoIbge": "3205309",
-      "municipioNome": "Vitória",
-      "uf": "ES",
-      "idhm": 0.845,
-      "idhmReferencia": 2010,
-      "ratingGoogle": 4.8,
-      "totalReviews": 120,
-      "score": 95,
-      "temperatura": "QUENTE",
-      "status": "QUALIFICADO",
-      "observacoes": null,
-      "ultimoContatoEm": null,
-      "criadoEm": "2026-08-20T09:00:00",
-      "atualizadoEm": "2026-08-22T10:30:00"
-    }
-  ],
+  "leads": [],
   "pagina": 0,
   "tamanho": 25,
-  "totalElementos": 63,
-  "totalPaginas": 3
+  "totalElementos": 0,
+  "totalPaginas": 0
 }
 ```
 
-Sem correspondências, retorna `200 OK` com `leads` vazio, `totalElementos` igual a `0` e `totalPaginas` igual a `0`.
+Quando a página contém registros, cada item de `leads` é um `LeadResponse` completo, como no exemplo de `GET /api/leads`.
 
-### Status HTTP
+#### Status HTTP
 
 - `200 OK` — página retornada, inclusive quando vazia.
 - `400 Bad Request` — status ausente ou inválido, página fora do intervalo de 0 a 10000 ou tamanho fora do intervalo de 1 a 25.
 - `500 Internal Server Error` — falha inesperada na consulta ou no mapeamento.
 
-### Fluxo interno resumido
+### GET /api/leads/{id}
 
-Controller
-→ valida status, página e tamanho
-→ delega ao `LeadService`
-→ monta a consulta por exemplo ou com vínculo à busca, conforme os filtros
-→ pagina e ordena no banco
-→ calcula `whatsappUrl` para os registros retornados
-→ devolve conteúdo e metadados da página.
-
-## GET /api/leads/{id}
-
-### Objetivo
+#### Objetivo
 
 Consulta um lead persistido pelo ID.
 
-### Autenticação
-
-Público atualmente. Autenticação ainda não foi implementada.
-
-### Parâmetros
+#### Parâmetros
 
 | Local | Nome | Tipo | Obrigatório | Finalidade e validações |
 |---|---|---|---:|---|
 | Path | `id` | inteiro de 64 bits (`Long`) | Sim | Identificador do lead. Não possui validação explícita de valor positivo. Um número sem registro correspondente retorna 404. |
 
-- **Query params:** nenhum.
-- **Headers relevantes:** nenhum.
-
-### Request body
-
-Não possui.
-
-### Resultado esperado
+#### Resultado esperado
 
 Retorna um `LeadResponse` com a mesma estrutura apresentada em `GET /api/leads`.
 
-```json
-{
-  "id": 35,
-  "googlePlaceId": "place-35",
-  "nome": "Padaria Central",
-  "cnpj": "12345678000190",
-  "razaoSocial": "Padaria Central Ltda",
-  "cnpjOrigem": "ENDERECO_EXATO",
-  "categoria": "PADARIA",
-  "enderecoFormatado": "Rua Central, 100",
-  "website": "https://padariacentral.example/",
-  "telefone": "(27) 99999-0000",
-  "telefoneNormalizado": "5527999990000",
-  "whatsappUrl": "https://wa.me/5527999990000",
-  "latitude": -20.3155,
-  "longitude": -40.3128,
-  "municipioCodigoIbge": "3205309",
-  "municipioNome": "Vitória",
-  "uf": "ES",
-  "idhm": 0.845,
-  "idhmReferencia": 2010,
-  "ratingGoogle": 4.8,
-  "totalReviews": 120,
-  "score": 95,
-  "temperatura": "QUENTE",
-  "status": "CONTATADO",
-  "observacoes": "Retornar amanhã",
-  "ultimoContatoEm": "2026-08-22T10:30:00",
-  "criadoEm": "2026-08-20T09:00:00",
-  "atualizadoEm": "2026-08-22T10:30:00"
-}
-```
-
-### Status HTTP
+#### Status HTTP
 
 - `200 OK` — lead retornado.
 - `400 Bad Request` — `id` não pôde ser convertido para `Long`.
 - `404 Not Found` — lead não encontrado (`LEAD_NAO_ENCONTRADO`).
 - `500 Internal Server Error` — falha inesperada na consulta ou no mapeamento.
 
-### Possíveis erros
+### PATCH /api/leads/{id}
 
-- ID textual, decimal ou fora do formato aceito para `Long`.
-- Nenhum lead existente com o ID informado.
-- Falha de acesso ao banco.
-
-### Fluxo interno resumido
-
-Controller
-→ converte o path param
-→ delega ao `LeadService`
-→ consulta o lead ou lança `LeadNaoEncontradoException`
-→ calcula `whatsappUrl`
-→ retorna `LeadResponse`.
-
-## PATCH /api/leads/{id}
-
-### Objetivo
+#### Objetivo
 
 Atualiza parcialmente os campos comerciais de um lead: status do funil, observações e/ou data do último contato. Os demais atributos, como dados da Google, score e temperatura, não são alteráveis por este endpoint.
 
 Esta é a única rota de atualização de lead existente atualmente; não há endpoints separados com sufixos `/status`, `/observacoes` ou `/contato`.
 
-### Autenticação
-
-Público atualmente. Autenticação e autorização por recurso ainda não foram implementadas.
-
-### Parâmetros
+#### Parâmetros
 
 | Local | Nome | Tipo | Obrigatório | Finalidade e validações |
 |---|---|---|---:|---|
 | Path | `id` | inteiro de 64 bits (`Long`) | Sim | Identificador do lead a atualizar. Não possui validação explícita de valor positivo. |
 
-- **Query params:** nenhum.
 - **Header relevante:** `Content-Type: application/json` para o request body.
-- **Header de autenticação:** nenhum.
 
-### Request body
+#### Request body
 
 DTO real: `AtualizarLeadRequest`.
 
@@ -826,68 +550,22 @@ DTO real: `AtualizarLeadRequest`.
 
 Ao menos um dos três campos deve possuir valor não nulo. Campos omitidos ou enviados como `null` são preservados, não apagados. Consequentemente, o endpoint atual não permite limpar `observacoes` ou `ultimoContatoEm` enviando `null`; para observações, uma string vazia pode ser gravada.
 
-### Resultado esperado
+#### Resultado esperado
 
-Persiste somente os campos não nulos recebidos e retorna o `LeadResponse` completo já atualizado:
+Persiste somente os campos não nulos e retorna o `LeadResponse` completo, com a estrutura mostrada em `GET /api/leads`.
 
-```json
-{
-  "id": 35,
-  "googlePlaceId": "place-35",
-  "nome": "Padaria Central",
-  "cnpj": "12345678000190",
-  "razaoSocial": "Padaria Central Ltda",
-  "cnpjOrigem": "ENDERECO_EXATO",
-  "categoria": "PADARIA",
-  "enderecoFormatado": "Rua Central, 100",
-  "website": "https://padariacentral.example/",
-  "telefone": "(27) 99999-0000",
-  "telefoneNormalizado": "5527999990000",
-  "whatsappUrl": "https://wa.me/5527999990000",
-  "latitude": -20.3155,
-  "longitude": -40.3128,
-  "ratingGoogle": 4.8,
-  "totalReviews": 120,
-  "score": 95,
-  "temperatura": "QUENTE",
-  "status": "CONTATADO",
-  "observacoes": "Retornar amanhã",
-  "ultimoContatoEm": "2026-08-22T10:30:00",
-  "criadoEm": "2026-08-20T09:00:00",
-  "atualizadoEm": "2026-08-25T14:05:00"
-}
-```
-
-### Status HTTP
+#### Status HTTP
 
 - `200 OK` — atualização persistida e lead atualizado retornado.
 - `400 Bad Request` — corpo ausente/malformado, enum/data inválido ou todos os campos nulos/omitidos.
 - `404 Not Found` — lead não encontrado (`LEAD_NAO_ENCONTRADO`).
 - `500 Internal Server Error` — falha inesperada de processamento ou persistência.
 
-### Possíveis erros
-
-- ID inválido para `Long` ou lead inexistente.
-- JSON ausente ou malformado.
-- `status` desconhecido.
-- `ultimoContatoEm` fora do formato aceito por `LocalDateTime`.
-- Payload `{}` ou payload no qual todos os campos são `null`, rejeitado com `VALIDACAO_INVALIDA` e a mensagem `Informe ao menos um campo para atualização` acompanhada do nome da propriedade validada.
-- Falha de acesso ao banco.
-
-### Fluxo interno resumido
-
-Controller
-→ converte o ID, desserializa e valida `AtualizarLeadRequest`
-→ delega ao `LeadService`
-→ carrega o lead ou lança `LeadNaoEncontradoException`
-→ aplica somente campos não nulos da allowlist comercial
-→ persiste e atualiza `atualizadoEm`
-→ calcula `whatsappUrl`
-→ retorna o `LeadResponse` completo.
-
-# Exportação
+## Exportação
 
 As duas exportações usam a mesma consulta e a mesma ordenação de `GET /api/leads`. Não há paginação nem limite de registros: todo o conjunto filtrado é carregado e transformado em memória.
+
+Ambas aceitam os filtros opcionais `status`, `categoria`, `temperatura` e `buscaId`, com o mesmo significado de `GET /api/leads`. Eles podem ser combinados; valores inválidos retornam `400`.
 
 As colunas, nesta ordem, são:
 
@@ -895,43 +573,21 @@ As colunas, nesta ordem, são:
 
 O `website` é o `websiteUri` oficial capturado pela Google Places, quando disponível; pode ser `null` no JSON e fica vazio nas exportações. `email` também é anulável/vazio na exportação e sua célula de texto recebe a neutralização de fórmulas já aplicada aos demais dados externos. O CNPJ é serializado com os 14 dígitos; no XLSX, a célula é explicitamente textual e preserva eventuais zeros à esquerda. CNPJ e razão social ficam em branco quando o lead não possui correspondência segura.
 
-## GET /api/exportacao/leads.csv
+### GET /api/exportacao/leads.csv
 
-### Objetivo
+#### Objetivo
 
 Baixa os leads em um arquivo CSV UTF-8. Campos com vírgula, aspas ou quebra de linha recebem escaping CSV; valores nulos viram células vazias.
 
-### Autenticação
-
-Público atualmente. Autenticação ainda não foi implementada.
-
-### Parâmetros
-
-| Local | Nome | Tipo | Obrigatório | Finalidade e validações |
-|---|---|---|---:|---|
-| Query | `status` | `StatusFunil` | Não | Filtra pelo status exato. |
-| Query | `categoria` | `CategoriaNegocio` | Não | Filtra pela categoria exata. |
-| Query | `temperatura` | `Temperatura` | Não | Filtra pela temperatura exata. |
-| Query | `buscaId` | `Long` positivo | Não | Exporta somente leads vinculados à execução indicada, com dados atuais. |
-
-Os filtros podem ser combinados. Valores desconhecidos ou com capitalização diferente dos enums retornam 400.
-
-- **Path params:** nenhum.
-- **Headers de request relevantes:** nenhum.
-
-### Request body
-
-Não possui.
-
-### Resultado esperado
+#### Resultado esperado
 
 Retorna bytes do arquivo, inclusive quando não há leads. Nesse caso, o CSV contém somente o cabeçalho.
 
-Exemplo simplificado do conteúdo:
+Exemplo do conteúdo:
 
 ```csv
 id,googlePlaceId,nome,cnpj,razaoSocial,categoria,enderecoFormatado,website,email,telefone,telefoneNormalizado,whatsappUrl,latitude,longitude,uf,municipioNome,idhm,ratingGoogle,totalReviews,score,temperatura,status,observacoes,ultimoContatoEm,criadoEm,atualizadoEm
-15,place-15,Padaria Central,12345678000190,Padaria Central Ltda,PADARIA,"Rua Central, 100",https://padariacentral.example/,(27) 99999-0000,5527999990000,https://wa.me/5527999990000,-20.3155,-40.3128,ES,Vitória,0.845,4.8,120,95,QUENTE,CONTATADO,Retornar amanhã,2026-08-20T10:30,2026-08-19T09:00,2026-08-20T10:30
+15,place-15,Padaria Central,12345678000190,Padaria Central Ltda,PADARIA,"Rua Central, 100",https://padariacentral.example/,contato@padariacentral.example,(27) 99999-0000,5527999990000,https://wa.me/5527999990000,-20.3155,-40.3128,ES,Vitória,0.845,4.8,120,95,QUENTE,CONTATADO,Retornar amanhã,2026-08-20T10:30,2026-08-19T09:00,2026-08-20T10:30
 ```
 
 Headers de resposta:
@@ -939,58 +595,19 @@ Headers de resposta:
 - `Content-Type: text/csv;charset=UTF-8`
 - `Content-Disposition: attachment; filename="leads.csv"`
 
-### Status HTTP
+#### Status HTTP
 
 - `200 OK` — arquivo gerado, mesmo sem registros.
 - `400 Bad Request` — algum filtro não corresponde ao enum esperado.
 - `500 Internal Server Error` — falha inesperada na consulta ou geração do arquivo.
 
-### Possíveis erros
+### GET /api/exportacao/leads.xlsx
 
-- Filtro com valor inválido.
-- Falha de acesso ao banco.
-- Falha inesperada durante a montagem do CSV.
-
-### Fluxo interno resumido
-
-Controller
-→ converte os filtros opcionais
-→ delega ao `ExportService`
-→ reutiliza a listagem filtrada e ordenada do `LeadService`
-→ monta cabeçalho e linhas CSV em UTF-8
-→ aplica escaping estrutural a vírgulas, aspas e quebras de linha
-→ neutraliza como texto valores externos iniciados por caracteres de fórmula
-→ retorna o arquivo como attachment.
-
-## GET /api/exportacao/leads.xlsx
-
-### Objetivo
+#### Objetivo
 
 Baixa os leads em uma planilha Excel no formato XLSX.
 
-### Autenticação
-
-Público atualmente. Autenticação ainda não foi implementada.
-
-### Parâmetros
-
-| Local | Nome | Tipo | Obrigatório | Finalidade e validações |
-|---|---|---|---:|---|
-| Query | `status` | `StatusFunil` | Não | Filtra pelo status exato. |
-| Query | `categoria` | `CategoriaNegocio` | Não | Filtra pela categoria exata. |
-| Query | `temperatura` | `Temperatura` | Não | Filtra pela temperatura exata. |
-| Query | `buscaId` | `Long` positivo | Não | Exporta somente leads vinculados à execução indicada, com dados atuais. |
-
-Os filtros podem ser combinados. Valores desconhecidos ou com capitalização diferente dos enums retornam 400.
-
-- **Path params:** nenhum.
-- **Headers de request relevantes:** nenhum.
-
-### Request body
-
-Não possui.
-
-### Resultado esperado
+#### Resultado esperado
 
 Retorna os bytes de uma pasta de trabalho XLSX com uma planilha chamada `Leads`. O cabeçalho é exibido em negrito, a primeira linha fica congelada, há filtro automático, as colunas são autoajustadas e números/datas são gravados como células tipadas. Campos textuais, inclusive valores que se parecem com fórmulas, são gravados explicitamente como texto.
 
@@ -1001,56 +618,29 @@ Headers de resposta:
 - `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
 - `Content-Disposition: attachment; filename="leads.xlsx"`
 
-### Status HTTP
+#### Status HTTP
 
 - `200 OK` — arquivo gerado, mesmo sem registros.
 - `400 Bad Request` — algum filtro não corresponde ao enum esperado.
 - `500 Internal Server Error` — falha inesperada na consulta ou geração da planilha.
 
-### Possíveis erros
+## Geografia
 
-- Filtro com valor inválido.
-- Falha de acesso ao banco.
-- Erro de I/O durante a criação do XLSX; é convertido pelo tratamento genérico em `ERRO_INTERNO`.
+### GET /api/geografia/municipios
 
-### Fluxo interno resumido
-
-Controller
-→ converte os filtros opcionais
-→ delega ao `ExportService`
-→ reutiliza a listagem filtrada e ordenada do `LeadService`
-→ cria workbook e planilha `Leads`
-→ preenche cabeçalho e células tipadas
-→ serializa o XLSX em memória
-→ retorna o arquivo como attachment.
-
-# Geografia
-
-## GET /api/geografia/municipios
-
-### Objetivo
+#### Objetivo
 
 Retorna as geometrias municipais simplificadas que podem aparecer na região visível do mapa. O endpoint usa somente o dataset offline carregado no backend e não chama IBGE, Atlas Brasil, Google Places ou banco de dados.
 
-### Autenticação
-
-Público atualmente. Autenticação ainda não foi implementada.
-
-### Parâmetros
+#### Parâmetros
 
 | Local | Nome | Tipo | Obrigatório | Finalidade e validações |
 |---|---|---|---:|---|
-| Query | `bbox` | quatro números separados por vírgula | Sim | Limites na ordem `minLng,minLat,maxLng,maxLat`. Exige longitudes entre -180 e 180, latitudes entre -90 e 90, valores finitos e mínimos estritamente menores que os máximos. |
+| Query | `bbox` | quatro números separados por vírgula | Sim | Limites na ordem `minLng,minLat,maxLng,maxLat`, com até 160 caracteres. Exige longitudes entre -180 e 180, latitudes entre -90 e 90, valores finitos e mínimos estritamente menores que os máximos. |
 
-- **Path params:** nenhum.
-- **Headers de request relevantes:** nenhum.
 - Exemplo: `bbox=-40.4,-20.4,-40.2,-20.2`.
 
-### Request body
-
-Não possui.
-
-### Resultado esperado
+#### Resultado esperado
 
 Retorna `application/geo+json` com uma `FeatureCollection`. Entram no resultado os municípios cujo envelope geográfico intersecta o bbox solicitado; por isso, a geometria pode ultrapassar os limites exatos do viewport. Esse pré-filtro por envelope é deliberado e não calcula a interseção geométrica exata do polígono com o viewport. O tipo original simplificado de cada geometria é preservado como `Polygon` ou `MultiPolygon`.
 
@@ -1082,63 +672,23 @@ Header de cache:
 
 - `Cache-Control: max-age=86400, public` — permite reutilizar por 24 horas uma resposta do mesmo bbox, pois o dataset é estático nesta versão da aplicação.
 
-### Integração com a feature IDHM
-
-O mapa da Busca envia o bbox do viewport somente quando a camada IDHM está ativa e reutiliza respostas durante a sessão. Badge e drawer do Kanban leem os campos geográficos persistidos do contrato de lead, enquanto CSV/XLSX recebem os mesmos dados pelo fluxo de exportação. O endpoint geográfico e o enriquecimento do lead usam o dataset congelado no classpath: não há consulta a IBGE, Atlas Brasil ou serviço de geocodificação em runtime.
-
-No fechamento da feature, os contratos foram validados de ponta a ponta com dados controlados de Vitória/ES (`idhm: 0.845`) e Curitiba/PR (`idhm: 0.823`), cobrindo busca, apresentação no Kanban, exportações e os dois viewports da camada coroplética.
-
-### Status HTTP
+#### Status HTTP
 
 - `200 OK` — coleção retornada, inclusive quando vazia.
 - `400 Bad Request` — `bbox` ausente, malformado, não finito, fora dos limites geográficos, em ordem inválida ou abrangendo mais de 1.500 municípios.
 - `500 Internal Server Error` — falha inesperada durante o processamento.
 
-### Possíveis erros
+## Outros endpoints
 
-- Quantidade diferente de quatro componentes.
-- Componente vazio, textual, `NaN` ou infinito.
-- Longitude ou latitude fora dos limites geográficos.
-- Longitude mínima maior ou igual à máxima, ou latitude mínima maior ou igual à máxima.
-- Região ampla demais, com mais de 1.500 envelopes municipais correspondentes.
+### GET /api/health
 
-Um valor inválido retorna o contrato padrão com `codigo: REQUISICAO_INVALIDA`; o conteúdo recebido não é repetido na mensagem.
-
-### Fluxo interno resumido
-
-Controller
-→ exige o parâmetro `bbox`
-→ valida quantidade, tamanho, finitude, limites e ordem
-→ filtra em memória os envelopes municipais que intersectam a região
-→ rejeita a consulta antes de serializar quando houver mais de 1.500 municípios
-→ converte propriedades e geometria simplificada para GeoJSON
-→ retorna a `FeatureCollection`.
-
-# Outros endpoints
-
-## GET /api/health
-
-### Objetivo
+#### Objetivo
 
 Fornece um health check simples e estático da aplicação.
 
 Este endpoint não testa conexão com banco, Google Places, cache ou outros componentes; portanto, `UP` indica apenas que o controller respondeu.
 
-### Autenticação
-
-Público atualmente. Autenticação ainda não foi implementada.
-
-### Parâmetros
-
-- **Path params:** nenhum.
-- **Query params:** nenhum.
-- **Headers relevantes:** nenhum.
-
-### Request body
-
-Não possui.
-
-### Resultado esperado
+#### Resultado esperado
 
 ```json
 {
@@ -1146,21 +696,11 @@ Não possui.
 }
 ```
 
-### Status HTTP
+#### Status HTTP
 
 - `200 OK` — resposta estática retornada.
 
-### Possíveis erros
-
-O método não possui dependências nem caminho de erro próprio. Falhas da infraestrutura HTTP ou da própria aplicação ainda podem impedir uma resposta.
-
-### Fluxo interno resumido
-
-Controller
-→ cria um mapa com `status: UP`
-→ retorna JSON com HTTP 200.
-
-# Tabela-resumo
+## Tabela-resumo
 
 | Método | Endpoint | Função |
 |---|---|---|
@@ -1170,9 +710,13 @@ Controller
 | POST | `/api/buscas` | Executa uma busca de estabelecimentos, persiste o histórico e os leads. |
 | GET | `/api/buscas` | Lista o histórico de buscas. |
 | GET | `/api/buscas/{id}` | Consulta uma busca e os leads encontrados naquela execução. |
+| POST | `/api/buscas/{id}/informacoes` | Inicia ou recupera a pesquisa ativa de site e Instagram. |
+| GET | `/api/buscas/{id}/informacoes` | Consulta o progresso persistido da pesquisa. |
 | POST | `/api/buscas/{id}/emails` | Inicia ou recupera a execução ativa da captura de e-mails. |
 | GET | `/api/buscas/{id}/emails` | Consulta o progresso persistido da captura de e-mails. |
+| POST | `/api/buscas/{id}/cnpj` | Tenta identificar localmente o CNPJ dos leads da busca. |
 | GET | `/api/leads` | Lista e filtra os leads persistidos. |
+| GET | `/api/leads/pagina` | Pagina os leads de uma etapa do Kanban. |
 | GET | `/api/leads/{id}` | Consulta um lead pelo ID. |
 | PATCH | `/api/leads/{id}` | Atualiza parcialmente status, observações e último contato. |
 | GET | `/api/exportacao/leads.csv` | Exporta os leads filtrados em CSV. |
