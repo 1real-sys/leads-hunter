@@ -51,3 +51,6 @@ __pycache__/
 .env
 .env.local
 .env.*.local
+
+# Analise local retirada do repositorio
+/03092026ANALISE.md
