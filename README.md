@@ -1,441 +1,146 @@
 # Leads Hunter
 
-Aplicação web local para **prospecção de estabelecimentos comerciais**. Ela consulta a Google Places API por região e categoria, transforma os estabelecimentos encontrados em *leads*, enriquece cada um com telefone, endereço, município, IDHM e CNPJ, calcula um score de oportunidade, organiza tudo em um Kanban e permite exportar os resultados.
+**Prospecção local de estabelecimentos, do mapa ao acompanhamento comercial.** Escolha uma região e categorias, consulte a Google Places API (New), priorize os leads encontrados e acompanhe cada contato em um Kanban. A aplicação roda localmente, com Angular, Spring Boot e MySQL.
 
-O projeto foi feito para uso **local e single-user** (uso pessoal e portfólio). Não há autenticação, multiusuário nem deploy.
+![Kanban do Leads Hunter com leads distribuídos pelas cinco etapas do funil](docs/images/kanban.png)
 
-> Este README cobre o projeto inteiro. O frontend Angular tem um README próprio em [`frontend/README.md`](frontend/README.md).
+> Interface real do projeto. Os nomes, telefones e demais dados exibidos nas capturas são fictícios; as respostas da API foram simuladas para a demonstração.
 
----
+[Como funciona](#como-funciona) · [Funcionalidades](#funcionalidades) · [Executar localmente](#executar-localmente) · [Documentação](#documentação)
 
-## O que é
+## Como funciona
 
-Um **funil comercial de rua digitalizado**. Você aponta um ponto no mapa, escolhe um raio e categorias (padaria, mercado, restaurante, etc.). O backend fala com a Google Places, deduplica os resultados, ignora o que não interessa, enriquece os dados e guarda cada estabelecimento como um lead reutilizável entre buscas.
+1. **Encontre:** defina o ponto no mapa, um raio de até 20 km e uma ou mais categorias. O backend consulta a Google Places e registra a busca.
+2. **Priorize:** estabelecimentos são deduplicados por `googlePlaceId`, filtrados pelos nomes bloqueados, enriquecidos com dados locais quando disponíveis e classificados por score e temperatura.
+3. **Acompanhe:** mova os leads entre `Novo → Qualificado → Contatado → Ganho/Perdido`, registre observações, consulte buscas anteriores e exporte os resultados filtrados.
 
-## Para que serve
+Cada busca mantém o score e a temperatura calculados naquela execução. Status, observações e último contato pertencem ao lead e permanecem quando ele aparece em outra busca.
 
-- Prospectar clientes de um bairro/cidade sem sair cadastrando tudo na mão.
-- Priorizar quem vale mais a pena contatar primeiro (score e temperatura).
-- Acompanhar o andamento comercial de cada lead (`NOVO` → `QUALIFICADO` → `CONTATADO` → `GANHO`/`PERDIDO`).
-- Guardar observações e o último contato sem perder o histórico.
-- Ter o telefone pronto para um contato **manual** pelo WhatsApp.
-- Exportar a lista filtrada para CSV/Excel.
-
-## Principais recursos
-
-- Busca de estabelecimentos por coordenadas, raio (até 20 km) e múltiplas categorias.
-- Cache e rate limit locais para não estourar a cota da Google em buscas repetidas.
-- Histórico de buscas, com o retrato de score/temperatura daquele momento.
-- Deduplicação de leads por `googlePlaceId`, preservando os dados comerciais que você editou.
-- Blacklist de nomes (ex.: ignorar redes que você não quer prospectar).
-- Enriquecimento geográfico offline: município, UF e IDHM.
-- Enriquecimento de CNPJ por município, endereço e nome, 100% local.
-- Score de 0 a 95 e temperatura `FRIO`, `MORNO` ou `QUENTE`.
-- Kanban com drag-and-drop (e alternativa por teclado), filtros e paginação por coluna.
-- WhatsApp apenas como **link manual** (`https://wa.me/55...`). Não existe disparo automático.
-- Exportação CSV e Excel com os filtros aplicados.
-- Pesquisa inteligente (opcional) de site/Instagram dos leads, via API do Brave Search.
-
----
-
-## Tecnologias (resumo)
-
-| Camada | Stack |
+| Busca por região e categoria | Detalhe de uma busca anterior |
 | --- | --- |
-| Backend | Java 25, Spring Boot 4.1, Spring Web MVC, Spring Data JPA, Hibernate, Jakarta Validation, Flyway, Lombok |
-| Banco | MySQL 8 + Flyway (`ddl-auto: validate`) |
-| Integrações | Google Places API (New), API oficial do Brave Search (opcional), jsoup, Playwright (scraping desativado) |
-| Utilidades | Caffeine (cache), Bucket4j (rate limit), Apache POI (XLSX), Jackson |
-| Frontend | Angular 22, TypeScript 6 (strict), Signals, Angular CDK, Leaflet + OpenStreetMap, SCSS |
-| Testes | JUnit 5 / Mockito / MockMvc com catálogo MySQL temporário isolado, Vitest, Playwright + axe-core |
+| [![Formulário de busca ao lado de um mapa de Curitiba com raio marcado](docs/images/busca.png)](docs/images/busca.png) | [![Histórico com resumo da execução e resultados dos leads](docs/images/historico.png)](docs/images/historico.png) |
 
-Para o raio-X tecnológico detalhado, veja [`tecnologias.md`](tecnologias.md).
+*As duas telas acima também usam dados de demonstração fictícios. Clique para ampliar.*
 
----
+## Funcionalidades
 
-## Arquitetura (visão rápida)
+- **Busca e histórico:** múltiplas categorias, cache e limite local de chamadas à Google, além do registro das execuções e dos leads encontrados.
+- **Leads e funil:** cinco etapas, filtros combináveis por etapa, categoria, temperatura e busca de origem, paginação por coluna e atualização de observações.
+- **Dados complementares:** município/UF e IDHM de dataset offline; correspondência de CNPJ com uma base pública importada pelo próprio usuário.
+- **Pesquisa de informações:** ação explícita no Histórico para verificar site e Instagram. Pode consultar a API oficial do Brave, quando configurada, e validar páginas candidatas com limites de leitura.
+- **Pesquisa de e-mails:** ação explícita que examina o site oficial já conhecido do lead, confirma a identidade do estabelecimento e aceita apenas endereço do domínio próprio.
+- **Contato e exportação:** telefone e link manual do WhatsApp, CSV e Excel com os filtros aplicados. A aplicação não envia mensagens nem e-mails.
+
+A base de CNPJ não acompanha o repositório. Sem importá-la, a busca e o Kanban continuam funcionando, mas o preenchimento de CNPJ por correspondência local fica indisponível. O IDHM e o CNPJ não compõem o score atual.
+
+## Arquitetura
 
 ```text
-Navegador (Angular :4200)
-   |  proxy /api  ->  :8080
-   v
-Spring Boot / Tomcat
-   +--> MySQL local (:3306)
-   +--> Google Places API (HTTPS)
-   +--> Brave Search API (HTTPS, opcional)
-   +--> datasets offline no classpath (IDHM) e base CNPJ no banco
+Angular + Leaflet/OpenStreetMap
+    │ /api pelo proxy de desenvolvimento
+    ▼
+Spring Boot: controllers → serviços → repositories/integrações
+    ├── MySQL: leads, buscas, vínculos e execuções de enriquecimento
+    ├── Google Places API (New): estabelecimentos
+    ├── Brave Search API: fonte opcional para pesquisa de informações
+    └── dataset local: município e IDHM
 ```
 
-O backend segue `Controller → Service → Repository/integração`. Entidades JPA não são expostas: a API usa DTOs/records próprios, com erros centralizados em um contrato JSON único.
+`Busca` registra a execução; `Lead` representa o estabelecimento deduplicado; `BuscaLead` faz a relação N:N e preserva score e temperatura da execução. O Flyway controla o schema e o Hibernate o valida (`ddl-auto: validate`). Veja o [fluxo interno](fluxo.md) para as regras de cada operação.
 
----
+| Camada | Tecnologias principais |
+| --- | --- |
+| Backend | Java 25, Spring Boot 4.1, Maven, JPA/Hibernate, Flyway |
+| Banco | MySQL 8 |
+| Frontend | Angular 22, TypeScript 6, Leaflet, OpenStreetMap |
+| Testes | JUnit/Mockito/MockMvc, Vitest, Playwright |
 
-## Requisitos para rodar
+As dependências e as decisões de escolha estão em [tecnologias.md](tecnologias.md).
 
-### Obrigatórios
+## Executar localmente
 
-- **Git**
-- **JDK 25** (validado em Amazon Corretto 25.0.4)
-- **MySQL 8.x** rodando em `localhost:3306`
-- **Node.js** (validado em 26.7.0) e **npm** (validado em 12.0.2) — para o frontend
-- **Chave da Google Places API (New)** — sem ela, `POST /api/buscas` retorna `503`
-- Um navegador com acesso à internet (tiles do OpenStreetMap)
+### Requisitos
 
-> Não é necessário instalar Maven: o projeto usa o **Maven Wrapper** (`./mvnw`).
+- JDK 25 e MySQL 8 em `localhost:3306`.
+- Node.js e npm para o frontend (validados neste projeto com Node 26 e npm 12).
+- Uma chave própria da **Google Places API (New)** para realizar buscas reais. A chave do Brave Search é opcional.
+- Acesso à internet para as APIs externas e para os tiles do OpenStreetMap.
 
-### Opcionais
+O Maven Wrapper (`./mvnw`) já está no repositório.
 
-- **Chave da Brave Search API** — habilita a pesquisa de site/Instagram no Histórico. Sem ela, a funcionalidade responde indisponível de forma rápida.
-- **Python 3.11+** — só para gerar/atualizar os datasets offline (`tools/cnpj/` e `tools/idhm/`).
-- Espaço em disco: a base bruta mensal do CNPJ pode passar de vários GiB (fica fora do Git).
+### 1. Prepare o banco
 
----
-
-## Configuração com `.env`
-
-As credenciais **não ficam no código**. O `application.yml` lê variáveis de ambiente e o `.env` é o lugar prático de guardá-las.
-
-```bash
-cp .env.example .env
-# edite .env com os seus valores
-```
-
-Conteúdo esperado do `.env`:
-
-```dotenv
-DB_USERNAME=root
-DB_PASSWORD=sua_senha_do_mysql
-GOOGLE_PLACES_API_KEY=sua_chave_google
-BRAVE_SEARCH_API_KEY=sua_chave_brave   # opcional
-```
-
-Variáveis opcionais de ajuste:
-
-| Variável | Padrão | Efeito |
-| --- | ---: | --- |
-| `GOOGLE_PLACES_RATE_LIMIT_REQUISICOES` | `10` | Chamadas externas por janela |
-| `GOOGLE_PLACES_RATE_LIMIT_PERIODO_SEGUNDOS` | `60` | Duração da janela do rate limit |
-| `BUSCA_CACHE_EXPIRACAO_MINUTOS` | `30` | Validade do cache de buscas |
-| `BUSCA_CACHE_TAMANHO_MAXIMO` | `100` | Máximo de buscas em cache |
-| `PESQUISA_BRAVE_HABILITADO` | `true` | Liga/desliga a fonte Brave |
-| `PESQUISA_SCRAPING_HABILITADO` | `false` | Reativa o scraping (desaconselhado) |
-
-> **Importante:** o Spring Boot não lê o arquivo `.env` sozinho. Você precisa carregá-lo no ambiente antes de subir o backend:
->
-> ```bash
-> set -a
-> source .env
-> set +a
-> ./mvnw spring-boot:run
-> ```
->
-> IDEs (IntelliJ/VS Code) também conseguem carregar o `.env` automaticamente; nesse caso basta rodar a aplicação pela IDE.
-
-### Sobre as chaves de API
-
-As chaves são **responsabilidade de quem roda o projeto**. O repositório não distribui, não empresta e não inclui nenhuma chave funcional.
-
-- **Google Places API (New):** crie um projeto no Google Cloud, habilite a *Places API (New)* e gere uma chave. Coloque em `GOOGLE_PLACES_API_KEY`. Sem ela, a busca não funciona.
-- **Brave Search API:** crie uma conta no Brave Search API e gere o token. Coloque em `BRAVE_SEARCH_API_KEY`. É opcional; só a pesquisa de Instagram/site depende dela.
-
-As chamadas partem sempre do backend. A chave nunca é enviada ao navegador.
-
----
-
-## Como rodar
-
-### 1. Banco de dados
-
-Crie o schema (o Flyway depois cria as tabelas):
+No MySQL, crie o schema e um usuário local dedicado. Substitua `sua_senha` por uma senha sua:
 
 ```sql
 CREATE DATABASE leadsradar CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-Se quiser um usuário dedicado (recomendado):
-
-```sql
 CREATE USER 'leadhunter'@'localhost' IDENTIFIED BY 'sua_senha';
 GRANT ALL PRIVILEGES ON leadsradar.* TO 'leadhunter'@'localhost';
-FLUSH PRIVILEGES;
 ```
 
-E ajuste `DB_USERNAME`/`DB_PASSWORD` no `.env`.
+Se o MySQL estiver em outro host ou contêiner, adapte o endereço de conexão e o host do usuário. Na primeira inicialização, o Flyway cria as tabelas; não é preciso executar SQL de schema manualmente.
 
-### 2. Backend
+### 2. Configure e inicie a API
 
 ```bash
-set -a; source .env; set +a
+cp .env.example .env
+# Preencha DB_PASSWORD e GOOGLE_PLACES_API_KEY no .env
+set -a
+source .env
+set +a
 ./mvnw spring-boot:run
 ```
 
-A API sobe em `http://localhost:8080`. Health check: `GET /api/health` → `{"status":"UP"}`.
+O modelo usa `DB_USERNAME=leadhunter`; ajuste-o se escolheu outro usuário. O `.env` local fica fora do Git. O Spring Boot lê **variáveis de ambiente**, portanto é preciso carregar o arquivo antes de iniciar a API. O backend atende em `http://localhost:8080`; `GET /api/health` retorna o estado básico da aplicação.
 
-### 3. Frontend
+Uma chave Google ausente não impede a inicialização, mas uma busca real responde `503`. Sem chave Brave, a pesquisa de informações ainda pode verificar o site oficial conhecido; a consulta ao Brave fica indisponível.
+
+### 3. Inicie a interface
 
 Em outro terminal:
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm start
 ```
 
-Abra `http://localhost:4200`. O proxy de desenvolvimento encaminha `/api` para `http://localhost:8080`.
+Abra `http://localhost:4200`. O proxy do Angular encaminha `/api` ao backend local. O endereço digitado no formulário identifica a busca no Histórico; o ponto consultado é definido pelas coordenadas ou pelo mapa.
 
----
-
-## Enriquecimento de CNPJ por município (injeção da base local)
-
-A correspondência de CNPJ do Leads Hunter é **100% local**: em runtime não existe consulta à Receita Federal. O que a aplicação faz é cruzar os leads (nome, endereço, número, CEP) contra um recorte da base pública do CNPJ que **você** carrega no MySQL, restrita aos municípios que te interessam.
-
-O fluxo tem 4 passos: baixar a competência mensal → montar o manifesto → gerar o SQL do recorte desejado → importar no MySQL.
-
-### Passo 1 — Baixar a competência mensal
-
-No [catálogo oficial de Dados Abertos do CNPJ](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj), escolha **uma competência** e baixe para `tools/cnpj/sources/`:
-
-- todos os lotes `Empresas*.zip`
-- todos os lotes `Estabelecimentos*.zip`
-- `Municipios.zip`
-
-Calcule os checksums:
-
-```bash
-sha256sum tools/cnpj/sources/*.zip
-```
-
-### Passo 2 — Montar o manifesto
-
-Crie `tools/cnpj/fontes-AAAA-MM.json` com a data-base, as URLs, os SHA-256 e **o recorte geográfico desejado**. Você escolhe por UF e/ou por municípios pontuais.
-
-**Exemplo A — todo o Espírito Santo (`ufs: ["ES"]`):**
-
-```json
-{
-  "dataBase": "2026-08-08",
-  "fontes": [
-    {
-      "tipo": "empresas",
-      "arquivo": "Empresas0.zip",
-      "url": "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/2026-08/Empresas0.zip",
-      "sha256": "SHA256_DE_64_CARACTERES_REVISADO"
-    },
-    {
-      "tipo": "estabelecimentos",
-      "arquivo": "Estabelecimentos0.zip",
-      "url": "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/2026-08/Estabelecimentos0.zip",
-      "sha256": "SHA256_DE_64_CARACTERES_REVISADO"
-    },
-    {
-      "tipo": "municipios",
-      "arquivo": "Municipios.zip",
-      "url": "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/2026-08/Municipios.zip",
-      "sha256": "SHA256_DE_64_CARACTERES_REVISADO"
-    }
-  ],
-  "ufs": ["ES"]
-}
-```
-
-**Exemplo B — só municípios específicos:**
-
-```json
-{
-  "dataBase": "2026-08-08",
-  "fontes": [ "..." ],
-  "municipiosInteresse": [
-    { "codigoIbge": "4106902", "nome": "Curitiba", "uf": "PR" },
-    { "codigoIbge": "3205309", "nome": "Vitória", "uf": "ES" }
-  ]
-}
-```
-
-**Exemplo C — combinar UF + municípios (união, sem duplicar):**
-
-```json
-{
-  "dataBase": "2026-08-08",
-  "fontes": [ "..." ],
-  "ufs": ["ES"],
-  "municipiosInteresse": [
-    { "codigoIbge": "4106902", "nome": "Curitiba", "uf": "PR" }
-  ]
-}
-```
-
-O manifesto aceita `ufs` e/ou `municipiosInteresse`, mas **pelo menos um** precisa ter itens. Cada UF é expandida pelo catálogo `tools/cnpj/municipios-ibge.csv` (5.570 municípios). Repita as entradas de `fontes` para **todos** os lotes publicados na competência.
-
-### Passo 3 — Gerar o SQL do recorte
-
-```bash
-python3 tools/cnpj/gerar_dataset.py \
-  --manifest tools/cnpj/fontes-2026-08.json \
-  --source-dir tools/cnpj/sources \
-  --output-sql /tmp/cnpj-es.sql \
-  --no-json \
-  --workers 0
-```
-
-- `--workers 0` usa até 8 processos automaticamente (mais rápido); `--workers 1` reduz memória.
-- `--no-json` gera só o SQL. Sem ele, também sai um JSON em `src/main/resources/cnpj/`.
-- Mantenha a saída em `/tmp` enquanto revisa; o arquivo é grande e **não deve ser versionado**.
-
-### Passo 4 — Importar no MySQL
-
-```bash
-mysql -u root -p leadsradar < /tmp/cnpj-es.sql
-```
-
-Se o MySQL estiver em container:
-
-```bash
-docker exec -i mysql-db mysql -u root -p leadsradar < /tmp/cnpj-es.sql
-```
-
-A carga é **idempotente para o mesmo recorte/competência**: ela remove e reinsere apenas os municípios selecionados. Confira as contagens:
-
-```bash
-mysql -u root -p leadsradar -e \
-  "SELECT COUNT(*) FROM cnpj_estabelecimento; SELECT COUNT(*) FROM cnpj_empresa; ANALYZE TABLE cnpj_estabelecimento, cnpj_empresa;"
-```
-
-### Como o CNPJ aparece nos leads
-
-Depois da carga, o enriquecimento acontece em dois momentos:
-
-1. **Durante uma nova busca**, para cada lead do município que ainda não tem CNPJ.
-2. **Sob demanda**, via `POST /api/buscas/{id}/cnpj` (botão **Buscar CNPJ** no Histórico), que tenta apenas os leads daquela busca com `cnpj` nulo.
-
-A correspondência exige candidato único, município, endereço, número e nome compatíveis, com CEP como filtro forte e limiar maior no fallback sem CEP. Ambiguidade, baixa confiança ou excesso de candidatos deixam o lead **sem** CNPJ (falha segura). CNPJ, razão social, competência e confiança ficam persistidos.
-
-> A migration repetível `src/main/resources/db/migration/R__carregar_subset_cnpj.sql` no Git é um **placeholder vazio de propósito**. A base volumosa vive apenas no seu MySQL local.
->
-> Sem base carregada para o município do lead, `cnpj` e `razaoSocial` simplesmente ficam `null` — não é erro.
-
-Detalhes completos em [`tools/cnpj/README.md`](tools/cnpj/README.md).
-
----
-
-## Dataset de IDHM (offline)
-
-O município, a UF e o IDHM vêm de `src/main/resources/geo/municipios-idhm.json` (5.570 municípios), carregado na inicialização e validado por tamanho/checksum. **Não há download em runtime.**
-
-Só é preciso regenerar se quiser atualizar os dados:
-
-```bash
-python3 tools/idhm/gerar_dataset.py
-```
-
-Detalhes em [`tools/idhm/README.md`](tools/idhm/README.md).
-
----
-
-## Rotas da API (resumo)
-
-Base local: `http://localhost:8080/api`. Sem autenticação no estágio atual. O contrato completo, com payloads e códigos de erro, está em [`API.md`](API.md).
-
-| Método | Rota | Para quê |
-| --- | --- | --- |
-| `GET` | `/api/health` | Health check simples |
-| `POST` | `/api/buscas` | Executa e persiste uma busca |
-| `GET` | `/api/buscas` | Lista o histórico de buscas |
-| `GET` | `/api/buscas/{id}` | Detalhe de uma busca anterior |
-| `POST` | `/api/buscas/{id}/cnpj` | Reprocessa o CNPJ dos leads da busca |
-| `POST` | `/api/buscas/{id}/informacoes` | Dispara a pesquisa de site/Instagram (`202`) |
-| `GET` | `/api/buscas/{id}/informacoes` | Estado/progresso da pesquisa |
-| `GET` | `/api/leads` | Lista e filtra leads |
-| `GET` | `/api/leads/pagina` | Pagina uma coluna do Kanban |
-| `GET` | `/api/leads/{id}` | Consulta um lead |
-| `PATCH` | `/api/leads/{id}` | Atualiza status, observações e/ou último contato |
-| `GET` | `/api/bloqueios` | Lista nomes bloqueados |
-| `POST` | `/api/bloqueios` | Cadastra um nome bloqueado |
-| `DELETE` | `/api/bloqueios/{id}` | Remove um nome bloqueado |
-| `GET` | `/api/geografia/municipios` | Municípios/IDHM em GeoJSON por `bbox` |
-| `GET` | `/api/exportacao/leads.csv` | Exporta os leads em CSV |
-| `GET` | `/api/exportacao/leads.xlsx` | Exporta os leads em Excel |
-
-Exemplo de busca:
-
-```bash
-curl -X POST http://localhost:8080/api/buscas \
-  -H "Content-Type: application/json" \
-  -d '{
-    "enderecoBase": "Centro, Curitiba - PR",
-    "latitude": -25.4284,
-    "longitude": -49.2733,
-    "raioKm": 5,
-    "categorias": ["PADARIA", "MERCADO", "RESTAURANTE"]
-  }'
-```
-
-Valores de enum aceitos:
-
-- `CategoriaNegocio`: `MERCADO`, `PADARIA`, `DOCERIA`, `RESTAURANTE`, `DISTRIBUIDORA`, `ACOUGUE`, `FARMACIA`, `INFORMATICA`, `VESTUARIO`, `PETSHOP`, `OUTROS`
-- `StatusFunil`: `NOVO`, `QUALIFICADO`, `CONTATADO`, `GANHO`, `PERDIDO`
-- `Temperatura`: `QUENTE`, `MORNO`, `FRIO`
-
----
-
-## Testes
-
-Backend:
+## Validar
 
 ```bash
 ./mvnw test
 ./mvnw package
 ```
 
-Frontend:
-
 ```bash
 cd frontend
 npm test
 npm run build
-npm run e2e:smoke      # smoke E2E com API simulada
+npm run e2e:smoke
 ```
 
-> O ambiente local validou o backend Java 25 precisando de um agente Byte Buddy em runtime para compatibilidade do Mockito com a JVM. Em JVMs compatíveis, `./mvnw test` roda normalmente. Os testes automatizados não abrem o WhatsApp nem consomem cota da Google.
+O teste E2E de smoke usa respostas de API simuladas. Os testes de integração do backend usam um catálogo MySQL isolado e exigem permissão para criá-lo e removê-lo. Neste ambiente com Java 25, os testes Mockito exigiram iniciar a JVM de testes com o `-javaagent` do Byte Buddy; isso não afeta a execução normal da aplicação.
 
----
+Para o smoke E2E, mantenha o frontend em execução com `npm start` em outro terminal e instale os navegadores do Playwright se ainda não estiverem disponíveis.
 
-## Estrutura do projeto
+## Dados opcionais e limites
 
-```text
-leads-hunter/
-├── src/main/java/dev/jlm/leadshunter/
-│   ├── busca/               busca, cache, histórico e vínculo Busca-Lead
-│   ├── bloqueio/            blacklist de nomes
-│   ├── cnpj/                correspondência local de CNPJ
-│   ├── config/              health check e tratamento centralizado de erros
-│   ├── exportacao/          CSV e Excel
-│   ├── geo/                 dataset municipal, IDHM e GeoJSON
-│   ├── integracao/places/   cliente, contratos e rate limit da Google
-│   ├── integracao/pesquisa/ pesquisa de site/Instagram (Brave)
-│   ├── lead/                lead, telefone e WhatsApp manual
-│   └── scoring/             score e temperatura
-├── src/main/resources/
-│   ├── application.yml
-│   ├── db/migration/        migrations Flyway (V1..V6 + R__)
-│   └── geo/                 dataset IDHM offline
-├── frontend/                SPA Angular
-├── tools/cnpj/              ingestor da base pública do CNPJ
-├── tools/idhm/              gerador do dataset de IDHM
-├── API.md                   contrato da API REST
-├── tecnologias.md           raio-X tecnológico
-├── fluxo.md                 estado atual do projeto
-└── HISTORICO_IMPLEMENTACOES.md
-```
+- **CNPJ:** o pipeline de [importação da base pública](tools/cnpj/README.md) prepara um recorte por municípios para o MySQL. A aplicação não consulta a Receita Federal durante a execução.
+- **IDHM:** o dataset municipal já está incluído no backend; a geração/atualização está em [`tools/idhm/`](tools/idhm/).
+- **Pesquisa de informações:** a leitura de páginas candidatas serve para confirmar telefone, endereço ou CNPJ. Há teto de três consultas ao Brave e três páginas por lead. O scraper de motores de busca está desativado por padrão.
+- **Pesquisa de e-mails:** lê no máximo duas páginas do mesmo host do site oficial por lead; não faz disparos.
+- **Uso previsto:** aplicação local para uma pessoa, sem autenticação ou deploy. Cache e limite de requisições ficam em memória e reiniciam com o processo.
 
----
+## Documentação
 
-## Escopo e limitações (por decisão do projeto)
-
-- Aplicação **local e single-user**; sem autenticação, usuários, roles ou deploy.
-- **WhatsApp apenas como link manual** `https://wa.me/55...`; sem disparo automático ou em massa.
-- A pesquisa usa a **API oficial do Brave**. A abertura da URL candidata (site próprio ou perfil público do Instagram) serve apenas para validar telefone/endereço/CNPJ do lead, com teto de **3 consultas ao Brave e 3 páginas por lead**, sem seguir redirecionamentos e sem acessar destinos privados; o scraping de motores de busca permanece desativado.
-- Sem Docker/Compose, CI/CD, Redis, RabbitMQ/Kafka ou cache distribuído.
-- Cache e rate limit são **em memória** e reiniciam com a aplicação.
-- O CNPJ não entra no cálculo do score.
-- A blacklist não remove retroativamente leads já cadastrados.
-- A base de CNPJ **não vem carregada**; é preciso injetá-la (veja a seção acima).
+| Documento | Quando consultar |
+| --- | --- |
+| [API.md](API.md) | Rotas, parâmetros, respostas e erros HTTP |
+| [fluxo.md](fluxo.md) | Sequência interna da busca, do enriquecimento, do Kanban e da exportação |
+| [tecnologias.md](tecnologias.md) | Stack e decisões técnicas |
+| [frontend/README.md](frontend/README.md) | Estrutura e comandos próprios do Angular |
+| [tools/cnpj/README.md](tools/cnpj/README.md) | Download, preparação e importação da base de CNPJ | Era pra um caso especifico idealizado no inicio, não é necessário
+| [GUIA_OUTRO_COMPUTADOR.md](GUIA_OUTRO_COMPUTADOR.md) | Uso do Kanban em outro computador com os dados atuais |
+| [HISTORICO_IMPLEMENTACOES.md](HISTORICO_IMPLEMENTACOES.md) | Evolução das implementações |

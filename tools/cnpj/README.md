@@ -1,44 +1,30 @@
-# Subset local dos Dados Abertos do CNPJ
+# Importação local dos Dados Abertos do CNPJ
 
-Este diretório contém o ingestor offline das sprints CNPJ-00 e CNPJ-06. Ele transforma os arquivos mensais da Receita Federal em um recorte ordenado e consumível pelo backend, em JSON e/ou SQL, sem baixar nem consultar CNPJ em runtime.
+Este diretório transforma os arquivos mensais da Receita Federal em um **recorte de estabelecimentos ativos por município** para o Leads Hunter. O processamento ocorre fora da aplicação. Durante uma busca, o backend consulta apenas o MySQL local; ele não baixa arquivos nem consulta a Receita Federal.
 
-## Fonte, procedência e licença
+> A base mensal não acompanha o repositório. Sem importar um recorte, a aplicação funciona, mas não encontra CNPJ por correspondência local.
 
-- Catálogo oficial: [Cadastro Nacional da Pessoa Jurídica — CNPJ](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj).
-- Órgão responsável: Secretaria Especial da Receita Federal do Brasil.
-- Metadados e leiaute: [CNPJ — Metadados](https://www.gov.br/receitafederal/dados/cnpj-metadados.pdf/@@download/file).
-- Arquivos consumidos: `Empresas*.zip`, `Estabelecimentos*.zip` e `Municipios.zip` da mesma competência mensal.
-- Formato oficial: CSV sem cabeçalho, separado por ponto e vírgula, delimitado por aspas e codificado em Latin-1.
-- Licença/uso: dados cadastrais públicos disponibilizados conforme a política de Dados Abertos do Governo Federal. A origem Receita Federal deve ser preservada ao redistribuir o recorte.
+## O que você precisa
 
-`Empresas` fornece o CNPJ básico e a razão social. `Estabelecimentos` fornece ordem/dígitos verificadores, nome fantasia, situação cadastral, endereço, UF e o código municipal interno da Receita. `Municipios` converte esse código interno em nome. O catálogo dedicado `municipios-ibge.csv` associa nome + UF ao código IBGE usado pelo Leads Hunter e permite expandir uma UF inteira sem acoplar o ingestor ao artefato de geografia/IDHM.
+- Python 3.11 ou superior, com a biblioteca padrão; o ingestor não exige pacotes Python adicionais.
+- MySQL com o schema `leadsradar` criado e as migrations Flyway aplicadas. O [README principal](../../README.md#executar-localmente) explica essa configuração.
+- Espaço para os ZIPs de uma competência completa, arquivos temporários e o SQL gerado. Uma carga ampla pode ocupar vários GiB.
+- Acesso ao [catálogo oficial dos Dados Abertos do CNPJ](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj) e ao [leiaute publicado pela Receita Federal](https://www.gov.br/receitafederal/dados/cnpj-metadados.pdf/@@download/file).
 
-## Segurança e reprodutibilidade
+O ingestor usa `Empresas*.zip`, `Estabelecimentos*.zip` e `Municipios.zip` **da mesma competência**. Empresas fornece a razão social; Estabelecimentos traz CNPJ, nome fantasia, situação cadastral e endereço; Municipios relaciona o código usado pela Receita ao nome. O catálogo versionado [`municipios-ibge.csv`](municipios-ibge.csv) associa nome e UF ao código IBGE usado no projeto.
 
-O manifesto é obrigatório e congela `dataBase`, recorte geográfico, URL HTTPS e SHA-256 de cada arquivo. O ingestor:
+Execute os comandos abaixo **na raiz do repositório**.
 
-- aceita download somente dos hosts oficiais declarados no código;
-- rejeita redirecionamento para outro host, nomes de arquivo/caminhos inseguros, caracteres de controle nas URLs, ZIPs com quantidade ou tamanho fora dos limites e CNPJ/CEP inválidos;
-- calcula o SHA-256 antes de ler qualquer CSV e para se a fonte mudar;
-- aceita `ufs` e/ou `municipiosInteresse`, expande cada UF pelo catálogo versionado e falha se um nome municipal não corresponder à relação normalizada da Receita;
-- mantém somente estabelecimentos com situação cadastral `02` (ativa);
-- exige pelo menos uma unidade ativa em cada município configurado;
-- descarta cedo os registros fora do recorte, mantém somente as empresas necessárias e grava o resultado atomicamente, em lotes e sem timestamp variável.
+## 1. Baixe uma competência e registre as fontes
 
-Os arquivos brutos são grandes e não devem ser versionados. `tools/cnpj/sources/` está ignorado pelo Git.
+Crie `tools/cnpj/sources/` e baixe para lá **todos** os lotes `Empresas*.zip` e `Estabelecimentos*.zip` publicados para a competência escolhida, além de `Municipios.zip`:
 
-## Estado do artefato de runtime
+```bash
+mkdir -p tools/cnpj/sources
+sha256sum tools/cnpj/sources/*.zip
+```
 
-O conteúdo versionado de `src/main/resources/db/migration/R__carregar_subset_cnpj.sql` deve permanecer como um placeholder seguro. A base volumosa vive no banco local: o SQL mensal gerado em `/tmp` pode ser importado diretamente pelo cliente MySQL. Se a migration repetível for usada para uma carga local via Flyway, sua alteração de dezenas ou centenas de MB deve permanecer fora do commit; nunca inclua o recorte mensal no Git.
-
-`tools/cnpj/municipios-ibge.csv` é diferente: ele contém somente 5.570 registros pequenos (`codigo_ibge,nome,uf`) e é versionado. Foi derivado de `src/main/resources/geo/municipios-idhm.json` pelo script `gerar_municipios_ibge.py`; o SHA-256 atual é `50ea7cb2d7cc34cd3d581dc197cd45619579be9fad5d7b630dd3a9d04efdddbc`.
-
-Os três casos Coco Bambu usados no desenvolvimento ficam exclusivamente em `src/test/resources/cnpj/fixtures.sql`. Seus CNPJs não são inventados: foram conferidos nas páginas oficiais das unidades [Vitória](https://www.cocobambu.com/unidades/cb-vitoria), [Vila Velha](https://cocobambu.com/unidades/cb-vila-velha) e [Curitiba](https://cocobambu.com/unidades/cb-curitiba). Essas fixtures não afirmam representar um recorte da Receita nem são carregadas no runtime.
-
-## Preparar a competência mensal
-
-1. No catálogo oficial, escolha uma única competência e baixe todos os arquivos `Empresas*.zip`, `Estabelecimentos*.zip` e `Municipios.zip` para `tools/cnpj/sources/`.
-2. Crie um manifesto JSON revisado, por exemplo `tools/cnpj/fontes-2026-08.json`:
+O `sha256sum` deve ser executado depois do download. Confira os nomes e as URLs de origem no catálogo e registre os checksums calculados em um manifesto, por exemplo `tools/cnpj/fontes-2026-08.json`. O formato é:
 
 ```json
 {
@@ -48,19 +34,19 @@ Os três casos Coco Bambu usados no desenvolvimento ficam exclusivamente em `src
       "tipo": "empresas",
       "arquivo": "Empresas0.zip",
       "url": "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/2026-08/Empresas0.zip",
-      "sha256": "SHA256_DE_64_CARACTERES_REVISADO"
+      "sha256": "COLE_O_SHA256_REAL_DE_64_CARACTERES"
     },
     {
       "tipo": "estabelecimentos",
       "arquivo": "Estabelecimentos0.zip",
       "url": "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/2026-08/Estabelecimentos0.zip",
-      "sha256": "SHA256_DE_64_CARACTERES_REVISADO"
+      "sha256": "COLE_O_SHA256_REAL_DE_64_CARACTERES"
     },
     {
       "tipo": "municipios",
       "arquivo": "Municipios.zip",
       "url": "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/2026-08/Municipios.zip",
-      "sha256": "SHA256_DE_64_CARACTERES_REVISADO"
+      "sha256": "COLE_O_SHA256_REAL_DE_64_CARACTERES"
     }
   ],
   "ufs": ["ES"],
@@ -70,13 +56,13 @@ Os três casos Coco Bambu usados no desenvolvimento ficam exclusivamente em `src
 }
 ```
 
-`ufs` e `municipiosInteresse` são opcionais individualmente, mas pelo menos um deles deve ter itens. Quando ambos são informados, o resultado é a união sem duplicar um município já abrangido pela UF. Cada UF deve ter duas letras e existir no catálogo; `"ufs": ["ES"]` expande deterministicamente os 78 municípios capixabas.
+**Este é um modelo, não um manifesto pronto para executar.** Substitua data, URLs e checksums pelos da competência escolhida e repita as entradas de `fontes` para **todos** os lotes numerados de Empresas e Estabelecimentos. Não misture competências.
 
-Repita as entradas para **todos** os lotes numerados de Empresas e Estabelecimentos publicados naquela competência. Calcule o checksum local com `sha256sum tools/cnpj/sources/*.zip`, confira os nomes/URLs no catálogo e só então registre os valores no manifesto. Não reutilize arquivos ou checksums de competências diferentes.
+O recorte pode usar `ufs`, `municipiosInteresse` ou ambos. `"ufs": ["ES"]` seleciona os 78 municípios capixabas; o município de Curitiba no exemplo é acrescentado ao recorte. Os dois campos são opcionais separadamente, mas pelo menos um deles precisa ter itens. O ingestor rejeita municípios sem estabelecimentos ativos na competência escolhida.
 
-## Gerar
+## 2. Gere o SQL
 
-Com fontes já baixadas:
+Com os ZIPs já baixados e o manifesto completo:
 
 ```bash
 python3 tools/cnpj/gerar_dataset.py \
@@ -87,76 +73,54 @@ python3 tools/cnpj/gerar_dataset.py \
   --workers 0
 ```
 
-Para o ingestor baixar exatamente as URLs congeladas no manifesto, omita `--source-dir`. O download pode ocupar vários gigabytes e só deve ser feito manualmente durante a atualização mensal.
+Adapte os nomes `fontes-2026-08.json` e `cnpj-es.sql` ao recorte usado. `--source-dir` lê os arquivos locais; sem essa opção, o ingestor baixa as URLs do manifesto. `--workers 0` escolhe automaticamente até oito processos. Use `--workers 1` para reduzir o pico de memória; valores explícitos até 16 são aceitos.
 
-`--workers 0` seleciona automaticamente até 8 processos, limitado pela quantidade de lotes; valores explícitos de 1 a 16 permitem priorizar memória ou throughput. O processamento por processos foi mantido porque apresentou ganho real no hardware-alvo. A ferramenta é Python e executa fora da JVM: o Java 25 do backend não acelera esse hot path automaticamente nem exige uma reescrita Java fora do escopo.
+`--no-json` gera somente o SQL. Sem essa opção, o script também escreve `src/main/resources/cnpj/cnpj-subset.json`, a menos que `--output` indique outro caminho. O JSON é um artefato opcional de inspeção; o backend usa as tabelas carregadas no MySQL.
 
-`--no-json` evita o artefato intermediário quando somente a carga SQL interessa. Sem essa flag, a saída JSON padrão é `src/main/resources/cnpj/cnpj-subset.json` e pode ser alterada com `--output`. `--output-sql` produz a carga consumível pelo backend: ela identifica competência, UFs, URL e checksum de cada fonte no cabeçalho, substitui somente os municípios selecionados, remove empresas que ficaram órfãs e faz os `INSERT` em lotes determinísticos de 500.
-
-Para conferir sem alterar nenhum recurso do backend, mantenha a saída em `/tmp`. Depois de revisar o cabeçalho e os totais, importe o SQL no MySQL local com o cliente já usado no ambiente. A carga é idempotente para o mesmo recorte e competência; não versione o arquivo gerado.
-
-O catálogo de expansão pode ser reproduzido a partir da fonte geográfica versionada:
+A ferramenta confere o SHA-256 de cada ZIP antes de ler os CSVs, valida o manifesto e mantém somente estabelecimentos com situação cadastral `02` (ativa) nos municípios selecionados. Ao terminar, imprime os totais e o SHA-256 do arquivo produzido. Confira o cabeçalho do SQL, sobretudo a competência e a lista de fontes:
 
 ```bash
-python3 tools/cnpj/gerar_municipios_ibge.py
+head -n 30 /tmp/cnpj-es.sql
 ```
 
-Antes de iniciar prospecção real, revise no SQL gerado se todos os lotes esperados constam no cabeçalho e execute a suíte de persistência. Alterar a competência do recorte faz o backend revalidar, na próxima captura, os CNPJs já correspondidos naquele município.
+O SQL informa a proveniência de cada fonte, substitui os estabelecimentos dos municípios selecionados, remove empresas sem estabelecimento restante e insere registros em lotes. A mesma carga pode ser executada novamente para o mesmo recorte e competência. **O arquivo não abre uma transação única:** faça backup dos dados locais antes de atualizar uma base importante; uma importação interrompida pode deixar a carga parcial.
 
-## Importar no MySQL local
+## 3. Importe no MySQL
 
-Depois de gerar o SQL (ex.: `/tmp/cnpj-es.sql`), importe no banco `leadsradar` usando o cliente do container MySQL já usado no ambiente:
+Com o cliente `mysql` instalado no host:
 
 ```bash
-docker exec -i mysql-db mysql -u root -p leadsradar < /tmp/cnpj-es.sql
+mysql -u leadhunter -p leadsradar < /tmp/cnpj-es.sql
 ```
 
-Se você tiver o `mysql` instalado no host, o equivalente é `mysql -u root -p leadsradar < /tmp/cnpj-es.sql`. O comando pede a senha interativamente; nunca coloque a senha no arquivo SQL nem no README. A carga é idempotente para o mesmo recorte/competência (faz `DELETE` só dos municípios alvo e re-insere).
-
-Confira com contagens exatas e atualize a estimativa do phpMyAdmin:
+Use o usuário configurado no seu `.env`; o cliente pedirá a senha. Se o MySQL estiver em um contêiner e não houver cliente no host, copie o SQL para o contêiner e execute a importação lá. Substitua `mysql-db` pelo nome do seu contêiner:
 
 ```bash
-docker exec mysql-db mysql -u root -p leadsradar -e \
-  "SELECT COUNT(*) FROM cnpj_estabelecimento; SELECT COUNT(*) FROM cnpj_empresa; ANALYZE TABLE cnpj_estabelecimento, cnpj_empresa;"
+docker cp /tmp/cnpj-es.sql mysql-db:/tmp/cnpj-es.sql
+docker exec -it mysql-db sh -c 'mysql -u leadhunter -p leadsradar < /tmp/cnpj-es.sql'
 ```
 
-> Observação: na listagem do phpMyAdmin, "Rows ≈" é uma **estimativa** do InnoDB que fica desatualizada após carga em massa (ex.: mostrava ~78.567 com 608.030 reais). Use `SELECT COUNT(*)` para o valor exato; o `ANALYZE TABLE` atualiza a estimativa.
+A opção `-it` permite informar a senha no terminal enquanto o MySQL lê o SQL copiado dentro do contêiner. Não inclua a senha na linha de comando nem no arquivo SQL.
 
-O arquivo SQL gerado é grande e **não deve ser versionado** (mantenha o `R__` do repositório como placeholder; a base volumosa vive no banco local).
-
-## Smoke real do Espírito Santo
-
-O smoke de CNPJ-06 usou o Ryzen 7 5700X (16 threads), Python 3.14.7 e as 21 fontes locais completas da competência RFB `2026-08-08` (10 lotes de Empresas, 10 de Estabelecimentos e Municípios). O comando de medição no Linux soma o RSS do processo principal e de todos os workers:
+Confira contagens exatas e as competências presentes:
 
 ```bash
-python3 tools/cnpj/medir_ingestao.py --intervalo 0.1 -- \
-  --manifest /tmp/fontes-2026-08-es.json \
-  --source-dir tools/cnpj/sources \
-  --output-sql /tmp/cnpj-es.sql \
-  --no-json \
-  --workers 8
+mysql -u leadhunter -p leadsradar -e \
+  'SELECT data_base, COUNT(*) AS estabelecimentos FROM cnpj_estabelecimento GROUP BY data_base; SELECT COUNT(*) AS empresas FROM cnpj_empresa;'
 ```
 
-| Workers | Tempo | Pico RSS agregado | Resultado |
-| ---: | ---: | ---: | --- |
-| 8 | 113,21 s | 1.541,53 MiB | 78 municípios, 589.690 empresas e 608.030 estabelecimentos |
-| 1 | 245,21 s | 1.011,41 MiB | mesmos registros e mesmos bytes |
+Se usar apenas o cliente do contêiner, execute a mesma consulta com `docker exec -it mysql-db mysql -u leadhunter -p leadsradar -e '...'`. Contagens aproximadas mostradas pelo phpMyAdmin/InnoDB podem divergir; `COUNT(*)` retorna o valor exato.
 
-O paralelismo controlado foi 2,17 vezes mais rápido e permaneceu abaixo da meta orientativa de 2 GiB. Os dois modos geraram um SQL de 168.526.384 bytes com o mesmo SHA-256: `da5caa912ecb5c3322d57a4cc9246548d0c9e942da424c0c5488b25d2aa6251a`.
+O arquivo versionado [`R__carregar_subset_cnpj.sql`](../../src/main/resources/db/migration/R__carregar_subset_cnpj.sql) é apenas um placeholder seguro. Não coloque o SQL mensal volumoso, os ZIPs nem dados reais de CNPJ no Git; a carga vive no banco local.
 
-## Validar
+## Validar o ingestor
 
 ```bash
 python3 tools/cnpj/test_gerar_dataset.py
 ```
 
-Os 13 testes constroem ZIPs mínimos em diretório temporário e cobrem parser Latin-1, normalização, filtro de ativos/localidades, ordenação determinística, proveniência no SQL, CNPJ/endereço, metadado inseguro, checksum, município sem registros, expansão ES → 78 municípios, união retrocompatível, UF inválida/inexistente, divergência nominal, `--no-json`, limite de workers e reprodução exata do catálogo versionado.
+Os testes usam ZIPs pequenos e temporários: não baixam a competência real nem alteram o MySQL. Eles cobrem filtros, checksums, municípios, saída determinística e geração do SQL. O catálogo `municipios-ibge.csv` pode ser reproduzido a partir da fonte geográfica versionada por `python3 tools/cnpj/gerar_municipios_ibge.py`; faça isso somente ao atualizar o catálogo.
 
-## Saída
+## Como a aplicação usa o recorte
 
-O JSON contém metadados da competência, fontes/checksums e municípios, seguidos por:
-
-- `empresas`: CNPJ básico, razão social original/normalizada e data da base;
-- `estabelecimentos`: CNPJ 14, nome fantasia, logradouro, número, bairro, CEP, município IBGE, UF, situação cadastral e data da base, incluindo as formas textuais normalizadas.
-
-Empresas sem estabelecimento ativo nos municípios escolhidos não entram no artefato. A lista é ordenada por CNPJ básico e CNPJ completo, tornando a geração reproduzível.
+O backend cruza município, endereço e nome do lead com as tabelas `cnpj_empresa` e `cnpj_estabelecimento`. Uma correspondência ambígua ou insuficiente não preenche CNPJ. A busca comum tenta esse enriquecimento para leads elegíveis; o detalhe do Histórico oferece a ação explícita **Buscar CNPJ** para os leads daquela busca. Uma nova competência pode levar à revalidação de CNPJs previamente associados. As regras de correspondência estão descritas no [fluxo interno](../../fluxo.md#1-criar-uma-busca).
