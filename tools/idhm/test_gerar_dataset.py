@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
@@ -88,6 +90,22 @@ class DatasetIdhmTest(unittest.TestCase):
         self.assertEqual(5_570, self.dataset["metadata"]["municipios"])
         self.assertEqual(2010, self.dataset["metadata"]["idhmReferencia"])
         self.assertEqual(["5101837"], self.dataset["metadata"]["municipiosSemGeometria"])
+
+    def test_checkout_windows_deve_preservar_bytes_do_dataset(self) -> None:
+        caminho_relativo = DATASET.relative_to(RAIZ_PROJETO)
+        with tempfile.TemporaryDirectory() as diretorio:
+            subprocess.run(
+                [
+                    "git", "-C", str(RAIZ_PROJETO), "-c", "core.autocrlf=true",
+                    "checkout-index", "--force", f"--prefix={Path(diretorio).as_posix()}/",
+                    "--", caminho_relativo.as_posix(),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            conteudo = (Path(diretorio) / caminho_relativo).read_bytes()
+            self.assertEqual(ARTEFATO_SHA256, hashlib.sha256(conteudo).hexdigest())
 
     def test_todos_os_municipios_devem_ter_campos_e_geometria_validos(self) -> None:
         for municipio in self.municipios:

@@ -2604,3 +2604,23 @@ Foi adicionado ao Kanban um seletor de buscas do Histórico entre Etapa e Catego
 - `frontend/src/app/features/kanban/kanban-page.ts`
 - `frontend/src/app/features/kanban/kanban-page.html`
 - `frontend/src/app/features/kanban/kanban-page.spec.ts`
+
+## 89. Preservação do checksum do dataset municipal no Windows — 25/10/2026
+
+O JSON municipal versionado foi confirmado com 3.709.696 bytes e SHA-256 `8c9ce54dff5eec54e7401ba2392e4305145edc4acb02c21388425393c6b56286`, igual ao recurso distribuído pelo build no Linux. Com `core.autocrlf=true`, o Git convertia o único LF do arquivo em CRLF no checkout e produzia exatamente o hash observado no Windows: `606912cfc73232bde95286a762d009dc89422e2aa45bfa3baa5bd27cab80de56`. O arquivo passou a ter uma regra `-text` específica em `.gitattributes`, mantendo seus bytes idênticos em qualquer checkout. A verificação SHA-256 e as validações de conteúdo no backend foram preservadas.
+
+Testes automatizados passaram a simular o checkout com `core.autocrlf=true`, conferir o hash do recurso no classpath e confirmar a rejeição de uma cópia convertida para CRLF.
+
+### Arquivos envolvidos
+
+**Criados:**
+
+- `src/test/java/dev/jlm/leadshunter/geo/MunicipioDatasetIntegrityTest.java`
+
+**Modificados:**
+
+- `.gitattributes`
+- `tools/idhm/test_gerar_dataset.py`
+- `tools/idhm/README.md`
+- `fluxo.md`
+- `HISTORICO_IMPLEMENTACOES.md`

@@ -88,6 +88,8 @@ A tela de Bloqueios usa `GET`, `POST` e `DELETE /api/bloqueios`. `NomeBloqueadoS
 
 `GET /api/geografia/municipios?bbox=...` consulta o dataset municipal/IDHM incluído no backend, limita o recorte e devolve GeoJSON para a camada opcional do mapa. A localização de um lead também usa esse dataset, sem download ou API geográfica no runtime. O backfill de geografia só roda por ativação explícita.
 
+O JSON municipal é um artefato congelado: o backend valida seu SHA-256 antes de ler os 5.570 municípios e seus dados geográficos. O Git preserva os bytes do arquivo em Windows e Linux pela regra específica em `.gitattributes`, inclusive quando `core.autocrlf=true`; o build distribui o mesmo recurso sem conversão de fins de linha.
+
 `GET /api/exportacao/leads.csv` e `GET /api/exportacao/leads.xlsx` passam por `ExportController` e `ExportService`. Aceitam `status`, `categoria`, `temperatura` e `buscaId`, reutilizando os filtros e a ordenação de `LeadService`. No Kanban, os arquivos usam os filtros **da última consulta aplicada**, mesmo que o formulário já tenha uma seleção nova ainda não aplicada. CSV é UTF-8 com escape de conteúdo; XLSX é produzido com Apache POI. Os arquivos incluem os campos atuais do lead, como geografia, CNPJ, site, e-mail e link manual de WhatsApp.
 
 ## 5. Configuração, erros e limites conhecidos

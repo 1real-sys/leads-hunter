@@ -80,3 +80,7 @@ O JSON final é ordenado por código IBGE e escrito de forma compacta e determin
 - `geometry` GeoJSON simplificada.
 
 O arquivo gerado não é um endpoint público nem uma entrada de runtime. Sua exposição filtrada por bbox será implementada somente na IDHM-02.
+
+O SHA-256 é calculado sobre os bytes exatos do JSON. A regra de `.gitattributes` para este arquivo desativa a conversão de fins de linha no checkout, pois uma única troca de LF por CRLF altera o checksum. `python3 tools/idhm/test_gerar_dataset.py` também simula um checkout com `core.autocrlf=true` e verifica que o artefato continua idêntico.
+
+Em um clone Windows criado antes dessa regra, depois de atualizar o repositório, restaure o arquivo do Git para reaplicar os atributos atuais: `git restore --source=HEAD --worktree -- src/main/resources/geo/municipios-idhm.json`. Faça isso somente se não houver alterações intencionais nesse JSON. Clones novos já recebem os bytes corretos.
