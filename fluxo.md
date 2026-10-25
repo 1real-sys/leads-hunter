@@ -1,683 +1,106 @@
-# Fluxo do Leads Hunter
+# Fluxo interno do Leads Hunter
 
-Este documento descreve o fluxo real do projeto no estado atual. O MVP, a melhoria FE-100, os refinamentos de IDHM e blacklist de nomes e as sprints CNPJ-00 a CNPJ-07 estão concluídos e validados nos respectivos escopos.
+Este documento explica como o projeto funciona **no código atual**. Para formatos de requisição e resposta, consulte [API.md](API.md); para a sequência de entregas, consulte [HISTORICO_IMPLEMENTACOES.md](HISTORICO_IMPLEMENTACOES.md). O fluxo descrito aqui considera a aplicação local, com uma pessoa usando o Angular e o backend Spring Boot.
 
-## Visão geral
-
-```text
-Cliente HTTP
-    |
-    | POST /api/buscas
-    v
-BuscaController.java
-    |
-    v
-BuscaService.java
-    |
-    +--> BuscaCacheKey.java
-    |        |
-    |        v
-    |    BuscaPlacesCache.java
-    |        |
-    |        +--> cache hit: reutiliza PlacesSearchResponse
-    |        |
-    |        +--> cache miss
-    |                 |
-    |                 v
-    +------------> PlacesSearchRequest.java
-    |        |
-    |        v
-    |    PlacesApiClient.java
-    |        |
-    |        v
-    |    PlacesRateLimiter.java
-    |        |
-    |        | POST /v1/places:searchNearby
-    |        v
-    |    Google Places API (New)
-    |        |
-    |        v
-    |    PlacesResponseMapper.java
-    |        |
-    |        v
-    |    PlacesSearchResponse.java
-    |
-    +--> NomeBloqueadoService.java --> NomeBloqueadoRepository.java --> MySQL
-    |        |
-    |        +--> ignora nomes bloqueados após deduplicar por googlePlaceId
-    |
-    +--> TelefoneNormalizer.java
-    |
-    +--> MunicipioService.java
-    |        |
-    |        +--> dataset IDHM offline + bbox + point-in-polygon
-    |
-    +--> CnpjService.java
-    |        |
-    |        +--> política fail-closed + endereço exato ou caminho legado
-    |        +--> CnpjEstabelecimentoRepository.java --> MySQL
-    |
-    +--> ScoringService.java
-    |        |
-    |        +--> calcula score de 0 a 95
-    |        +--> classifica FRIO, MORNO ou QUENTE
-    |
-    +--> Busca.java --> BuscaRepository.java --> MySQL
-    |
-    +--> LeadRepository.java
-    |        |
-    |        +--> cria Lead com status NOVO
-    |        +--> ou atualiza dados externos do Lead existente
-    |        v
-    |      MySQL
-    |
-    +--> BuscaLead.java --> BuscaLeadRepository.java --> MySQL
-    |
-    +--> WhatsAppLinkGenerator.java
-    |        |
-    |        +--> gera URL somente para telefone normalizado válido
-    |
-    v
-BuscaResponse.java
-    |
-    v
-Resposta HTTP 201 Created
-```
-
-O fluxo de consulta dos leads persistidos é independente de uma nova busca:
+## Componentes e dados
 
 ```text
-GET /api/leads, GET /api/leads/pagina, GET /api/leads/{id} ou PATCH /api/leads/{id}
-    |
-    v
-LeadController.java
-    |
-    v
-LeadService.java --> LeadRepository.java --> MySQL
-    |
-    +--> WhatsAppLinkGenerator.java
-    |
-    v
-LeadResponse.java --> Resposta HTTP 200 OK
+Angular (frontend/)
+    │ HTTP /api
+    ▼
+Controllers Spring (src/main/java/dev/jlm/leadshunter/)
+    │ validação de entrada e resposta HTTP
+    ▼
+Services de busca, leads, CNPJ, geografia e enriquecimento
+    ├── Google Places API (New), pelo PlacesApiClient
+    ├── Brave Search API, quando a ação Buscar informações o permite
+    ├── dataset municipal/IDHM local
+    ├── páginas públicas candidatas ou do site oficial, com limites próprios
+    └── repositories JPA → MySQL local (schema controlado por Flyway)
 ```
 
-O histórico das buscas também pode ser consultado sem chamar a Google novamente:
+O frontend usa as rotas `busca`, `kanban`, `historico`, `historico/:id` e `bloqueios`. Os componentes de `frontend/src/app/features/` chamam os serviços em `frontend/src/app/core/api/`; os modelos de `frontend/src/app/shared/models/` representam os contratos HTTP. Em desenvolvimento, o proxy encaminha `/api` ao backend local. Não há autenticação, multiusuário ou deploy na aplicação atual.
+
+`Busca` guarda os parâmetros e o resumo de cada execução. `Lead` guarda um estabelecimento único, deduplicado por `googlePlaceId`, com dados externos, classificação e dados comerciais atuais. `BuscaLead` relaciona os dois em N:N e guarda `scoreNaBusca` e `temperaturaNaBusca`: esses dois valores registram a classificação **daquela execução**, mesmo que o `Lead` mude depois. As execuções das ações de informações e e-mails têm tabelas próprias para status, progresso e resultado. O schema evolui pelas migrations `V1` a `V12`; o Hibernate valida o schema (`ddl-auto: validate`).
+
+## 1. Criar uma busca
 
 ```text
-GET /api/buscas ou GET /api/buscas/{id}
-    |
-    v
-BuscaController.java
-    |
-    v
-BuscaService.java
-    |
-    +--> BuscaRepository.java --> resumo da busca
-    |
-    +--> BuscaLeadRepository.java --> Lead atual + score/temperatura da execução
-    |
-    +--> WhatsAppLinkGenerator.java
-    v
-BuscaResumoResponse.java ou BuscaDetalheResponse.java --> Resposta HTTP 200 OK
+Mapa + formulário Angular
+    → POST /api/buscas
+    → BuscaController
+    → BuscaService
+    → BuscaPlacesCache
+         ├── hit: reutiliza a resposta externa
+         └── miss: PlacesApiClient → PlacesRateLimiter → Google Places Nearby Search
+    → deduplicação e bloqueios
+    → atualização dos Leads, geografia, CNPJ e scoring
+    → Busca + BuscaLead no MySQL
+    → HTTP 201 com resumo e leads encontrados
 ```
 
-A exportação CSV e Excel consulta os mesmos leads e filtros do Kanban:
+1. `BuscaPage` mantém coordenadas e raio sincronizados entre mapa e formulário. `BuscaRequest` valida coordenadas, categorias e raio de até 20 km antes de `BuscaService.criar` processar a requisição.
+2. `BuscaCacheKey` usa coordenadas arredondadas, raio e categorias normalizadas. `BuscaPlacesCache` guarda por padrão até 100 respostas da Google durante 30 minutos. Um hit evita nova chamada externa, **mas ainda cria uma nova execução `Busca` e seus vínculos**.
+3. Em um miss, `PlacesApiClient` monta o Nearby Search a partir das categorias, solicita os campos necessários e passa pelo `PlacesRateLimiter` antes da chamada real. `PlacesResponseMapper` traduz a resposta da Google para o modelo interno, incluindo telefone, `websiteUri`, coordenadas, endereço estruturado, avaliação e situação operacional quando vierem na resposta.
+4. `BuscaService` salva em `Busca` o total bruto retornado. Depois remove resultados repetidos pelo `googlePlaceId` e consulta os termos de `NomeBloqueadoService`. Um nome bloqueado não cria nem atualiza `Lead` ou `BuscaLead`; a resposta imediata informa `totalBloqueados` separadamente.
+5. Para cada resultado permitido, o serviço encontra o `Lead` pelo `googlePlaceId` ou cria um com status `NOVO`. Atualiza os dados externos presentes, inclusive telefone brasileiro normalizado e endereço estruturado. Ausência de telefone, componente de endereço ou site na nova resposta não apaga um valor conhecido. Se um novo `websiteUri` mudar o host do site, o e-mail anteriormente capturado e seus metadados são limpos.
+6. Com coordenadas, `MunicipioService` localiza município/UF e IDHM no dataset offline. Sem correspondência, os campos geográficos ficam nulos. Em seguida, `CnpjService` tenta correspondência na base local para lead sem CNPJ; um CNPJ já preenchido é revalidado somente quando muda a competência ativa do município. A política de correspondência por endereço exato é fechada por padrão e depende de allowlist válida; fora dela, permanece o caminho legado. Correspondência insuficiente, ambígua ou truncada não preenche CNPJ. Uma base nova que não confirme o mesmo CNPJ limpa o enriquecimento antigo, sem substituí-lo silenciosamente por outro.
+7. `ScoringService` calcula de 0 a 95 pontos por categoria, telefone, avaliações e funcionamento e classifica `FRIO`, `MORNO` ou `QUENTE`. `status`, `observacoes` e `ultimoContatoEm` definidos pelo usuário são preservados quando o lead reaparece. O score atual é salvo no `Lead`; o score e a temperatura da execução são copiados para `BuscaLead`.
+8. A criação ocorre em uma transação. Um estabelecimento retornado sem `googlePlaceId` interrompe e reverte a gravação. `BuscaResponse` devolve os IDs dos leads persistidos e o resumo da execução.
 
-```text
-GET /api/exportacao/leads.csv?status=...&categoria=...&temperatura=...
-    |
-    v
-ExportController.java
-    |
-    v
-ExportService.java --> LeadService.java --> LeadRepository.java --> MySQL
-    |
-    +--> escaping CSV e URL manual de WhatsApp
-    v
-Arquivo UTF-8 leads.csv --> Resposta HTTP 200 OK
+A busca comum não executa automaticamente as ações **Buscar CNPJ**, **Buscar informações** ou **Buscar e-mails** do Histórico. Ela também não envia mensagens pelo WhatsApp.
 
-GET /api/exportacao/leads.xlsx?status=...&categoria=...&temperatura=...
-    |
-    v
-ExportController.java --> ExportService.java --> Apache POI
-    |
-    v
-Arquivo leads.xlsx --> Resposta HTTP 200 OK
-```
+## 2. Consultar e administrar leads
 
-A camada geográfica consulta somente o dataset offline já carregado:
+`LeadController` expõe `GET /api/leads`, `GET /api/leads/pagina`, `GET /api/leads/{id}` e `PATCH /api/leads/{id}`. `LeadService` aplica filtros combináveis de `status`, `categoria`, `temperatura` e `buscaId`. Quando há `buscaId`, o vínculo `BuscaLead` restringe quais leads entram na consulta; os campos exibidos continuam sendo os **valores atuais do Lead**. A ordenação é por score decrescente, nome e ID. A rota paginada exige status e limita cada página a 25 registros.
 
-```text
-GET /api/geografia/municipios?bbox=minLng,minLat,maxLng,maxLat
-    |
-    v
-GeografiaController.java --> MunicipioService.java
-    |
-    +--> valida bbox, limita a 1.500 municípios e filtra envelopes em memória
-    v
-GeoJSON FeatureCollection com Polygon/MultiPolygon simplificados
-```
+O Kanban consulta uma página por etapa, com totais e páginas independentes. A seleção de **Endereço base de pesquisa** usa o ID de uma execução do Histórico como `buscaId`; a opção padrão reúne todas as buscas. Depois de mover um card, a interface envia `PATCH /api/leads/{id}` e recarrega as colunas afetadas. O mesmo endpoint atualiza observações e último contato no detalhe. Campos omitidos no PATCH são preservados; não há recálculo de score por mudança manual de status. Limpar o campo de último contato na interface não remove a data persistida pelo contrato atual.
 
-## Fluxo atual, arquivo por arquivo
+`LeadResponse` expõe dados do estabelecimento, classificação, geografia, CNPJ, site, e-mail e dados comerciais sem retornar a entidade JPA diretamente. `WhatsAppLinkGenerator` cria `https://wa.me/55...` somente para telefone brasileiro normalizado válido. O Kanban, o Histórico e as exportações apenas apresentam esse link para abertura manual; não há envio automático.
 
-### 1. `BuscaController.java`
+## 3. Consultar o Histórico
 
-É o ponto de entrada HTTP. Recebe `POST /api/buscas`, converte o JSON em `BuscaRequest`, executa as validações e delega para `BuscaService.criar`. Quando o fluxo termina, responde com HTTP `201 Created` e um `BuscaResponse`.
+`GET /api/buscas` lê os resumos persistidos da mais recente para a mais antiga. `GET /api/buscas/{id}` lê a `Busca` e seus vínculos `BuscaLead`; não repete consulta à Google nem ao cache. No detalhe, score e temperatura vêm do snapshot da execução. Status, observações, último contato, CNPJ, razão social, site e e-mail vêm do estado **atual** de cada `Lead`. Assim, uma atualização comercial ou um enriquecimento posterior aparece também em buscas antigas sem alterar o score histórico.
 
-Também expõe `GET /api/buscas`, que lista os resumos do histórico do mais recente para o mais antigo, e `GET /api/buscas/{id}`, que abre uma execução com os leads encontrados. Uma busca inexistente retorna HTTP `404 Not Found` por meio de `BuscaNaoEncontradaException`.
+O detalhe do Histórico oferece três ações explícitas: **Buscar CNPJ**, **Buscar informações** e **Buscar e-mails**. Cada uma opera somente sobre os leads vinculados à busca selecionada. As ações têm regras e persistência próprias descritas abaixo.
 
-### 2. `BuscaRequest.java`
+### Buscar CNPJ
 
-Representa os parâmetros recebidos: endereço-base, latitude, longitude, raio em quilômetros e categorias. Valida coordenadas geográficas, exige pelo menos uma categoria e limita o raio a 20 km.
+`POST /api/buscas/{id}/cnpj` chama `BuscaCnpjService`. Ele percorre os vínculos da execução, ignora leads que já têm CNPJ e tenta correspondência local para os demais, na mesma transação. A resposta informa total, ignorados, encontrados e sem correspondência. A base mensal de CNPJ é carregada localmente pelo pipeline em `tools/cnpj/`; a aplicação não consulta a Receita em runtime. O botão não altera dados comerciais, score nem snapshots históricos.
 
-### 3. `BuscaService.java`
+### Buscar informações públicas
 
-Coordena o caso de uso. Gera uma `BuscaCacheKey` e consulta `BuscaPlacesCache`. Se não houver resultado recente, converte o request em `PlacesSearchRequest` e chama `PlacesApiClient.buscarProximos`; se houver, reutiliza o `PlacesSearchResponse` sem nova chamada à Google. Depois conta os estabelecimentos, monta a entidade `Busca`, serializa as categorias e persiste o resumo por `BuscaRepository.saveAndFlush`.
+`POST /api/buscas/{id}/informacoes` cria ou recupera uma execução persistida e responde `202`; `GET` na mesma rota consulta seu progresso e responde `204` quando ainda não existe execução. `BuscaInformacoesExecucaoService` limita o volume por execução, impede duas execuções ativas da mesma busca e reserva o worker após o commit. O worker processa os leads em sequência, fora de uma transação longa; o resultado de cada lead e os contadores são gravados em transações curtas. Uma execução interrompida não retoma automaticamente na inicialização seguinte.
 
-O cache guarda somente a resposta externa. Cada requisição continua criando uma nova `Busca`, processando os leads e registrando os vínculos `BuscaLead`, inclusive quando ocorre cache hit.
+`BuscaInformacoesService` ignora um lead cujo bloco automático de observações já contém Instagram e site válidos. Para os demais, `PesquisaWebInternaService` tenta primeiro o site oficial conhecido (`websiteUri`) e os links públicos extraídos dele. Se não houver confirmação e a opção **Brave Search** estiver ativa, consulta a API oficial do Brave. O teto é de **três consultas ao Brave e três páginas candidatas por lead**, contando o site oficial quando ele é aberto. As páginas candidatas são o próprio site ou perfil público do Instagram, usadas somente para confirmar telefone, endereço ou CNPJ; o fluxo não navega por páginas de resultados de buscadores.
 
-Para cada estabelecimento, consolida resultados repetidos pelo `googlePlaceId`, carrega os termos ativos em `NomeBloqueadoService` e ignora nomes que contenham qualquer termo normalizado. A contagem de bloqueados considera somente resultados únicos; `totalEncontrados` continua representando a resposta externa bruta. Um resultado bloqueado não cria `Lead` nem `BuscaLead`, e leads de buscas anteriores não são removidos.
+`ClassificadorUrlService` avalia identidade e conflitos entre candidatos. Nome ou handle parecido, sozinho, não confirma um link. `LeitorPaginaCandidata` aceita apenas destinos HTTP/HTTPS públicos, não segue redirecionamentos e impõe timeout e limite de leitura. Páginas inacessíveis e falhas técnicas não viram ausência conclusiva. `FormatadorObservacoesPesquisa` atualiza somente o bloco automático de links ou ausência e preserva o texto comercial fora dele. A ação não altera status, último contato, CNPJ, score nem snapshots.
 
-Para cada resultado permitido, consulta `LeadRepository`. Se o lead não existir, cria um registro com status `NOVO`. Se já existir, atualiza somente os dados externos presentes. Além do endereço formatado, persiste CEP, logradouro, número e bairro quando a Google fornece `addressComponents`; a ausência de um componente novo não apaga o valor já conhecido. Quando há telefone brasileiro válido, salva o valor original e a versão normalizada. Com latitude e longitude disponíveis, consulta `MunicipioService` e atualiza código IBGE, município, UF, IDHM e referência; quando as coordenadas não correspondem ao dataset, limpa somente esses campos geográficos.
+### Buscar e-mails
 
-Depois da geografia e antes do scoring, um lead ainda sem CNPJ passa pelo `CnpjService`. Quando a política fail-closed permite o município/UF, o caminho exato exige CEP válido, número canônico, logradouro normalizado, município e estabelecimento ativo; um único candidato passa sem veto nominal, e múltiplos candidatos só passam com exatamente um nome acima de `0,55`. Consulta truncada e ambiguidade recusam. Fora da política ou sem endereço exato, permanece o caminho legado com nome obrigatório, limiares e pontuação atuais, usando a coluna `numero_normalizado`. Correspondências confiáveis preenchem CNPJ, razão social, origem, instante, competência da base e confiança. Um CNPJ existente é preservado enquanto a competência ativa do município permanece igual; quando uma carga nova aparece, a captura revalida e limpa todos os campos CNPJ se a nova base não confirmar a unidade. Ausência, baixa confiança, ambiguidade ou limite excedido continuam sem gerar CNPJ. Por fim, `ScoringService` atualiza score e temperatura, preservando `status`, `observacoes` e `ultimoContatoEm`; a regra de pontuação não usa CNPJ.
+`POST /api/buscas/{id}/emails` inicia ou recupera a execução persistida; `GET` acompanha seu progresso. `BuscaEmailExecucaoService` impede duas execuções ativas da mesma busca e agenda o worker após o commit. `BuscaEmailProcessamento` percorre os leads vinculados, ignora quem já tem e-mail e registra o resultado de cada lead em transação curta.
 
-Por fim, cria um `BuscaLead` para relacionar a nova busca ao lead e registra nele o score e a temperatura daquela execução. Em seguida, converte os leads persistidos em `BuscaResponse`. Todo o processo ocorre na mesma transação; um resultado sem `googlePlaceId` interrompe e reverte a operação.
+`EmailLeadService` lê somente o `websiteUri` oficial e, se necessário, uma página de contato do **mesmo host**: no máximo duas páginas por lead. O conteúdo precisa confirmar a identidade do estabelecimento por telefone, endereço numerado ou CNPJ, sem conflito. Apenas e-mail do host normalizado do site ou de subdomínio é elegível; endereços externos descartados entram somente em um contador agregado. O e-mail aprovado é gravado com data e host de origem. Não há envio automático, consulta ao Brave ou à Google nessa ação. Falha de leitura e omissão do site em nova resposta Places não apagam um e-mail válido existente.
 
-Nas consultas do histórico, `listarHistorico` lê as buscas já ordenadas por `criadoEm` decrescente. `buscarHistoricoPorId` combina o resumo persistido em `Busca` com os vínculos de `BuscaLead`. O detalhe usa `scoreNaBusca` e `temperaturaNaBusca` para preservar o retrato daquela execução, enquanto CNPJ, status, observações e último contato refletem o estado atual do `Lead`. Essas operações usam transações somente de leitura e não acionam cache nem Google Places.
+## 4. Bloqueios, geografia e exportação
 
-### 4. `BuscaCacheKey.java` e `BuscaPlacesCache.java`
+A tela de Bloqueios usa `GET`, `POST` e `DELETE /api/bloqueios`. `NomeBloqueadoService` normaliza termos, persiste-os com unicidade e os consulta a cada nova busca. O filtro atua **antes** da persistência dos resultados daquela busca; cadastrar um termo não remove leads históricos já salvos.
 
-`BuscaCacheKey` identifica buscas equivalentes usando latitude e longitude arredondadas para quatro casas decimais, raio e categorias distintas em ordem alfabética. O texto de `enderecoBase` não participa da chave.
+`GET /api/geografia/municipios?bbox=...` consulta o dataset municipal/IDHM incluído no backend, limita o recorte e devolve GeoJSON para a camada opcional do mapa. A localização de um lead também usa esse dataset, sem download ou API geográfica no runtime. O backfill de geografia só roda por ativação explícita.
 
-`BuscaPlacesCache` usa Caffeine para manter `PlacesSearchResponse` em memória. Por padrão, cada entrada expira após 30 minutos e o cache aceita até 100 buscas. Os valores podem ser alterados por `BUSCA_CACHE_EXPIRACAO_MINUTOS` e `BUSCA_CACHE_TAMANHO_MAXIMO`. Falhas do carregador não são armazenadas.
+`GET /api/exportacao/leads.csv` e `GET /api/exportacao/leads.xlsx` passam por `ExportController` e `ExportService`. Aceitam `status`, `categoria`, `temperatura` e `buscaId`, reutilizando os filtros e a ordenação de `LeadService`. No Kanban, os arquivos usam os filtros **da última consulta aplicada**, mesmo que o formulário já tenha uma seleção nova ainda não aplicada. CSV é UTF-8 com escape de conteúdo; XLSX é produzido com Apache POI. Os arquivos incluem os campos atuais do lead, como geografia, CNPJ, site, e-mail e link manual de WhatsApp.
 
-### 4A. `NomeBloqueado`, repository, service e controller
+## 5. Configuração, erros e limites conhecidos
 
-A migration V3 cria `nome_bloqueado` com o termo original, sua forma normalizada, data de criação e unicidade no valor normalizado. `NomeBloqueadoService` exige de 3 a 120 caracteres após `trim`, aplica NFKD, remove marcas diacríticas e converte para minúsculas com `Locale.ROOT`.
+`application.yml` lê credenciais do MySQL e chaves externas por `DB_USERNAME`, `DB_PASSWORD`, `GOOGLE_PLACES_API_KEY` e `BRAVE_SEARCH_API_KEY`. O arquivo local `.env` é ignorado pelo Git e precisa ser carregado no ambiente antes de iniciar o Spring Boot; `.env.example` é o modelo sem segredos. Google Places é necessário para uma busca externa real. Brave é opcional para a ação de informações. O scraper legado de motores de busca permanece desativado na configuração padrão.
 
-`GET /api/bloqueios`, `POST /api/bloqueios` e `DELETE /api/bloqueios/{id}` listam, cadastram e removem termos. Duplicidade normalizada retorna `400`, e remoção de ID inexistente retorna `404`, sempre pelo contrato de erro comum. Não há cache dos termos: cada execução de busca lê o estado atual da tabela.
+`ApiExceptionHandler` transforma erros de validação, recurso inexistente, limite, integração externa e falhas inesperadas no contrato `ApiErrorResponse`, sem expor resposta bruta externa ou credenciais. Falhas da Google não são armazenadas no cache; uma requisição que falha antes de persistir não cria histórico.
 
-### 5. `PlacesSearchRequest.java`
+Pontos ainda abertos no estado atual:
 
-É o contrato interno da integração. Transporta latitude, longitude, raio e categorias sem expor o formato JSON específico da Google ao restante da aplicação.
+- A promoção da correspondência CNPJ por endereço exato depende da revisão manual integral do diagnóstico; a política de produção permanece fechada sem allowlist aprovada.
+- A precisão e a cobertura amplas da pesquisa de site/Instagram ainda dependem de uma amostra rotulada maior. Alguns sites públicos bloqueiam a leitura pelo backend; uma página bloqueada não é contornada automaticamente.
+- A busca de e-mails tem validação automatizada, mas ainda não há medição de captura em uma amostra real de sites.
+- IDHM e CNPJ não entram no `ScoringService`; cadastrar um bloqueio não faz limpeza retroativa de leads.
 
-### 6. `PlacesApiClient.java`
-
-Isola a comunicação com o Google Places API (New). Ele:
-
-- lê a chave de `${GOOGLE_PLACES_API_KEY}`;
-- converte categorias internas em tipos da Google, como `PADARIA -> bakery`;
-- transforma o raio de quilômetros para metros;
-- limita a resposta a 20 estabelecimentos;
-- ordena por popularidade;
-- solicita uma permissão ao `PlacesRateLimiter`;
-- faz um `POST` para `places:searchNearby`;
-- usa uma Field Mask para pedir somente ID, nome, endereço formatado e seus componentes, telefones, coordenadas, avaliação, quantidade de avaliações, situação e tipos.
-
-Se a chave estiver ausente, a chamada é interrompida com `PlacesApiConfigurationException`, explicando qual variável deve ser configurada. Respostas HTTP da Google são traduzidas para exceções do domínio da integração: `429` vira cota excedida, `401/403` viram falha de configuração, outros `4xx` viram consulta rejeitada e respostas `5xx` ou falhas de rede viram indisponibilidade. Se o corpo não puder ser convertido, o cliente sinaliza resposta inválida. Os detalhes brutos da resposta externa permanecem somente na causa interna da exceção.
-
-Os campos de telefone são `internationalPhoneNumber` e `nationalPhoneNumber`. Eles pertencem ao Nearby Search Enterprise, assim como o campo `rating` que a busca já solicitava.
-
-### 7. `PlacesRateLimiter.java`
-
-Usa Bucket4j para limitar chamadas HTTP reais à Google. Por padrão, permite uma capacidade de 10 requisições com reposição gradual ao longo de 60 segundos. Os valores podem ser alterados por `GOOGLE_PLACES_RATE_LIMIT_REQUISICOES` e `GOOGLE_PLACES_RATE_LIMIT_PERIODO_SEGUNDOS`.
-
-Quando não há permissão disponível, lança `PlacesRateLimitExceededException` e a API responde com HTTP `429 Too Many Requests`. Cache hit não chega ao `PlacesApiClient` e, portanto, não consome permissão. O bucket fica apenas em memória e é reiniciado junto com a aplicação; ele protege contra rajadas, não controla sozinho um orçamento mensal.
-
-### 8. `PlacesResponseMapper.java`
-
-Converte a resposta externa para o modelo interno. Mapeia os campos da Google, trata resposta vazia e infere `CategoriaNegocio` a partir dos tipos recebidos. Por exemplo, `supermarket` vira `MERCADO` e `candy_store` vira `DOCERIA`. Para telefone, prefere o formato internacional e usa o nacional como alternativa. Também extrai CEP, logradouro, número e bairro dos tipos oficiais de `addressComponents`; CEP inválido é descartado e a ausência completa resulta em endereço estruturado nulo.
-
-### 9. `PlacesSearchResponse.java`
-
-Representa o resultado interno da integração. Cada `PlaceResult` contém `googlePlaceId`, nome, categoria, endereço formatado, telefone, coordenadas, rating, total de reviews, situação operacional, tipos originais da Google e um `EnderecoEstruturado` opcional com CEP, logradouro, número e bairro.
-
-### 10. `Busca.java` e `BuscaRepository.java`
-
-`Busca` representa o histórico da pesquisa. O repository persiste no MySQL o endereço-base, coordenadas, raio, categorias pesquisadas, total encontrado e data de criação. O schema inicial é criado pela V1, a geografia do lead pela V2, os bloqueios pela V3, o endereço estruturado/CNPJ pela V4 e a proveniência/confiança pela V5, sempre com Flyway e `ddl-auto: validate`. O conteúdo versionado da migration repetível `R__carregar_subset_cnpj.sql` é um placeholder; o recorte mensal volumoso é gerado e carregado localmente, mas não deve ser commitado.
-
-### 11. `TelefoneNormalizer.java` e `WhatsAppLinkGenerator.java`
-
-Remove a formatação do telefone e produz somente dígitos no padrão `55 + DDD + número`. Aceita telefone fixo ou celular brasileiro em formato nacional, `+55` ou `0055`. Números ausentes, incompletos, com DDI estrangeiro, 0800 ou DDD inválido são ignorados. Um resultado inválido não apaga um telefone válido salvo anteriormente.
-
-`WhatsAppLinkGenerator` recebe apenas o telefone já normalizado e gera uma URL manual no formato `https://wa.me/55DDDNUMERO`. Para telefone ausente, formatado ou inválido, retorna `null`. A aplicação somente entrega o link para o usuário abrir; não existe disparo automático ou em massa.
-
-### 12. `ScoringService.java`
-
-Centraliza toda a regra de pontuação. Categorias específicas recebem 30 pontos, telefone válido recebe 25, reviews podem somar até 15, rating até 15 e um estabelecimento `OPERATIONAL` recebe 10. `OUTROS` não recebe pontos de categoria. A soma máxima da regra atual é 95.
-
-A temperatura é calculada pelo resultado: `FRIO` de 0 a 39, `MORNO` de 40 a 69 e `QUENTE` de 70 a 100.
-
-### 13. `Lead.java` e `LeadRepository.java`
-
-`Lead` representa um estabelecimento único. `LeadRepository.findByGooglePlaceId` é usado como chave de deduplicação. Um lead novo começa em `NOVO`; um lead existente mantém os dados comerciais definidos pelo usuário quando reaparece em outra busca. A migration V2 adicionou código IBGE, nome do município, UF, IDHM e ano de referência; a V4 adicionou CEP, logradouro, número, bairro, CNPJ, razão social e instante da correspondência, com restrição para CNPJ de 14 dígitos. A V5 acrescentou `cnpj_data_base` e `cnpj_confianca`, restringiu confiança ao intervalo de 0 a 1 e limpou correspondências produzidas pela antiga carga sem proveniência. A consulta parametrizada de pendências geográficas usa paginação por ID e lotes limitados.
-
-### 13A. `MunicipioDataset.java`, `MunicipioService.java` e backfill
-
-`MunicipioDataset` lê exclusivamente `classpath:geo/municipios-idhm.json` durante a inicialização, limita o artefato a 6 MiB, verifica o SHA-256 congelado e valida metadados, quantidade, códigos únicos, coordenadas e geometrias antes de mantê-las em memória. Não existe download em runtime.
-
-`MunicipioService` recebe latitude e longitude, descarta valores ausentes ou fora dos limites geográficos, reduz a busca pelos envelopes municipais e aplica point-in-polygon em Polygon e MultiPolygon, considerando também buracos. O resultado interno contém código IBGE, município, UF, IDHM e referência 2010. Para a camada do mapa, também valida o bbox recebido, seleciona todo envelope municipal que o intersecta e converte o subset para GeoJSON sem chamada externa. A consulta é interrompida antes da conversão quando excede 1.500 municípios. O filtro por envelope é deliberado, conforme o contrato da IDHM-02; a geometria exata fica a cargo do Leaflet, e não há segundo teste de interseção poligonal no backend.
-
-O `MunicipioBackfillRunner` só existe quando `leadhunter.backfill-municipio=true`. Ao ser ativado explicitamente, processa em lotes de 100 apenas leads com coordenadas e sem código municipal, avançando por ID para que municípios não encontrados não causem repetição infinita. Por padrão o runner fica ausente e nenhum lead anterior é alterado no startup.
-
-### 13B. `CnpjEmpresa`, `CnpjEstabelecimento` e `CnpjService`
-
-`CnpjEmpresa` guarda CNPJ básico e razão social; `CnpjEstabelecimento` representa a unidade de 14 dígitos, com nome fantasia, endereço estruturado, município IBGE, UF, situação cadastral e data da base. A associação JPA usa o CNPJ básico e os repositories oferecem consultas paginadas e limitadas para município ativo com CEP ou número.
-
-`CnpjService` executa correspondência local e sem chamada externa. `CnpjMatchEvaluator` concentra a avaliação pura de endereço e legado; `CnpjMatchPolicy` mantém o caminho exato desligado sem allowlist válida. A normalização ignora acentos, caixa, pontuação, abreviações usuais de logradouro e termos jurídicos/genéricos; o número segue a regra canônica compartilhada com a V9, enquanto o diagnóstico mantém o normalizador e as consultas cruas versionados para comparação. Mais de 200 candidatos, consulta truncada, múltiplos resultados aprovados ou qualquer insuficiência deixam o lead sem correspondência. O resultado aprovado inclui a origem, a data-base do estabelecimento e a pontuação arredondada para quatro casas; o repository também consulta a maior competência ativa por município para orientar a revalidação.
-
-### 14. `LeadController.java`, `LeadService.java` e `LeadResponse.java`
-
-Expõem a leitura e a atualização comercial dos leads já persistidos. `GET /api/leads` lista todos e aceita os filtros opcionais `status`, `categoria` e `temperatura`, que podem ser combinados. `GET /api/leads/pagina` exige um status e pagina essa etapa no banco com `page`, `size` limitado a 25 e os filtros opcionais de categoria e temperatura, retornando conteúdo, página e totais reais. As consultas usam Query by Example e ordenam por maior score, nome e ID como desempate estável. `GET /api/leads/{id}` retorna um lead específico ou HTTP `404 Not Found` por meio de `LeadNaoEncontradoException`.
-
-`PATCH /api/leads/{id}` recebe `AtualizarLeadRequest` e altera somente os campos informados entre `status`, `observacoes` e `ultimoContatoEm`. O payload vazio é rejeitado por Bean Validation. Os demais atributos do lead são preservados, e a resposta contém o estado persistido atualizado.
-
-`LeadResponse` mantém a entidade JPA fora do contrato HTTP e apresenta os dados externos, a classificação, os campos comerciais, código IBGE, município, UF, IDHM, referência e `whatsappUrl` quando houver telefone normalizado válido. `PaginaLeadsResponse` herda os mesmos campos por conter uma lista desse contrato. As consultas são executadas em transações somente de leitura, enquanto a atualização usa uma transação de escrita.
-
-### 15. `BuscaLead.java` e `BuscaLeadRepository.java`
-
-Representam e persistem o relacionamento N:N. Assim, uma busca pode encontrar vários leads e o mesmo lead pode aparecer em várias buscas sem ser duplicado. `scoreNaBusca` e `temperaturaNaBusca` guardam uma cópia do resultado calculado naquela execução, mesmo que o lead seja recalculado futuramente. A consulta do detalhe carrega o `Lead` junto com cada vínculo por `EntityGraph` e ordena os resultados pelo score histórico decrescente.
-
-### 16. `BuscaResponse.java`
-
-É a resposta pública do endpoint. Retorna os dados da busca, `totalBloqueados` e uma lista resumida dos leads persistidos. O campo `id` de cada item contém o identificador do `Lead`; telefone, `whatsappUrl`, score e temperatura são retornados quando disponíveis.
-
-### 17. `BuscaResumoResponse.java` e `BuscaDetalheResponse.java`
-
-São os contratos públicos do histórico. O resumo contém os parâmetros, total e data da busca. O detalhe acrescenta os leads vinculados, o CNPJ atual, o link manual de WhatsApp, o score e a temperatura daquela execução, além dos campos comerciais atuais. As categorias persistidas como texto são novamente apresentadas como valores de `CategoriaNegocio`.
-
-### 18. `ExportController.java` e `ExportService.java`
-
-Expõem `GET /api/exportacao/leads.csv` e `GET /api/exportacao/leads.xlsx`. Ambos aceitam os filtros opcionais `status`, `categoria` e `temperatura`, reutilizam a ordenação e o mapeamento de `LeadService` e exportam as colunas externas e comerciais do `Lead`, incluindo UF, município e IDHM. O CSV é UTF-8 com escaping de vírgulas, aspas e quebras de linha; o Excel é gerado com Apache POI, cabeçalho em negrito, filtro automático, primeira linha congelada, autoajuste de colunas e células tipadas para números e datas. O link de WhatsApp exportado continua sendo apenas manual.
-
-### 19. `ApiExceptionHandler.java` e `ApiErrorResponse.java`
-
-`ApiExceptionHandler` centraliza a conversão das falhas de integração, validação de payload, parâmetros inválidos e exceções de recurso não encontrado em um contrato JSON único. Toda resposta contém `timestamp`, `status`, `codigo`, `mensagem` e `path`. Falhas de cota ou do rate limit local retornam `429`; chave ausente ou indisponibilidade retornam `503`; resposta inválida ou consulta rejeitada pela Google retornam `502`; validações, requisições malformadas, bbox inválido e bloqueio duplicado retornam `400`; buscas, leads e bloqueios inexistentes retornam `404`. Exceções inesperadas são registradas apenas com método, rota e tipo da exceção e retornam `500 ERRO_INTERNO` com mensagem genérica. O contrato não expõe stack trace, corpo bruto da Google, mensagens internas ou credenciais.
-
-## Estrutura relacionada
-
-```text
-src/main/java/dev/jlm/leadshunter/
-├── busca/                 # Endpoint, service, cache, entidades e histórico
-├── bloqueio/              # Cadastro persistente e normalização da blacklist
-├── cnpj/                  # Espelho local e correspondência segura por unidade
-├── integracao/places/     # Cliente Google, rate limit, contratos e mapper
-├── lead/                  # Gestão de leads, telefone e link manual de WhatsApp
-├── scoring/               # Cálculo centralizado de score e temperatura
-├── exportacao/            # Exportação CSV e Excel
-├── geo/                   # Dataset, localização e endpoint GeoJSON municipal
-└── config/                # Endpoints, configurações e tratamento HTTP de erros
-
-src/main/resources/
-├── application.yml        # Banco, Flyway e variável da chave Google
-└── db/migration/          # Schema versionado
-
-src/test/java/dev/jlm/leadshunter/
-├── busca/                 # Testes do fluxo de BuscaService e integração JPA
-├── cnpj/                  # Testes da persistência e correspondência de unidade
-├── integracao/places/     # Testes do cliente, mapper e rate limit da Google
-├── config/                # Testes do contrato HTTP de erros
-├── lead/                  # Testes de consulta, atualização e telefone
-└── scoring/               # Testes das regras de score e temperatura
-```
-
-## O que já está implementado e testado
-
-- Entidades `Busca`, `Lead` e `BuscaLead`, repositories e migration inicial.
-- Relacionamento N:N modelado entre `Busca` e `Lead` por `BuscaLead`.
-- Restrição única de `Lead.googlePlaceId` no banco.
-- Cadastro persistente de bloqueios por nome, com unicidade normalizada e CRUD REST.
-- Filtro por substring normalizada após a deduplicação, sem criar Lead ou BuscaLead.
-- Contagem `totalBloqueados` no retorno imediato de cada busca.
-- Endpoint `POST /api/buscas` com validação de entrada.
-- Chamada real preparada para o Nearby Search da Google Places API (New).
-- Chave externa por variável de ambiente, sem segredo no código.
-- Conversão de categorias do domínio para tipos da Google.
-- Mapeamento da resposta externa para `PlacesSearchResponse`.
-- Captura e persistência de CEP, logradouro, número e bairro a partir de `addressComponents`.
-- Ferramenta offline reproduzível em `tools/cnpj/`, com manifesto, checksums, expansão de UFs ou municípios pontuais, filtros de atividade e saídas determinísticas JSON/SQL com proveniência no cabeçalho.
-- Catálogo IBGE dedicado e versionado com os 5.570 municípios, reproduzível a partir da fonte geográfica do projeto.
-- Ingestão CNPJ em streaming, com descarte antecipado, seleção somente das empresas necessárias, paralelismo limitado e modo `--no-json`.
-- Tabelas locais de empresa e estabelecimento preparadas para carga SQL mensal; o conteúdo volumoso vive no banco local e permanece fora dos commits.
-- Correspondência de CNPJ por município, endereço e nome, com limite de candidatos, limiar e rejeição de ambiguidades.
-- Persistência da competência e confiança da correspondência, com revalidação quando a base municipal muda.
-- Persistência do resumo da busca e de `totalEncontrados`.
-- Persistência de cada estabelecimento como `Lead`.
-- Deduplicação de leads e de resultados repetidos por `googlePlaceId`.
-- Criação do relacionamento N:N por `BuscaLead`.
-- Status inicial `NOVO` para leads inéditos.
-- Atualização dos dados externos de leads existentes.
-- Preservação de `status`, `observacoes` e `ultimoContatoEm` em novas buscas.
-- Obtenção dos telefones nacional e internacional pela Google Places API.
-- Normalização de telefone brasileiro para `55 + DDD + número`.
-- Preservação do telefone existente quando a nova resposta não contém um número válido.
-- Cálculo centralizado de score por categoria, telefone, reviews, rating e funcionamento.
-- Classificação de temperatura em `FRIO`, `MORNO` ou `QUENTE`.
-- Atualização de score e temperatura no `Lead`.
-- Registro do score e da temperatura da execução em `BuscaLead`.
-- Cache Caffeine dos resultados recentes da Google Places API.
-- Chave de cache por coordenadas arredondadas, raio e categorias ordenadas.
-- Persistência de um novo histórico mesmo quando o resultado vem do cache.
-- Rate limit Bucket4j aplicado somente às chamadas externas reais.
-- Resposta HTTP 429 quando a capacidade temporária é esgotada.
-- Retorno dos leads persistidos, com seus IDs, na resposta HTTP.
-- Listagem do histórico por `GET /api/buscas`, em ordem decrescente de criação.
-- Consulta detalhada por `GET /api/buscas/{id}`, com resposta 404 para ID inexistente.
-- Uso do score e da temperatura de `BuscaLead` no detalhe histórico.
-- Exposição dos dados comerciais atuais e do link manual de WhatsApp nos leads do histórico.
-- Exportação CSV por `GET /api/exportacao/leads.csv`.
-- Exportação Excel por `GET /api/exportacao/leads.xlsx` com Apache POI.
-- Filtros de status, categoria e temperatura aplicados também na exportação.
-- Geração de CSV UTF-8 com escaping de vírgulas, aspas e quebras de linha.
-- Header de download `Content-Disposition` com o arquivo `leads.csv`.
-- Planilha Excel com cabeçalho formatado, filtro, congelamento e dados tipados.
-- Tratamento centralizado das falhas da Google Places e contrato JSON uniforme de erros.
-- Distinção entre rate limit local, cota externa, configuração rejeitada, indisponibilidade e resposta inválida.
-- Listagem dos leads persistidos por `GET /api/leads`.
-- Paginação dos leads por status em `GET /api/leads/pagina`, com páginas de até 25 registros e total filtrado.
-- Filtros combináveis por status, categoria e temperatura.
-- Consulta individual por `GET /api/leads/{id}`, com resposta 404 para ID inexistente.
-- Atualização parcial de status, observações e último contato por `PATCH /api/leads/{id}`.
-- Preservação dos campos omitidos no payload de atualização.
-- Validação que rejeita uma atualização sem nenhum campo informado.
-- Contrato HTTP próprio em `LeadResponse`, sem exposição direta da entidade JPA, incluindo código IBGE, município, UF, IDHM e referência.
-- Consulta municipal por bbox em `GET /api/geografia/municipios`, com validação uniforme e resposta GeoJSON.
-- Exportações CSV/XLSX com UF, município e IDHM.
-- Geração de `whatsappUrl` somente para telefone brasileiro normalizado válido.
-- Exposição do link manual tanto nas respostas de busca quanto nas respostas de lead.
-- Ausência de qualquer envio automático ou em massa pelo WhatsApp.
-- Teste de contexto Spring com MySQL e Flyway.
-- Testes do `BuscaService` para criação, deduplicação, vínculo e preservação dos dados comerciais.
-- Teste de integração JPA com MySQL e Flyway para persistência N:N, deduplicação e rollback transacional.
-- Validação da preservação comercial e do snapshot de score/temperatura em buscas repetidas.
-- Validação da restrição única de `googlePlaceId` diretamente no banco.
-- Testes de resposta completa, vazia e endereço estruturado do `PlacesResponseMapper`.
-- Testes do ingestor CNPJ para parser Latin-1, normalização, filtros, determinismo, proveniência, metadados seguros, checksums, expansão/união de UFs, divergências nominais, `--no-json` e limites de workers.
-- Testes do `CnpjService` para unidade correta, rede em cidades distintas, ambiguidade, baixa confiança, fallback sem CEP, limite de candidatos e consulta da competência municipal.
-- Testes do `BuscaService` para preservar competência atual, revalidar carga nova e limpar correspondência não confirmada.
-- Teste JPA do recorte CNPJ e do fluxo de captura para Vitória/ES e Vila Velha/ES.
-- Testes de formatos nacionais, internacionais, ausentes e inválidos de telefone.
-- Testes das faixas de score, reviews, rating e limites de temperatura.
-- Testes da chave, configuração e reutilização do cache sem perda de histórico.
-- Testes de capacidade, bloqueio e status HTTP do rate limit.
-- Testes da passagem obrigatória do `PlacesApiClient` pelo rate limit.
-- Testes do serviço de leads para filtros, ordenação, mapeamento e ID inexistente.
-- Testes da atualização comercial e da validação de `AtualizarLeadRequest`.
-- Testes de geração e rejeição do link manual do WhatsApp.
-- Testes do histórico para ordenação, conversão de categorias, snapshot de scoring e busca inexistente.
-- Testes HTTP de listagem, detalhe com CNPJ atual e resposta 404 dos endpoints de histórico.
-- Testes HTTP do `POST /api/buscas`, incluindo resposta `201` e rejeição de payload inválido.
-- Testes HTTP do `LeadController` para filtros, consulta, atualização parcial, 404 e validações.
-- Testes HTTP do contrato de erro para cota excedida, indisponibilidade, resposta inválida e recurso inexistente.
-- Tratamento HTTP uniforme para Bean Validation, JSON ilegível e parâmetros de enum inválidos.
-- Fallback HTTP seguro para exceções inesperadas, com resposta `500 ERRO_INTERNO` sem detalhes internos.
-- Testes HTTP para rate limit local, configuração ausente, consulta rejeitada, erro inesperado, JSON malformado, corpo ausente e enum inválido no payload.
-- Testes do cliente Places com respostas HTTP simuladas para cota, autorização, indisponibilidade e payload inválido.
-- Testes do conteúdo CSV, escaping, filtros, arquivo vazio e headers HTTP de download.
-- Testes de leitura da planilha Excel gerada, tipos de célula e headers HTTP de download.
-- Chamada externa controlada com Google Places API (New), retornando e persistindo leads reais.
-
-A última execução de `./mvnw test`, com um agente Byte Buddy informado somente em runtime para compatibilidade do Mockito com a JVM Java 25 do ambiente de validação, concluiu 154 testes sem falhas, incluindo o contexto Spring com MySQL 8.1, sete migrations Flyway, schema na versão 5, Hibernate em `ddl-auto: validate` e a integração JPA de CNPJ. Os testes automatizados não abrem o WhatsApp nem consomem a API da Google.
-
-A validação manual de ponta a ponta retornou HTTP `201`, encontrou 18 estabelecimentos, persistiu a busca e os leads e expôs os links manuais de WhatsApp. A leitura posterior de um lead persistido retornou HTTP `200`. Os novos endpoints também foram validados contra o MySQL local: a listagem retornou a busca existente com HTTP `200`, o detalhe retornou seus 18 vínculos ordenados pelo score histórico com HTTP `200` e um ID inexistente retornou HTTP `404`. A exportação CSV filtrada por `status=NOVO` retornou HTTP `200`, `Content-Type: text/csv;charset=UTF-8`, nome de download `leads.csv` e 18 linhas de dados. A exportação Excel com o mesmo filtro retornou HTTP `200`, `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, nome `leads.xlsx` e arquivo reconhecido como Excel 2007+ com ZIP íntegro.
-
-## Fechamento técnico do backend
-
-O trecho de enriquecimento e scoring da busca agora funciona desta forma:
-
-```text
-PlacesSearchResponse
-    |
-    +--> normalização de telefone
-    +--> ScoringService: score e temperatura
-    +--> atualização de score/temperatura no Lead
-    +--> registro do score/temperatura no BuscaLead
-    v
-BuscaResponse com leads persistidos e pontuados
-```
-
-O tratamento de erros e os principais caminhos de entrada inválida estão cobertos. O fechamento técnico do backend foi concluído após as seguintes validações:
-
-- `./mvnw -DargLine=-javaagent:/home/jlm1real/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.10/byte-buddy-agent-1.18.10.jar test`: 98 testes executados, sem falhas, erros ou testes ignorados.
-- `./mvnw -DskipTests package`: build do JAR executável concluído com sucesso.
-- Inicialização local da aplicação: Tomcat subiu na porta 8080, conexão com MySQL foi estabelecida, a migration foi validada pelo Flyway e o schema permaneceu atualizado na versão 1.
-- Smoke test sem nova chamada à Google Places: `GET /api/buscas`, `GET /api/leads?status=NOVO`, exportação CSV e exportação XLSX retornaram HTTP 200; foram confirmados 18 leads, 19 linhas no CSV e arquivo Excel 2007+ íntegro.
-
-O backend do MVP está concluído e validado para uso local/portfólio. O próximo ciclo do produto é o frontend das fases 5 a 7 do roadmap; não há nova pendência funcional de backend dentro do escopo atual.
-
-## Planejamento do próximo ciclo — frontend
-
-O workspace agora possui a aplicação Angular em `frontend/`, com `angular.json`, `package.json`, `src/app`, routing, SCSS, testes e sem SSR. Node.js `v26.7.0` e npm `12.0.2` estão disponíveis; Angular CLI global não está instalado e a CLI local `22.1.6` foi usada para instalar Angular `22.1.4`. O projeto usa o proxy de desenvolvimento `/api` para `http://localhost:8080`. Depois do bootstrap, o desenvolvimento seguirá `angular-developer` e `leadradar-frontend`.
-
-O planejamento detalhado e os critérios de aceite estão em [FRONTEND_SPRINTS.md](FRONTEND_SPRINTS.md). Os sprints foram divididos para entregar incrementos pequenos, completos e validados:
-
-| Sprint | Entrega | Status |
-| --- | --- | --- |
-| FE-00 | Bootstrap Angular e execução local | CONCLUÍDO |
-| FE-01 | Contratos TypeScript e base HTTP | CONCLUÍDO |
-| FE-02 | Shell, navegação e rotas | CONCLUÍDO |
-| FE-03 | Mapa Leaflet interativo | CONCLUÍDO |
-| FE-04 | Formulário de busca sincronizado ao mapa | CONCLUÍDO |
-| FE-05 | Execução da busca pela API | CONCLUÍDO |
-| FE-06 | Apresentação dos resultados da busca | CONCLUÍDO |
-| FE-07 | Consulta e filtros de leads | CONCLUÍDO |
-| FE-08 | Kanban somente leitura e cards | CONCLUÍDO |
-| FE-09 | Drag-and-drop com persistência de status | CONCLUÍDO |
-| FE-10 | Detalhe do lead e WhatsApp manual | CONCLUÍDO |
-| FE-11 | Observações e último contato | CONCLUÍDO |
-| FE-12 | Lista do histórico de buscas | CONCLUÍDO |
-| FE-13 | Detalhe de uma busca anterior | CONCLUÍDO |
-| FE-14 | Downloads CSV e XLSX | CONCLUÍDO |
-| FE-15A | Shell operacional e workspace da Busca | CONCLUÍDO |
-| FE-15B | Adaptação das áreas ao workspace operacional | CONCLUÍDO |
-| FE-100 | Scroll e paginação independentes no Kanban | CONCLUÍDO |
-| FE-16 | Polimento integrado, responsividade e acessibilidade | CONCLUÍDO |
-| FE-17 | Testes de fluxo e fechamento do MVP | CONCLUÍDO |
-
-Decisões preservadas para o ciclo:
-
-- SPA local, standalone, TypeScript strict e sem SSR;
-- proxy de desenvolvimento `/api` para o backend local, sem alterar CORS apenas para desenvolvimento;
-- ausência de autenticação, multiusuário e deploy, conforme o escopo atual;
-- uso dos endpoints reais documentados em `API.md`;
-- um único `PATCH /api/leads/{id}` para status, observações e último contato;
-- Leaflet para mapa e Angular CDK para o Kanban;
-- WhatsApp somente por abertura manual de `whatsappUrl`;
-- downloads CSV/XLSX produzidos pelo backend;
-- Signals para estado simples e RxJS somente quando o fluxo assíncrono justificar;
-- sem biblioteca de estado global, dashboard avançado ou abstrações sem necessidade.
-
-O FE-01 deixou disponível `provideHttpClient()`, os contratos TypeScript da API em `frontend/src/app/shared/models`, o prefixo relativo `/api` em `frontend/src/app/core/api/api-routes.ts` e o mapeamento seguro de falhas HTTP em `frontend/src/app/core/api/api-error-message.ts`. Após revisão, `AtualizarLeadRequest` passou a exigir em compilação ao menos um campo não nulo, e os testes passaram a exercer os DTOs aninhados das buscas. O FE-02 adicionou o shell navegável, as rotas lazy de Busca, Kanban e Histórico, placeholders acessíveis e o fallback de rota desconhecida. O FE-03 adicionou o mapa Leaflet reutilizável à Busca, com ponto central tipado, marcador arrastável, seleção por clique ou teclado, círculo de raio atualizado incrementalmente, tiles OpenStreetMap atribuídos e cleanup no ciclo de vida. O FE-04 adicionou o formulário com Signal Forms para endereço descritivo, coordenadas, raio e múltiplas categorias, usando as restrições reais do backend e um único estado sincronizado com o mapa. O FE-05 conectou esse formulário ao `POST /api/buscas` por meio de `BuscaApi`, bloqueia chamadas simultâneas, conserva a `BuscaResponse` completa e representa `loading`, sucesso com dados, sucesso vazio e erro. Os códigos `400`, `429`, `502`, `503` e `500` recebem mensagens seguras e permitem nova submissão após a falha. O smoke pelo proxy local confirmou o `503 GOOGLE_PLACES_CONFIGURATION` esperado com a chave explicitamente vazia, sem chamada à Google. O FE-06 transformou a resposta confirmada em um resumo da busca e uma lista responsiva de leads, omite dados opcionais ausentes, identifica a temperatura também por texto, disponibiliza WhatsApp manual somente com a URL recebida do backend e mantém o estado vazio concluído com orientação e acesso ao Kanban. O FE-07 conectou a rota Kanban ao `GET /api/leads` por meio de `LeadApi`, com filtros tipados e combináveis de status, categoria e temperatura. A consulta ocorre ao entrar e ao aplicar, limpar ou repetir filtros; chamadas simultâneas são bloqueadas, a ordem da API é preservada e uma falha mantém a última lista válida visível com feedback explícito. O FE-08 organiza a lista filtrada nas cinco etapas reais do funil, com contadores derivados e cards compactos que omitem dados ausentes. Status nulo ou inesperado fica em uma coluna condicional `Sem etapa`, sem ser confundido com `NOVO`. O quadro conserva os filtros e diferencia a ausência global de resultados de uma etapa vazia, com navegação horizontal em telas estreitas. O FE-09 conecta as colunas com Angular CDK e persiste cada mudança pela rota única `PATCH /api/leads/{id}`. O estado é otimista enquanto a operação está pendente, confirmado pela resposta completa do backend e revertido com feedback seguro em caso de falha. Cada lead fica bloqueado durante seu próprio salvamento, os filtros permanecem selecionados e botões de etapa anterior/próxima oferecem alternativa ao drag por teclado. O FE-10 abre um painel lateral de detalhe ao acionar o título de um card do Kanban, sem nova chamada HTTP: o painel usa o `LeadResponse` completo já carregado, exibe os dados externos, a classificação e os dados comerciais, omite campos nulos e abre o WhatsApp manual em nova aba somente quando o backend fornece `whatsappUrl`. O painel é um diálogo acessível com foco preso, abre/fecha por teclado e devolve o foco ao botão que o abriu. O FE-11 transformou a área de dados comerciais do detalhe em um editor explícito: o usuário edita observações e o último contato, e o painel envia somente os campos alterados para `PATCH /api/leads/{id}`, usando a resposta confirmada para atualizar o próprio detalhe e a lista do Kanban. Observações podem ser limpas com string vazia; limpar o campo de último contato não remove o registro, por limitação do contrato atual, e isso é explicado na interface. Falhas preservam o texto digitado, e tentar fechar com alterações não salvas exibe um aviso e mantém a edição até salvar ou cancelar. O FE-12 conectou a rota Histórico ao `GET /api/buscas`, preserva a ordem do backend e apresenta data local, endereço-base, categorias, raio e total encontrado em uma tabela navegável. A tela diferencia carregamento, lista vazia, erro com nova tentativa e dados disponíveis; endereços ausentes recebem fallback neutro. Cada item abre `/historico/:id`, mantendo o contexto da navegação. O FE-13 substituiu a transição dessa rota pelo detalhe real de `GET /api/buscas/{id}`: o resumo preserva os parâmetros registrados, e a tabela mantém a ordem do backend enquanto separa explicitamente score e temperatura daquela execução dos dados comerciais atuais. O WhatsApp continua manual e só aparece como link quando a API fornece uma URL. ID inválido é rejeitado antes de qualquer chamada, e busca inexistente, execução sem leads e falha genérica possuem estados próprios e retorno ao histórico. O FE-14 conectou o Kanban às exportações binárias de CSV e XLSX usando os filtros selecionados. Os nomes e tipos dos arquivos respeitam os headers do backend com fallbacks seguros, URLs temporárias são sempre liberadas, cada formato possui carregamento independente e respostas de erro em blob são convertidas para a mensagem segura da API sem gerar arquivo. O FE-15A substituiu o shell centralizado por uma sidebar persistente com as três áreas de trabalho e removeu o header e o footer permanentes. Na Busca, os parâmetros ocupam uma região operacional própria e compacta, enquanto o mapa usa a maior parte do workspace e da altura da viewport; mapa, formulário e estados existentes permanecem sincronizados. Os resultados continuam no contexto da Busca, agora em uma grade mais densa, sem mudança nos contratos ou no fluxo HTTP. O FE-15B adaptou Kanban e Histórico à mesma estrutura: cabeçalhos e controles ficaram compactos, o quadro passou a usar toda a largura útil com cinco colunas simultâneas no desktop e rolagem localizada em larguras menores, e as tabelas de histórico foram adensadas. Drag-and-drop, atualização de status, drawer, filtros e exportações foram preservados. A FE-100 passou a consultar cada status por uma página real de até 25 registros, mantém totais e páginas independentes, reconsulta somente origem e destino após uma movimentação e limita o board à altura restante do workspace, com scroll vertical próprio em cada coluna. Como polimento pontual anterior à FE-16 completa, o drawer do Kanban foi reorganizado em blocos semânticos compactos para resumo comercial, estabelecimento, dados comerciais e metadados, preservando abertura, foco, fechamento, edição e WhatsApp.
-
-O refinamento visual posterior do drawer corrigiu o espaçamento interno efetivo, ampliou moderadamente sua largura, removeu divisórias estruturais, alinhou os dados do estabelecimento em linhas label/valor, ampliou a área de observações e ancorou os metadados no rodapé, sem alterar abertura, fechamento, foco, edição, WhatsApp ou contratos.
-
-A tela Busca agora mostra o andamento junto aos parâmetros: o botão fica desabilitado com spinner e texto de carregamento, enquanto os estados de sucesso, vazio e erro recebem mensagens distintas. Sucessos exibem a quantidade retornada e atalhos para Kanban e Histórico; os parâmetros continuam preservados e o `POST /api/buscas` permanece inalterado.
-
-O FE-16 uniformizou tokens semânticos, controles, badges, loaders e mensagens de estado entre as telas. A troca de rota move o foco para o conteúdo principal; erros de Busca, Histórico e salvamento comercial recebem foco após a renderização. O drawer mantém foco preso, abertura por teclado, Escape e retorno ao gatilho. Em telas menores, o Kanban deixa filtros e exportação seguirem o fluxo vertical da página e conserva o workspace do quadro com rolagem horizontal localizada e rolagem vertical independente por coluna. O mapa mantém a instância Leaflet existente e o marcador possui navegação por teclado explícita. A suíte frontend passou com 150 testes, o build concluiu sem warnings e a auditoria Axe em 1440 px e 390 px não encontrou violações nas rotas principais.
-
-O FE-17 fechou a validação do MVP com `MvpFlowIntegrationTest`, que percorre busca, consulta, atualização comercial, nova leitura, histórico e exportação CSV/XLSX pelo backend Spring real, Flyway e MySQL local. O teste usa um cliente Places substituto controlado, confirmando o fluxo sem exigir chave real nem consumir cota. O smoke E2E `frontend/scripts/mvp-flow-smoke.mjs` percorre no navegador Busca, resultados, Kanban, edição, reload, Histórico, detalhe, WhatsApp manual e exportação CSV; `npm run e2e:smoke` passou no modo mock com 23 requisições. O modo local contra o backend está documentado no README, mas a chamada real à Google não foi executada. Os estados de indisponibilidade, rate limit, quota e resposta inválida permanecem cobertos por simulações controladas existentes. A suíte frontend passou com 150 testes, a suíte backend com 104 testes, o build de produção passou sem warnings e o MVP ficou sem funcionalidades fora do escopo.
-
-### Manutenção pós-MVP
-
-Após o fechamento do MVP, foi entregue a manutenção do WhatsApp no card do Kanban: o card de cada lead passou a exibir, ao lado direito do telefone, o rótulo "WhatsApp" e o link manual "Abrir WhatsApp" sempre que o backend entrega `whatsappUrl` no `LeadResponse`. Leads sem `whatsappUrl` continuam mostrando apenas o telefone, e o drawer de detalhes mantém o comportamento anterior. A mudança é restrita ao `LeadCard` (`lead-card.html`, `lead-card.scss` e `lead-card.spec.ts`), sem alterações no backend. A suíte frontend passou com 152 testes e o build de produção concluiu sem warnings. O escopo de validação de presença do WhatsApp descrito anteriormente em `features-pos-mvp/refinamento.md` foi descartado por decisão de produto, e o documento passou a descrever esta feature.
-
-### Refinamento IDHM
-
-A sprint **IDHM-00** está concluída. O gerador offline em `tools/idhm/` combina os dados municipais de IDHM 2010 do Atlas Cidade com a malha municipal mínima da API oficial do IBGE, faz o vínculo pelo código IBGE, calcula o bbox e simplifica os polígonos. As URLs são restritas a hosts conhecidos, os downloads usam HTTPS, tamanho máximo e checksums congelados, e nenhuma chamada externa foi adicionada ao runtime da aplicação.
-
-O artefato `src/main/resources/geo/municipios-idhm.json` contém 5.570 municípios, ocupa 3.709.696 bytes e tem SHA-256 `8c9ce54dff5eec54e7401ba2392e4305145edc4acb02c21388425393c6b56286`. A fonte tabular possui também Boa Esperança do Norte/MT (`5101837`), mas esse município não está na malha consumida e não possui IDHM 2010; a diferença é validada explicitamente.
-
-A sprint **IDHM-01** também está concluída. A migration V2 e o modelo JPA persistem os cinco atributos geográficos, e toda captura com coordenadas passa pelo localizador offline antes do scoring. Vitória/ES foi confirmada com IDHM 0,845 e Curitiba/PR com IDHM 0,823. Leads sem correspondência ficam com geografia nula; score, deduplicação, dados comerciais e snapshots históricos permanecem inalterados. O backfill está disponível somente por ativação explícita.
-
-A sprint **IDHM-02** está concluída. `LeadResponse` e a paginação expõem código IBGE, município, UF, IDHM e referência, enquanto CSV/XLSX incluem UF, município e IDHM. `GET /api/geografia/municipios` valida quatro coordenadas finitas e ordenadas, filtra por interseção de envelopes e retorna somente o subset pedido como GeoJSON. A revisão final adicionou teto de 1.500 municípios, cache HTTP público por 24 horas, DTOs distintos para Polygon/MultiPolygon e testes de parser, MultiPolygon e região vazia. A suíte backend passou com 120 testes e o pacote executável foi gerado.
-
-A sprint **IDHM-03** está concluída. O contrato TypeScript de lead aceita os cinco campos geográficos opcionais e anuláveis. Card e drawer do Kanban compartilham a mesma classificação PNUD e formatação do IDHM: o card apresenta um badge compacto com valor e UF, com faixa acessível por papel semântico e texto visualmente oculto, e o drawer mostra Município/UF, valor, faixa e referência na seção de estabelecimento. Dado ausente ou inválido é omitido sem fallback enganoso. A suíte frontend passou com 171 testes, o build de produção terminou sem warnings e a inspeção visual em desktop e mobile não encontrou overflow nem regressão dos controles de drag, detalhe ou WhatsApp.
-
-A sprint **IDHM-04** está concluída. `GeografiaApi` consulta o endpoint municipal com bbox tipado, e `MapaBusca` oferece uma camada coroplética opcional. O viewport é normalizado em células para reutilização; eventos `moveend` passam por throttle de 250 ms, consultas repetidas são evitadas, respostas obsoletas são canceladas e o cache em memória mantém no máximo 80 células durante a sessão. Viewports acima de 5° não provocam consultas rejeitadas pelo teto do backend e recebem orientação para aproximar; cliques nos polígonos não alteram o centro da busca, a legenda não intercepta ponteiro e o contador identifica a região carregada. A camada usa a classificação compartilhada de IDHM, inclui legenda e popup, permite foco e abertura por teclado e permanece abaixo do círculo e do marcador em uma pane dedicada. Cada município mantém tabstop próprio porque a camada é opt-in. Desligar a camada ou destruir o mapa remove recursos pendentes e os polígonos. A suíte frontend passou com 179 testes, o build terminou sem warnings e as verificações automatizadas em desktop e mobile não encontraram overflow nem violações WCAG A/AA após a estabilização visual.
-
-A sprint **IDHM-05** encerrou a feature com validação integrada. O backend passou com 120 testes e pacote executável; Flyway confirmou no MySQL 8.1 as duas migrations e o schema na versão 2, com Hibernate em `ddl-auto: validate`. O frontend passou com 179 testes e build de produção sem warnings. A revisão em navegador, isolada de serviços externos, percorreu buscas controladas para Vitória/ES e Curitiba/PR e confirmou badges, drawers, exportações CSV/XLSX, legenda, polígonos e popups da camada IDHM nos dois viewports. As credenciais da aplicação permanecem somente em variáveis de ambiente (`DB_PASSWORD` e `GOOGLE_PLACES_API_KEY`); nenhuma chamada externa ou secret passou a fazer parte do runtime versionado.
-
-### Refinamento da blacklist de nomes
-
-As sprints **BL-00** a **BL-04** estão concluídas. A V3 e o pacote `bloqueio` persistem o termo original e sua versão normalizada, rejeitam equivalentes no banco e expõem listagem, cadastro e remoção pela API. Foi adotado o mínimo de 3 e o máximo de 120 caracteres.
-
-Na busca, os nomes são comparados por substring depois da deduplicação por `googlePlaceId`. Resultados bloqueados não viram `Lead` nem `BuscaLead`; `totalEncontrados` permanece bruto e `totalBloqueados` informa quantos resultados únicos foram ignorados no retorno imediato. Não há remoção retroativa nem nova chamada à Google para compensar a filtragem.
-
-O frontend possui a rota `/bloqueios`, acessível pela navegação principal, com Signal Forms, listagem, cadastro, remoção e estados acessíveis. O resumo da busca exibe uma nota neutra apenas quando `totalBloqueados > 0` e aceita respostas antigas sem o campo.
-
-O fechamento passou com 140 testes backend, 189 testes frontend, os dois builds e o smoke de navegador em modo controlado com 27 requisições. O cenário integrado cadastrou `Supermercados BH`, ignorou um resultado único mesmo com duplicata externa, preservou o alvo permitido e removeu o termo. A auditoria WCAG A/AA da nova rota não encontrou violações nem overflow em 1440 × 1000 ou 390 × 844.
-
-### Refinamento CNPJ
-
-A sprint **CNPJ-00** está concluída. `tools/cnpj/gerar_dataset.py` consome os arquivos mensais oficiais de Empresas, Estabelecimentos e Municípios mediante manifesto com data, URLs HTTPS e checksums SHA-256. A ferramenta valida origem e limites, filtra apenas estabelecimentos ativos dos municípios configurados, normaliza os campos e gera JSON e SQL determinísticos com competência e fontes no cabeçalho. Os cinco testes Python cobrem parser Latin-1, normalização, filtros, ordenação, proveniência, metadados seguros, checksum e ausência de registros. Os arquivos brutos permanecem fora do Git.
-
-A sprint **CNPJ-01** está concluída. O cliente Places solicita `addressComponents`, e o mapper extrai CEP, logradouro, número e bairro. A V4 adiciona o endereço estruturado e os dados CNPJ ao lead e cria `cnpj_empresa`/`cnpj_estabelecimento`. A migration repetível permanece como placeholder seguro até ser gerada a partir da competência mensal oficial; as unidades conhecidas de Vitória/ES, Vila Velha/ES e Curitiba/PR ficam somente em fixtures transacionais. Flyway, Hibernate e os testes de mapper, cliente e persistência passaram no MySQL 8.1.
-
-A sprint **CNPJ-02** está concluída, incluindo a revisão de proveniência. A busca chama o `CnpjService` depois da localização municipal e antes do scoring. A correspondência exige candidato ativo único, município, número, rua e nome compatíveis; usa CEP quando disponível, aumenta o limiar no fallback sem CEP e falha de modo seguro diante de baixa confiança, ambiguidade ou excesso de candidatos. A V5 persiste competência e confiança, remove a antiga carga não rastreável e habilita revalidação quando a competência municipal mudar. Se a nova base não confirmar a unidade, o enriquecimento anterior é limpo; dados comerciais, deduplicação e scoring permanecem preservados. As fixtures integradas confirmam CNPJs distintos para as unidades Coco Bambu de Vitória e Vila Velha.
-
-O fechamento revisado de CNPJ-00 a CNPJ-02 passou com cinco testes do ingestor e 154 testes backend. O pacote executável foi gerado sem executar nova chamada externa.
-
-A sprint **CNPJ-03** está concluída. `LeadResponse`, inclusive dentro de `PaginaLeadsResponse`, expõe `cnpj` e `razaoSocial` quando disponíveis, mantendo confiança e competência fora do contrato público. CSV e XLSX ganharam as duas colunas, com células vazias para ausência; o CSV neutraliza strings externas iniciadas como fórmulas e o XLSX mantém os campos textuais tipados. No Angular 22, o modelo aceita os campos opcionais e anuláveis, e o drawer mostra CNPJ formatado e razão social ou rótulos neutros quando a API os entrega como `null`, preservando compatibilidade com respostas anteriores que omitem ambos.
-
-A sprint **CNPJ-04** encerrou o refinamento com validação integrada e documentação. A suíte backend passou com 154 testes e o pacote executável foi gerado; a suíte frontend passou com 197 testes e o build de produção terminou sem warnings. A revisão integrada das unidades conhecidas usa as fixtures transacionais (exclusivas de teste) e confirma a resolução de CNPJ por unidade — Vitória/ES e Vila Velha/ES casam com CNPJs distintos e Curitiba/PR com o seu — sem consultar a Receita em runtime. A migration `R__carregar_subset_cnpj.sql` segue como placeholder vazio: os CNPJs só passam a ser resolvidos contra dados reais depois que esse arquivo for substituído pela saída revisada do `tools/cnpj` na ingestão mensal da competência RFB. `fluxo.md`, `HISTORICO_IMPLEMENTACOES.md`, `API.md` e `features-pos-mvp/refinamento-cnpj.md` foram sincronizados com o estado final.
-
-A sprint **CNPJ-05** está concluída no escopo. O detalhe de `GET /api/buscas/{id}` expõe o CNPJ atual de cada lead, e a tela Histórico o mostra formatado logo abaixo do endereço ou apresenta "CNPJ não encontrado" quando o valor é nulo, inválido ou foi omitido por uma resposta antiga. Passaram os 18 testes backend diretamente afetados, os 8 testes da página, a suíte frontend completa com 198 testes e os dois builds. A suíte backend completa executou 154 testes, mas permanece com três falhas e três erros alheios à sprint: dados residuais no MySQL local colidem com fixtures transacionais, e a carga CNPJ local populada faz testes antigos que pressupõem o placeholder vazio receberem candidatos adicionais.
-
-A sprint **CNPJ-06** está concluída. O manifesto aceita `ufs` e/ou `municipiosInteresse`; a expansão usa `tools/cnpj/municipios-ibge.csv`, catálogo dedicado de 5.570 municípios, e o ES resulta nos 78 códigos IBGE esperados. A reconciliação com os nomes municipais da Receita usa a chave normalizada de UF e nome e falha diante de divergências. O ingestor abre cada ZIP como stream, descarta cedo estabelecimentos fora do alvo, guarda somente as empresas necessárias e escreve saídas atomicamente em lotes; `--no-json` evita o intermediário opcional. O modo automático usa até 8 processos, limitado pelos lotes, e `--workers 1` preserva uma opção de menor memória.
-
-O smoke real das 21 fontes locais RFB `2026-08-08`, no Ryzen 7 5700X com Python 3.14.7, processou os 78 municípios do ES, 589.690 empresas e 608.030 estabelecimentos. Com 8 workers concluiu em 113,21 s e teve pico RSS agregado de 1.541,53 MiB; com 1 worker foram 245,21 s e 1.011,41 MiB. Ambos produziram o mesmo SQL de 168.526.384 bytes e SHA-256 `da5caa912ecb5c3322d57a4cc9246548d0c9e942da424c0c5488b25d2aa6251a`. Os 13 testes Python e a compilação dos quatro scripts passaram. A sprint não alterou backend nem contratos; Java 25 continua sendo o runtime da aplicação, enquanto esse pipeline otimizado é executado em Python.
-
-A sprint **CNPJ-07** está concluída no escopo. O botão **Buscar CNPJ**, ao lado de **Voltar ao histórico**, chama `POST /api/buscas/{id}/cnpj`. O `BuscaCnpjService` valida a busca e tenta corresponder somente seus leads com CNPJ nulo, usando a base local e persistindo os cinco campos da correspondência na mesma transação. O preenchimento é compartilhado com a captura, cuja revalidação por competência continua intacta. Leads já preenchidos são ignorados; dados comerciais, scoring e snapshots são preservados. O resumo informa total, ignorados, encontrados e sem correspondência. A tela bloqueia cliques repetidos, mostra carregamento/resultado/erro e recarrega o detalhe; o contrato histórico passou a incluir também a razão social atual, exibida quando presente.
-
-A validação de CNPJ-07 passou com 41 testes backend selecionados (incluindo integração JPA com fixture sintética transacional isolada), 201 testes frontend e os dois builds. O smoke no Firefox com API controlada confirmou a atualização de CNPJ/razão social em 1440 × 1000 e 390 × 844, sem overflow ou violações Axe WCAG A/AA. A suíte backend completa executou 161 testes: 155 passaram, com as mesmas três falhas e três erros preexistentes de blacklist/fixtures diante da carga local; os novos testes passaram. Não houve chamada externa, migration nova ou alteração na base mensal.
-
-O refinamento de correspondência CNPJ por endereço exato está implementado localmente conforme `features-pos-mvp/refinamento-cnpj-match.md` (CNPJMATCH-00 a CNPJMATCH-03). `CnpjMatchEvaluator` é puro e compartilhado pela produção e pelo diagnóstico; o caminho exato exige CEP, número canônico, logradouro normalizado, município e estabelecimento ativo, recusa `Slice` truncada e usa o nome somente para desempatar múltiplos candidatos em `0,55`. Fora da política fail-closed configurada por município/UF, a captura mantém somente o caminho legado. O caso `Farmácia São Miguel` × `DROGARIA DE SOUSA ALVES LTDA` é coberto pelo caminho `ENDERECO_UNICO`, sem regra específica por estabelecimento.
-
-A V9 adiciona e preenche `numero_normalizado`, com os índices dos caminhos com e sem CEP; o ingestor passa a emitir a coluna. A V10 adiciona `cnpj_origem`, que é propagado na captura, na revalidação e nos contratos JSON, com rótulo humano no Kanban e no Histórico. Revalidação do mesmo CNPJ atualiza metadados; CNPJ diferente ou ausência de confirmação limpa a identidade sem substituição silenciosa. O `ScoringService` não foi alterado.
-
-O diagnóstico percorre leads distintos sem CNPJ, inclusive fora da allowlist, e gera JSONL imutável mais CSV de revisão separado. O cabeçalho registra competências, versões dos normalizadores, fingerprint da allowlist e o inventário agrupado dos números brutos descartados da base CNPJ; o CSV é vinculado pelo hash SHA-256 dos bytes exatos do JSONL. O runner é opt-in, limitado e começa em relatório. Antes de consultar ou gravar leads, `--aplicar` exige uma revisão completa e válida das aprovações permitidas; qualquer `ERRADO` ou pendência veta a rodada inteira. Só `CERTO` com evidência, allowlist, competência, hash e reprodução do avaliador é aplicado; `INCONCLUSIVO` não autoriza escrita e é refletido na cobertura. A promoção continua bloqueada até a revisão manual integral dos aprovados e a exigência de zero falso positivo.
-
-A política distingue município não configurado, que permite fallback para UFs, de lista municipal explicitamente vazia, que tem precedência e nega o caminho exato. O teste live não usa mais o catálogo isolado nem aceita conjunto vazio/ausência do lead 653: em 22/09/2026, os dois cenários passaram sem skip contra `leadsradar`, com Flyway desligado, conexão read-only e worker de startup neutralizado.
-
-A validação final do refinamento passou em 26 testes backend direcionados, 13 testes Python do ingestor, 239 testes frontend e nos builds Maven/Angular. A suíte backend completa passou com 523 testes, zero falhas/erros e 11 testes opt-in ignorados; Flyway validou e aplicou as 11 migrations no catálogo MySQL isolado, chegando à V10. Nenhum `--aplicar` foi executado.
-
-### Dark mode
-
-A sprint **DM-01**, da DM-01.1 à DM-01.8, está concluída. O frontend possui os modos `Sistema`, `Claro` e `Escuro`, com preferência persistida no navegador, resolução reativa de `prefers-color-scheme`, aplicação por `data-theme`/`color-scheme` e bootstrap anterior ao Angular para evitar a troca tardia da paleta. O seletor nativo e rotulado fica no shell e preserva os breakpoints existentes.
-
-Os tokens semânticos claros foram consolidados e ganharam uma paleta escura verde-petróleo. Shell, Busca, Kanban, Histórico, detalhe histórico, Bloqueios, rota inexistente, controles e estados existentes consomem a troca global sem duplicação das folhas de componentes. A implementação não adicionou dependências nem alterou backend, contratos HTTP ou comportamento funcional.
-
-A DM-01.6 aplica tratamento tonal moderado somente ao pane de tiles no tema escuro e tematiza zoom, atribuição, popup, legenda e feedback. Círculo e bordas municipais leem tokens CSS e são atualizados na instância existente ao trocar o tema; mapa, tile layer e GeoJSON não são recriados, e nenhuma nova consulta geográfica é disparada. A paleta do IDHM permanece idêntica por representar dados.
-
-A suíte frontend passou com 215 testes e o build de produção terminou sem warnings. O smoke E2E passou no Firefox, em modo mock, com 27 requisições. A matriz final executou 96 auditorias de estados e gerou 24 screenshots das seis rotas em claro/escuro, a 1440 × 1000 e 390 × 844, sem overflow horizontal ou violações Axe WCAG A/AA.
-
-### Pesquisa inteligente de site e Instagram
-
-A sprint **INFO-01** está em implementação em `features-pos-mvp/pesquisa-inteligente.md`, com **INFO-01.1 a INFO-01.6 concluídas**. Após aprovação das alternativas, `PesquisaWebFallbackClient` usa Google como principal e DuckDuckGo/Brave nessa ordem, somente em falha técnica. Em 13/09/2026, após as três fontes bloquearem o acesso por navegador, a fonte principal passou a ser a API oficial do Brave Search e o scraping ficou desativado por padrão. A consulta sanitizada usa nome, categoria e localização; parsers jsoup isolados convertem resultados públicos em URL, título e resumo para o classificador existente. O scraper de motores de busca segue desativado; a partir de 15/09/2026 o serviço pode abrir a própria URL candidata para validar dados, como descrito abaixo.
-
-Uma única instância do browser é reutilizada em thread dedicada, com contexto isolado por consulta, fila padrão de um item, timeout, limite de resposta, bloqueio de recursos pesados e destinos restritos à fonte ativa. O intervalo global é de 15 segundos, inclusive entre fontes, e é considerado no orçamento de espera da navegação. Cada fonte entra em cooldown de uma hora após bloqueio ou cinco minutos após outra falha técnica. Resultado válido vazio não dispara fallback; fila local ocupada não gera acessos extras. Quando todas falham, observações são preservadas e o lead entra em falhas; três falhas consecutivas abrem o circuito do lote. Não há retry, execução de desafio ou evasão. O Chromium precisa ser instalado no host pelo CLI do Playwright e não faz parte do JAR.
-
-`PesquisaWebInternaService` executa duas consultas iniciais por lead (Instagram e site) e uma terceira de Instagram sem município apenas se necessário, com **teto de três consultas ao Brave por lead**. Em seguida, `LeitorPaginaCandidata` pode abrir até **três páginas por lead** entre os candidatos já relacionados e ainda não confirmados, priorizando perfis de Instagram, para procurar telefone, endereço ou CNPJ do lead no conteúdo público (HTML, meta descrição e JSON estruturado). Persistindo a ausência de Instagram, com telefone válido, uma confirmação direcionada ainda pode ocorrer se sobrar orçamento de busca. Os resultados são avaliados em conjunto para ambos os tipos, sem perder homônimos ou conflitos da mesma página/perfil. URLs de sites preservam o caminho confirmado e removem query/fragmento; Instagram exige perfil, recusando posts/reels/stories. Sites rejeitam redes sociais, diretórios, agregadores, marketplaces e destinos inseguros. Nome/handle iguais não bastam: exige-se evidência independente de município, endereço com número, telefone, CNPJ ou `googlePlaceId` público. A categoria e a razão social continuam como sinais de pontuação, não substitutos da confirmação. A abertura de página não segue redirecionamentos, limita-se a HTTP/HTTPS público (sem localhost ou faixas privadas), tem timeout e limite de bytes, e falha ou bloqueio não concluem ausência.
-
-O refinamento **SITE-00** está concluído: `PlacesApiClient` solicita `places.websiteUri` dentro do mesmo FieldMask Enterprise; o mapper propaga o valor, e `Lead.website` é persistido pela migration V7 sem apagar um site conhecido quando a nova resposta não o traz. `LeadResponse`, paginação, resposta inicial/histórico e exportações CSV/XLSX expõem o site. O drawer do Kanban e o detalhe do Histórico exibem o link oficial ou o rótulo neutro `Site não informado`.
-
-As sprints **SITE-01** e **SITE-02** também estão concluídas. `LeitorPaginaCandidata` preserva o método textual anterior e agora devolve `PaginaLida` com links de perfis Instagram canonicalizados, descartando posts/reels, hosts privados e URLs inválidas. Além de `href`, o leitor reconhece atributos de navegação usados por páginas dinâmicas (`data-href`, `data-url`, `data-link` e `onclick`) e URLs de Instagram embutidas em JSON/estado inicial, preservando o caminho completo para que posts e reels continuem rejeitados. `PesquisaWebInternaService` recebe `website` em `PesquisaLeadDados`, abre o site oficial uma vez antes do Brave, reutiliza os links sociais extraídos como candidatos e não consulta o Brave quando o site ou um perfil encontrado nele confirma o lead. A abertura do site conta no teto de três páginas por lead; leads sem site ou sem confirmação mantêm o fluxo existente e o limite de três consultas ao Brave.
-
-O detalhe do Histórico possui o interruptor `Brave Search` junto da ação `Buscar informações`. A preferência é enviada no POST e persistida na execução assíncrona: ativado mantém o fallback pela API do Brave; desativado impede consultas Brave, sem impedir a validação do site oficial e dos candidatos já disponíveis. O padrão é ativado para preservar clientes antigos que não enviam body.
-
-Na reprodução específica da filial Petz Vila Velha, a classificação controlada confirmou que um perfil vinculado ao HTML do site é encontrado com o Brave desligado e sem consultas externas. A página pública real, porém, respondeu `403 Access Denied` ao leitor HTTP e ao Chromium headless do ambiente; esse bloqueio ocorre antes da extração e não foi contornado com redirecionamento, desafio ou bypass. Portanto, o parser foi reforçado para páginas acessíveis, mas essa URL ainda depende de o próprio site entregar HTML ao backend.
-
-`BuscaInformacoesService` carrega apenas os leads associados à busca por `BuscaLead`, ignora blocos que já tenham os dois links válidos e executa a pesquisa sequencialmente, fora de transação. `JpaBuscaInformacoesPersistencia` relê e atualiza cada lead concluído em transação curta. `FormatadorObservacoesPesquisa` mantém o texto comercial byte a byte fora dos delimitadores, consolida links parciais já válidos, remove duplicação de blocos automáticos e grava a frase exata de ausência somente quando a pesquisa terminou sem candidato. Falha técnica não altera observações. Status, último contato, CNPJ, scoring e snapshots históricos permanecem intactos.
-
-A **INFO-01.4** adicionou execução persistida com migration V6, unicidade de execução ativa por busca, worker sequencial com uma posição de espera, limite padrão de 150 leads e despacho após commit. Resultado do lead e progresso são gravados na mesma transação curta. Na inicialização da instância local, execuções ativas são marcadas como interrompidas sem retomada automática, preservando dados já confirmados.
-
-A **INFO-01.5** expõe `POST /api/buscas/{id}/informacoes` com `202` e `GET` da execução ativa/mais recente. Sem execução, o GET retorna `204`; busca inexistente retorna `404`; IDs inválidos retornam `400`; capacidade/volume excedidos retornam `429`. Falhas da pesquisa são persistidas com código e mensagem seguros; o GET continua retornando `200` com o estado do trabalho, inclusive falha total.
-
-A INFO-01.4 passou em 22 testes direcionados antes de iniciar a INFO-01.5. A validação final passou em 64 testes direcionados, incluindo HTTP/JPA com worker real e pesquisa externa simulada. O pacote executável foi gerado. A suíte completa executou 258 testes: 251 passaram, um smoke opt-in foi ignorado e permaneceram as mesmas três falhas e três erros preexistentes de blacklist/CNPJ local; nenhum teste da pesquisa inteligente falhou.
-
-A **INFO-01.6** adicionou `Buscar informações` após `Buscar CNPJ` no detalhe do Histórico. Um store de Signals por tela consulta a execução cinco segundos após cada resposta, sem sobreposição, com timeout de 15 segundos por requisição. Destruir a tela ou trocar o ID cancela consultas locais; reabrir restaura o estado persistido. Erro de comunicação bloqueia novo início até retomar o GET, sem repetir POST automaticamente. Conclusão recarrega os dados sem ocultar o detalhe e apresenta contadores/falhas; somente URLs HTTP/HTTPS rotuladas dentro do bloco automático completo viram links em nova aba, preservando texto manual escapado e quebras de linha.
-
-A validação frontend da INFO-01.6 passou com 239 testes e build sem warnings. O smoke de regressão passou com 28 requisições simuladas; o novo `npm run e2e:informacoes` passou no Firefox com 24 auditorias dos estados da ação em claro/escuro, desktop/mobile, sem overflow ou violações Axe WCAG A/AA. Os smokes usam API simulada e não comprovam disponibilidade ou precisão da pesquisa real no Google.
-
-A **INFO-01.7 está parcial**, com automação integrada e documentação entregues em 13/09/2026. `PesquisaInformacoesE2eTest` usa o build Angular em Chromium, HTTP/worker/parser/classificador/MySQL reais e apenas páginas externas simuladas. Passou cobrindo ambos os links, resultados parciais, ausência conclusiva, bloqueio, lead completo ignorado, isolamento entre históricos, preservação comercial, links seguros e saída/retorno à rota. Não houve chamada ao Places; o teste remove exclusivamente seus registros temporários após encerrar o worker.
-
-A validação desta etapa passou em 104 testes backend direcionados, gerou o pacote e passou em 35 testes frontend direcionados, 239 testes frontend completos, build Angular sem warnings, smoke de regressão com 28 requisições e 24 auditorias Axe/overflow em claro/escuro e desktop/mobile. A suíte backend completa teve 259 testes: 251 aprovados, três falhas e três erros preexistentes de CNPJ/blacklist, além de dois opt-in executados separadamente. O E2E opt-in passou; o smoke público também passou no ramo de tratamento do bloqueio.
-
-A rodada inicial da INFO-01.7 confirmou bloqueio do Google. Após a autorização de DuckDuckGo e Brave, os 17 testes direcionados e os dois E2Es (Google principal e fallback ao Brave simulado) passaram. O pacote completo passou com **269 testes: 266 aprovados, zero falhas/erros e três opt-in não habilitados**. O isolamento por catálogo MySQL aleatório, exclusivo do classpath de testes, resolveu as seis ocorrências preexistentes de CNPJ/blacklist sem alterar fixtures/expectativas nem dados da aplicação. Flyway continua responsável pelo schema, Hibernate usa `validate` e o catálogo temporário é removido no encerramento normal da JVM; o inicializador não entra no JAR.
-
-Às 12:29 de 13/09/2026, o novo smoke de captura real tentou Google → DuckDuckGo → Brave, uma vez cada, com intervalo entre fontes. As três bloquearam o acesso e o teste terminou com indisponibilidade, sem retry. Captura e precisão reais não foram comprovadas; a sprint permanece parcial exclusivamente por essa dependência externa. As validações anteriores de frontend continuam registradas, sem alteração de UI nesta rodada.
-
-Após esse bloqueio, o usuário aprovou o uso de uma API de busca permitida. `BravePesquisaApiClient` consulta a API oficial do Brave Search (`/res/v1/web/search`) com `BRAVE_SEARCH_API_KEY`, timeout, leitura limitada e sem navegador; a resposta JSON é convertida nos mesmos `GoogleResultadoWeb` e entregue ao classificador existente. `PesquisaWebGateway` (`@Primary`) escolhe a fonte: Brave quando há chave; caso contrário, o scraping somente com `PESQUISA_SCRAPING_HABILITADO=true`; sem nenhuma, retorna indisponibilidade sem alterar observações. O crédito gratuito do Brave (US$ 5/mês, ≈ 1.000 requisições) cobre cerca de 500 leads/mês mantendo as 2 consultas por lead. As mensagens de erro passaram a ser neutras quanto ao provedor. Não há dependência nova; o Playwright permanece no projeto, porém desativado.
-
-A suíte backend passou integralmente com **281 testes, zero falhas/erros e três opt-in não habilitados**, incluindo os novos testes unitários do cliente Brave e do seletor de fonte. A verificação com a API real depende de o usuário criar a chave e definir `BRAVE_SEARCH_API_KEY`; não foi executada nesta entrega.
-
-Como o usuário preferiu não cadastrar cartão, o Bing foi testado e integrado como fonte principal do scraping, sem chave: `FontePesquisaWeb.BING`, parser de `li.b_algo` com decodificação do redirecionador `bing.com/ck/a?...&u=a1<base64url>`, fallback **Bing → Google → DuckDuckGo → Brave** e API do Brave opcional por chave. Mojeek respondeu `403`. Dois defeitos reais do navegador foram corrigidos: `URI.create` de sub-recursos inválidos do Bing e leitura de conteúdo durante navegação (retry limitado).
-
-A medição com 6 leads reais (Castelo/ES), somente leitura, capturou **0 Instagram e 0 site**. O Bing devolveu resultados genéricos e idênticos para as consultas de Instagram e site, ignorando nome, município e `site:`. Decisão final do usuário: **usar a API do Brave**. O scraping voltou ao padrão `false`, mantendo o código do Bing/fallback desativado para reavaliação futura. Sem `BRAVE_SEARCH_API_KEY`, a pesquisa responde indisponível rápido. A suíte passou com **285 testes, zero falhas/erros e cinco opt-in não habilitados**.
-
-Com a chave do Brave configurada, a API respondeu `200`, mas a consulta no formato do Google retornava `0` resultados. O `BravePesquisaApiClient` passou a montar consulta própria (`nome município UF` e `... instagram`) e o `search_lang` foi corrigido para `pt-br` (o Brave rejeitava `pt` com `422`). Na leitura de 6 leads reais, a captura passou a **2 Instagram e 0 site**. Para evitar falsos positivos, o classificador passou a exigir que o domínio do site contenha um token distintivo do nome, rejeitando diretórios como `guiaja.net` e `supermercado.net.br`.
-
-Depois, a pedido do usuário, a cobertura foi aprimorada sem perder precisão: o classificador reconhece handles/domínios concatenados (ex.: `@supermercadomichel`), detecta conflito de localização (rejeita site de outra cidade/UF) e o serviço tenta uma segunda consulta de Instagram **sem o município** quando a primeira não acha perfil aceitável. O caso real "Supermercado Michel" (Castelo/ES) passou a capturar `instagram.com/supermercadomichel` e o site de Curitiba foi rejeitado. A suíte passou com **290 testes, zero falhas/erros e seis opt-in não habilitados**. A associação dos Instagram capturados em nomes genéricos ainda precisa ser conferida; o aceite real da INFO-01.7 segue pendente.
-
-**Refinamento de precisão em 13/09/2026:** o cliente Brave solicita até cinco trechos adicionais da mesma URL, com limites e remoção de HTML, e desativa correção ortográfica e operadores para não alterar nomes comerciais. O classificador veta conflitos explícitos de município/UF, CNPJ e DDD (este último salvo confirmação por CNPJ/Place ID), não usa query strings como prova e não aceita nome de bairro/rua como município. Domínio de site precisa manter relação com o nome inclusive quando ele é genérico; um subdomínio com o nome do lead não legitima um domínio-base alheio. Duplicatas não escondem conflitos e repetição em outra consulta não desempata candidatos. Não houve aumento do máximo de três consultas por lead.
-
-A medição executou **40 chamadas Brave, somente leitura**: seis leads antes/depois (18 + 18), Michel (3) e uma confirmação por telefone (1). As respostas foram preservadas em temporários locais para replay sem novas chamadas. O site anteriormente aceito para Oliveira foi rejeitado; os novos trechos revelaram Viamão/RS. O perfil `@supermercadomichel` traz DDD 41, incompatível com o DDD 28 do lead de Castelo, e não foi aceito. Nenhum dos sete leads teve URL suficientemente corroborada nessa amostra; isso não prova inexistência de site/perfil. A consulta adicional por telefone não trouxe evidência útil e não foi adicionada à produção. A suíte/pacote passaram com **333 testes, 327 aprovados e seis opt-in**, sem falhas/erros. O diagnóstico não modificou observações nem outros dados comerciais.
-
-**Refinamento de filiais concluído em 13/09/2026:** a Petz Vila Velha já aparecia no Brave, mas era descartada por exigir o município no domínio e por consolidar conflitos de todas as páginas do site. `ClassificadorUrlService` separa marca/município somente na comparação do domínio, consolida conflitos por página e depois seleciona a melhor página elegível do site. `AnalisadorEnderecoPesquisa` reconhece tipos de logradouro abreviados e por extenso, associa o número à mesma ocorrência/trecho, recusa endereço explicitamente divergente e usa o endereço formatado quando faltam componentes. O telefone `(027)` é reconhecido como DDD `27`. O caminho da filial é preservado até o bloco de observações. Permanecem a confirmação independente, os vetos de identidade e o máximo de três consultas por lead.
-
-A reprodução e a confirmação posterior consumiram **seis chamadas reais ao Brave**, sem escrever no banco de aplicação: o site da Petz passou de ausente para `https://www.petz.com.br/loja/petz-vila-velha`; o Instagram não foi confirmado. O replay de oito leads manteve a recusa dos sete casos anteriores de Castelo e confirmou somente esse site. A captura inicial virou fixture offline. Passaram **117 testes direcionados** e a suíte completa com **371 testes: 365 aprovados, seis opt-in ignorados, zero falhas/erros**; o JAR foi gerado com `./mvnw -DskipTests package` após a suíte. Diagnóstico, escolhas e tentativas estão em `features-pos-mvp/refinamento-pesquisa.md`, preservando integralmente o pedido original.
-
-**Refinamento de nomes alternativos concluído em 14/09/2026:** o Instagram pode usar nome comercial diferente quando compartilha a marca distintiva e possui telefone, CNPJ ou Place ID exato no conteúdo público. Referências em resultados de sites podem corroborar um perfil já descoberto se endereço com número, telefone exato e referência explícita a um único Instagram aparecem no mesmo trecho/bloco. Trechos separados e dados de unidades conflitantes não são combinados; permanecem o limiar, a margem entre candidatos e os vetos de identidade. `ConfirmacaoPerfilInstagram` limita os termos das consultas adicionais; não há acesso a perfis/sites candidatos nem alteração de contrato HTTP, schema ou frontend.
-
-O caso Supermercado Michel foi confirmado pela API real em cinco consultas: `https://www.instagram.com/centraldecomprasmichel`, sem site confirmado. A referência indexada da Central de Compras reuniu endereço, telefone e perfil no mesmo bloco; o homônimo com DDD 41 continuou rejeitado. A rodada de diagnóstico e validação consumiu dez chamadas Brave, somente leitura, e a captura final virou fixture offline. Passaram **154 testes direcionados** e a suíte completa com **418 testes: 412 aprovados, seis opt-in ignorados, zero falhas/erros**. `./mvnw -DskipTests package` gerou o JAR após a suíte. O documento de refinamento recebeu diagnóstico, escolhas e tentativas por acréscimo, preservando o pedido.
-
-**Refinamento de telefone, username e endereço parcial em 15/09/2026:** `ClassificadorUrlService` reconhece zero de tronco sem parênteses, incluindo `028 999353480`. `AnalisadorEnderecoPesquisa` separa divergência de logradouro e número. No Instagram, a diferença de número pode ser resolvida por telefone exato no mesmo logradouro/município ou pelo conjunto de nome exato, username com no máximo duas edições, mesma rua/cidade e número vizinho com diferença máxima de dois. Município presente apenas no nome/título deixa de contar como localização. Outra rua, localização explícita conflitante, CNPJ e DDD permanecem vetos; sites próprios continuam exigindo número sem conflito. O limite de cinco consultas, os provedores e a estratégia de pesquisa permanecem.
-
-No caso **Hortifruti Castelo**, a Brave retornou `@hortfrutcastelo` em primeiro lugar com dados antigos. A leitura diagnóstica do HTML público confirmou a bio atual com `028 999353480` e Avenida Nossa Senhora da Penha, 559, sem transformar essa leitura em scraping de produção. O conjunto completo inicialmente ficou ambíguo porque “Castelo” no nome de perfis concorrentes era tratado como município; a separação de identidade e localização eliminou isso. A validação real final confirmou `https://www.instagram.com/hortfrutcastelo` em duas chamadas e nenhum site. Foram quinze chamadas Brave na investigação, somente leitura. Passaram 154 testes direcionados e a suíte completa com 446 testes (440 aprovados, seis opt-in ignorados); o pacote foi gerado após a suíte.
-
-**Handle de ramo e termos genéricos plurais em 15/09/2026:** no lead **Multishow Supermercados Castelo - Volta Redonda**, a Brave já devolvia `@multishowcastelo` na primeira consulta. O `ClassificadorUrlService` passou a reconhecer a flexão de número dos termos genéricos (`supermercados`, `farmacias`, `acougues` etc.) e a aceitar um perfil do Instagram cujo handle combine marca e praça: exige uma sequência contígua de ao menos dois termos distintivos do nome contendo, no mesmo trecho, um termo do município e um termo que não venha dele. Handles de rede (`multishowsupermercados`), de outra praça (`multishowvitoria`) ou que repetem apenas a cidade (`mercadocastelo`) continuam recusados, e nomes que são só a praça (`Padaria São José`) também. A regra vale somente para Instagram e mantém limiar, margem, vetos de endereço/município/UF/CNPJ/DDD e o limite de cinco consultas. O perfil confirmado já entra na primeira análise, eliminando a consulta extra sem município. A validação real confirmou `https://www.instagram.com/multishowcastelo` e nenhum site, em duas chamadas, e a captura virou fixture offline. Passaram 13 testes novos, a suíte completa com 459 testes (453 aprovados, seis opt-in ignorados) e o pacote.
-
-O refinamento de site oficial está implementado nas sprints **SITE-00 a SITE-03**: captura e persistência do `websiteUri`, contrato, exportação, exibição, extração de links, semeadura da pesquisa, documentação pública e validação automatizada. A redução de chamadas foi comprovada em cenários controlados: site confirmado não chama o Brave; site sem confirmação mantém o teto de três consultas. A reprodução positiva em uma página real ficou limitada por indisponibilidade/DNS do ambiente no diagnóstico opt-in `SiteOficialLiveTest`; não há alegação de medição em produção.
-
-### Próximo passo
-
-Os sprints **FE-00** a **FE-17**, a melhoria **FE-100**, a manutenção do WhatsApp, **IDHM-00** a **IDHM-05**, **BL-00** a **BL-04**, **CNPJ-00** a **CNPJ-07**, **CNPJMATCH-00** a **CNPJMATCH-03**, **DM-01** e **EMAIL-00** a **EMAIL-03** estão implementados nos respectivos escopos. Não há outra etapa de dark mode pendente. A promoção do refinamento CNPJ permanece deliberadamente pendente da revisão manual exigida pelo próprio plano; o flag de produção continua fail-closed e nenhum `--aplicar` foi executado.
-
-Os refinamentos de filiais, nomes comerciais alternativos, telefone/endereço parcial e handle de ramo estão implementados e testados; Petz Vila Velha, Supermercado Michel, Hortifruti Castelo e Multishow Castelo foram confirmados com a API real nos respectivos escopos. O SITE-00 a SITE-03 do site oficial estão implementados, documentados e validados automaticamente; a amostra positiva real do novo caminho não foi confirmada porque a página pública usada no diagnóstico ficou indisponível para o leitor no ambiente. O aceite amplo da **INFO-01.7** permanece parcial: falta uma amostra rotulada maior de URLs realmente pertencentes aos estabelecimentos para medir precisão/cobertura. Uma nova execução de `Buscar informações` reavalia ausências e resultados parciais; blocos com os dois links válidos continuam sendo ignorados. Capturas antigas por nome/handle não devem ser tratadas como identidade comprovada; não houve correção retroativa dos blocos já gravados. O scraping permanece desativado. Falhas técnicas não produzem ausência conclusiva nem alteram observações; candidatos sem confirmação são recusados.
-
-A suíte backend está isolada da base populada e passou integralmente nos testes habilitados. O usuário MySQL dos testes precisa de CREATE/DROP DATABASE; falha ao criar o catálogo temporário interrompe os testes, sem fallback para a base da aplicação. O uso do IDHM e do CNPJ no `ScoringService` e a limpeza retroativa de leads bloqueados permanecem fora das entregas atuais.
-
-As categorias de prospecção **Informática**, **Vestuário** e **Pet Shop / Ração** foram incluídas em 15/09/2026 (sprints CTG-00 a CTG-02 de `features-pos-mvp/refinamento-categorias.md`). Elas existem no enum, no mapeamento para os tipos oficiais do Google Places (`electronics_store`/`cell_phone_store`; `clothing_store`/`womens_clothing_store`/`shoe_store`/`sportswear_store`; `pet_store`), na inferência de volta, nos textos da pesquisa inteligente e nos rótulos do frontend. Selecionar uma delas deixa de cair em `OUTROS`. O contrato HTTP, o schema e o `ScoringService` permaneceram iguais.
-
-## Documentação e configuração local
-
-O `README.md` da raiz passou a ser a porta de entrada do projeto: o que é, para que serve, principais recursos, tecnologias, requisitos completos, configuração por `.env`, execução de backend/frontend, injeção da base CNPJ por município desejado, resumo das rotas e limitações de escopo.
-
-A configuração sensível voltou a ser lida somente por variáveis de ambiente (`DB_USERNAME`, `DB_PASSWORD`, `GOOGLE_PLACES_API_KEY`, `BRAVE_SEARCH_API_KEY`), removendo os valores hardcoded que estavam no `application.yml` do worktree. O `.env` foi ignorado pelo Git e há um `.env.example` versionado como modelo.
-
-A validação usou `DB_USERNAME`/`DB_PASSWORD` no ambiente e passou com `./mvnw -DargLine=-javaagent:.../byte-buddy-agent-1.18.10.jar test`: **446 testes, zero falhas, zero erros e seis opt-in ignorados**, com o contexto Spring, Flyway e MySQL 8.1 no catálogo temporário isolado. O `./mvnw -DskipTests package` também passou.
-
-## Padrão de boilerplate com Lombok
-
-O backend utiliza Lombok de forma seletiva, mantendo a configuração já existente no Maven e sem alterar contratos HTTP ou regras de negócio.
-
-- `Busca`, `BuscaLead` e `Lead` usam `@Getter`, `@Setter` e `@NoArgsConstructor` para substituir os accessors manuais e preservar o construtor exigido pelo JPA.
-- `BuscaController`, `BuscaService`, `LeadController`, `LeadService`, `ExportController` e `ExportService` usam `@RequiredArgsConstructor` para injetar dependências obrigatórias `final`.
-- `ApiExceptionHandler` usa `@Slf4j` para eliminar a declaração manual do logger.
-- DTOs e contratos internos que já são `record` permanecem records.
-- Entidades JPA não usam `@Data`, `@Builder`, `@EqualsAndHashCode` ou `@ToString`, evitando recursão em relacionamentos, lazy loading inesperado e comparação por campos mutáveis.
-
-## E-mail do site oficial — EMAIL-00 a EMAIL-03
-
-As quatro sprints de `features-pos-mvp/refinamento-email-site-oficial.md` estão implementadas. O e-mail do `Lead` é persistido por V11 junto da data e do host de origem; o contrato de lead, o histórico, o Kanban e CSV/XLSX o expõem. Atualização do Places que mude o host do site limpa os três campos; omissão do site e falha de leitura não apagam um e-mail existente. A pesquisa inteligente anterior não captura e-mail automaticamente.
-
-O botão **Buscar e-mails** no detalhe do Histórico inicia `POST /api/buscas/{id}/emails` por ação explícita e acompanha o GET persistido. A V12 guarda o progresso e impõe uma única execução ativa por busca; o worker executa uma busca por vez, com uma posição de espera e sem retry automático. Cada lead sem e-mail lê até duas páginas do mesmo site oficial, reaproveitando os limites de HTTP público, timeout, tamanho e ausência de redirects. Telefone, endereço numerado ou CNPJ devem confirmar a identidade sem conflitos; somente endereço do host normalizado ou subdomínio é aceito. O contador agregado `descartadosDominioExterno` mede leads com contato externo recusado, sem reter os endereços. O `mailto:` é manual; não há envio automático, Google ou Brave nessa ação.
-
-Flyway aplicou V11/V12 até a versão 12 no MySQL temporário isolado. A suíte backend passou com **544 testes, zero falhas/erros e 11 opt-in ignorados**; o frontend passou com **242 testes**, o build Angular e o pacote Maven passaram. O smoke Firefox em modo mock passou com 29 requisições fora do sandbox; uma tentativa anterior no sandbox falhou ao iniciar o browser por `NS_ERROR_OUT_OF_MEMORY`. Não houve teste de captura em site real nem medição de cobertura em produção. O próximo passo específico da feature, caso se deseje medir a perda aceita na v1, é rodar a ação explicitamente numa amostra de buscas e observar o contador agregado, sem ampliar a regra de domínio antes dessa leitura.
-
-## Filtro do Kanban por execução de busca
-
-O Kanban agora oferece **Endereço base de pesquisa** entre Etapa e Categoria. As opções vêm de cada execução do Histórico, inclusive buscas sem endereço ou sem leads, identificadas por endereço e data/hora; se o rótulo coincidir no mesmo minuto, o ID aparece para diferenciá-las. O valor técnico é sempre o ID da busca. O padrão é **Todas as buscas** e a seleção é combinada com Etapa, Categoria e Temperatura. O vínculo `BuscaLead` limita os leads, enquanto status, categoria, temperatura e demais dados exibidos são os atuais. CSV e Excel usam os filtros da última consulta aplicada ao Kanban, inclusive antes de uma nova seleção ser aplicada. O filtro usa os contratos existentes de listagem e exportação com o parâmetro opcional `buscaId`; não houve migration.
-
-A suíte backend completa passou com **549 testes, zero falhas/erros e 11 opt-in ignorados**, no MySQL temporário isolado. O frontend passou com **243 testes** e build de produção; o pacote Maven também foi gerado sem executar novamente os testes.
+Para executar o projeto e configurar dependências locais, veja [README.md](README.md)
