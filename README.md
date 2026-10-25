@@ -142,5 +142,4 @@ Para o smoke E2E, mantenha o frontend em execução com `npm start` em outro ter
 | [tecnologias.md](tecnologias.md) | Stack e decisões técnicas                                                |
 | [frontend/README.md](frontend/README.md) | Estrutura e comandos próprios do Angular                                 |
 | [tools/cnpj/README.md](tools/cnpj/README.md) | Download, preparação e importação da base de CNPJ,   Era pra um caso especifico idealizado no inicio, não é necessário                     |
-| [GUIA_OUTRO_COMPUTADOR.md](GUIA_OUTRO_COMPUTADOR.md) | Uso do Kanban em outro computador com os dados atuais                    |
 | [HISTORICO_IMPLEMENTACOES.md](HISTORICO_IMPLEMENTACOES.md) | Evolução das implementações                                              |
