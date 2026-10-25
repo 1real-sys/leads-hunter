@@ -1,392 +1,82 @@
-# Raio-X tecnológico do Leads Hunter
+# Tecnologias e escolhas técnicas
 
-Levantamento do estado real do repositório em **10 de setembro de 2026**. Este documento descreve as tecnologias, a arquitetura, as funcionalidades, a execução local, as integrações e as limitações que existem hoje no projeto.
+O Leads Hunter é uma aplicação local de prospecção com frontend Angular, API Spring Boot e MySQL. Este documento registra **a stack usada e o motivo das escolhas**. O funcionamento interno está em [fluxo.md](fluxo.md), os contratos HTTP em [API.md](API.md) e as instruções de execução no [README.md](README.md). As versões vêm de `pom.xml` e `frontend/package-lock.json`.
 
-## Resumo executivo
-
-O Leads Hunter é uma aplicação web local e single-user para prospecção de estabelecimentos comerciais. O sistema consulta a Google Places API, deduplica e persiste os estabelecimentos como leads, enriquece os dados com município, IDHM e CNPJ, calcula score comercial, organiza os leads em um Kanban e permite exportá-los em CSV ou Excel.
-
-| Camada | Tecnologia principal | Estado atual |
-| --- | --- | --- |
-| Backend | Java 25 + Spring Boot 4.1.0 | Implementado |
-| Frontend | Angular 22.1.4 + TypeScript 6.0.3 | Implementado |
-| Banco | MySQL + Flyway | Implementado para execução local |
-| Integração externa | Google Places API (New) | Implementada no backend |
-| Pesquisa web pública | API oficial do Brave Search + `java.net.http.HttpClient`; scraping Playwright Java 1.62.0 + Chromium headless + jsoup 1.23.2 (desativado por padrão) | Fonte via `BRAVE_SEARCH_API_KEY`; Bing testado em leads reais e descartado por ignorar a consulta |
-| Mapa | Leaflet 1.9.4 + OpenStreetMap | Implementado |
-| Cache | Caffeine em memória | Implementado |
-| Rate limiting | Bucket4j 8.10.1 em memória | Implementado para chamadas à Google |
-| Exportação | CSV próprio + Apache POI 5.5.1 para XLSX | Implementado |
-| Infraestrutura | Processos locais, sem containers e sem deploy | Somente ambiente local |
-
-## O que o programa faz
-
-- Busca estabelecimentos por coordenadas, raio de até 20 km e categorias comerciais.
-- Consulta a Google Places API (New) pelo backend e nunca expõe a integração diretamente ao navegador.
-- Deduplica leads por `googlePlaceId`.
-- Relaciona buscas e leads em N:N por meio de `BuscaLead`, preservando o retrato de score e temperatura de cada execução.
-- Mantém o histórico de pesquisas e permite abrir seus detalhes.
-- Persiste telefone, endereço formatado, endereço estruturado, avaliação, quantidade de reviews e situação operacional.
-- Normaliza telefones brasileiros e gera somente um link manual `https://wa.me/55...`.
-- Calcula score de 0 a 95 e classifica os leads como `FRIO`, `MORNO` ou `QUENTE`.
-- Organiza o funil nos status `NOVO`, `QUALIFICADO`, `CONTATADO`, `GANHO` e `PERDIDO`.
-- Permite movimentar leads no Kanban por drag-and-drop ou controles de teclado.
-- Permite editar observações e último contato sem sobrescrever os demais dados.
-- Filtra leads por status, categoria e temperatura.
-- Pagina cada coluna do Kanban de forma independente, com até 25 registros por página.
-- Exporta os leads filtrados em CSV UTF-8 e Excel `.xlsx`.
-- Mantém uma blacklist persistente de nomes e ignora estabelecimentos cujo nome contenha um termo bloqueado normalizado.
-- Localiza município, UF e IDHM por um dataset geográfico offline com 5.570 municípios.
-- Exibe no mapa uma camada coroplética opcional de IDHM, servida como GeoJSON pelo backend.
-- Faz correspondência local de CNPJ por município, endereço e nome, com limiar de confiança e rejeição de ambiguidades.
-- Permite tentar novamente o enriquecimento de CNPJ dos leads de uma busca histórica.
-- Oferece um endpoint próprio de health check.
-
-## Backend
-
-### Plataforma e build
-
-| Item | Versão/configuração | Uso no projeto |
-| --- | --- | --- |
-| Java | 25 LTS; ambiente local em Amazon Corretto 25.0.4 | Linguagem e runtime da API |
-| Spring Boot | 4.1.0 | Base da aplicação e gerenciamento de dependências |
-| Maven Wrapper | Maven 3.9.16 no ambiente inspecionado | Build, testes e empacotamento |
-| Artefato | `dev.jlm:leads-hunter:0.0.1-SNAPSHOT` | JAR executável Spring Boot |
-| Pacote raiz | `dev.jlm.leadshunter` | Organização do código Java |
-| Servidor | Tomcat embarcado, porta 8080 | Servidor HTTP fornecido pelo Spring Web |
-
-Não foi encontrada configuração ativa de virtual threads. Embora essa tecnologia apareça como possibilidade na documentação inicial, o código e o `application.yml` atuais não a habilitam.
-
-### Frameworks e bibliotecas
-
-| Tecnologia | Uso |
-| --- | --- |
-| Spring Web MVC | Controllers REST, contratos HTTP e servidor web |
-| Spring `RestClient` | Comunicação HTTP síncrona com a Google Places API |
-| Spring Data JPA | Repositories, paginação, Query by Example e Specifications |
-| Hibernate/JPA | Mapeamento e persistência das entidades |
-| Jakarta Validation | Validação de DTOs, parâmetros, limites e payloads |
-| Flyway + `flyway-mysql` | Criação, evolução e validação do schema |
-| MySQL Connector/J | Driver JDBC de runtime |
-| Caffeine | Cache local das respostas recentes da Google Places |
-| Bucket4j 8.10.1 | Limite local de chamadas externas |
-| Apache POI 5.5.1 | Geração de arquivos Excel `.xlsx` |
-| API do Brave Search | Fonte da pesquisa de site/Instagram, via JSON e chave em variável de ambiente; consulta própria (`nome município UF`) e `search_lang=pt-br` |
-| Playwright Java 1.62.0 | Renderização isolada de páginas públicas no fallback de scraping, desativado por padrão |
-| jsoup 1.23.2 | Extração de URL, título e resumo do HTML renderizado e limpeza de HTML no JSON do Brave |
-| Jackson | Serialização JSON e leitura do dataset geográfico |
-| Lombok | Geração seletiva de getters, setters, construtores e logger |
-| Spring Boot DevTools | Recarga e apoio ao desenvolvimento local |
-
-### Organização do backend
+## Visão da arquitetura
 
 ```text
-src/main/java/dev/jlm/leadshunter/
-├── busca/                 busca, cache, histórico e vínculo Busca-Lead
-├── bloqueio/              blacklist persistente de nomes
-├── cnpj/                  dados e correspondência local de CNPJ
-├── config/                health check e tratamento centralizado de erros
-├── exportacao/            geração de CSV e Excel
-├── geo/                   dataset municipal, IDHM, GeoJSON e backfill
-├── integracao/places/     cliente, contratos e rate limit da Google Places
-├── lead/                  gestão do lead, telefone e WhatsApp manual
-└── scoring/               cálculo de score e temperatura
+Angular → API Spring Boot → MySQL
+                 ├── Google Places API (busca de estabelecimentos)
+                 ├── Brave Search API (pesquisa pública opcional)
+                 ├── dataset municipal/IDHM no classpath
+                 └── base local de CNPJ no MySQL
 ```
 
-A arquitetura segue o fluxo Controller → Service → Repository/integração. Entidades JPA não são devolvidas diretamente: a API usa DTOs e records próprios. O tratamento de exceções é centralizado por `@RestControllerAdvice` e devolve um contrato JSON uniforme, sem stack trace ou detalhes internos.
+A aplicação foi desenhada para **uso local e uma única instância**. Por isso, cache e limites de chamadas ficam em memória, enquanto buscas, leads e execuções de enriquecimento ficam no banco. O navegador não recebe chaves de APIs externas. Não há autenticação nem infraestrutura de deploy no escopo atual.
 
-### API REST disponível
+## Backend e persistência
 
-| Método e rota | Finalidade |
-| --- | --- |
-| `GET /api/health` | Health check simples da aplicação |
-| `POST /api/buscas` | Executar e persistir uma busca |
-| `GET /api/buscas` | Listar o histórico |
-| `GET /api/buscas/{id}` | Consultar uma busca anterior |
-| `POST /api/buscas/{id}/cnpj` | Reprocessar CNPJ dos leads ainda sem correspondência |
-| `POST /api/buscas/{id}/informacoes` | Iniciar a pesquisa inteligente em segundo plano e retornar 202 |
-| `GET /api/buscas/{id}/informacoes` | Recuperar estado, progresso e resumo da execução ativa/mais recente |
-| `GET /api/leads` | Listar e filtrar leads |
-| `GET /api/leads/pagina` | Paginar uma etapa do Kanban |
-| `GET /api/leads/{id}` | Consultar um lead |
-| `PATCH /api/leads/{id}` | Atualizar status, observações e/ou último contato |
-| `GET /api/bloqueios` | Listar termos bloqueados |
-| `POST /api/bloqueios` | Cadastrar um termo bloqueado |
-| `DELETE /api/bloqueios/{id}` | Remover um termo bloqueado |
-| `GET /api/geografia/municipios` | Obter municípios/IDHM em GeoJSON por bounding box |
-| `GET /api/exportacao/leads.csv` | Exportar leads em CSV |
-| `GET /api/exportacao/leads.xlsx` | Exportar leads em Excel |
+| Tecnologia | Versão ou configuração | Papel no projeto |
+| --- | --- | --- |
+| Java | 25 | Linguagem e runtime do backend. |
+| Spring Boot | 4.1.0 | Inicialização, configuração, servidor Tomcat embarcado e gerenciamento das dependências Spring. |
+| Spring Web MVC | Gerenciada pelo Boot | Controllers REST e tratamento HTTP. |
+| Spring Data JPA e Hibernate | Gerenciados pelo Boot | Repositories, paginação e persistência das entidades. |
+| Jakarta Validation | Gerenciada pelo Boot | Validação dos DTOs e parâmetros recebidos. |
+| MySQL e Connector/J | MySQL 8.x; driver gerenciado pelo Boot | Dados operacionais, histórico e recorte local de CNPJ. |
+| Flyway e `flyway-mysql` | Gerenciados pelo Boot | Migrations versionadas `V1` a `V12` e carga repetível de CNPJ. |
+| Jackson | Gerenciado pelo Boot | JSON dos contratos HTTP, da Brave e do dataset geográfico. |
+| Lombok | Gerenciado pelo Boot | Reduz código repetitivo em entidades e serviços selecionados. |
+| Maven Wrapper | 3.9.16, fixado em `.mvn/wrapper/` | Build reproduzível sem depender de Maven global. |
 
-## Banco de dados e persistência
+O Flyway controla o schema; Hibernate usa `ddl-auto: validate`. A relação entre `Busca` e `Lead` é N:N por `BuscaLead`, que também guarda o score da execução. A API devolve DTOs em vez de entidades JPA. O código Java é organizado por funcionalidade em `src/main/java/dev/jlm/leadshunter/`.
 
-| Item | Situação atual |
-| --- | --- |
-| SGBD | MySQL local |
-| Schema padrão | `leadsradar` |
-| ORM | Hibernate/JPA via Spring Data JPA |
-| Evolução de schema | Flyway |
-| Estratégia Hibernate | `ddl-auto: validate`; não cria nem altera schema automaticamente |
-| Open Session in View | Desabilitado (`open-in-view: false`) |
-| Engine/charset das migrations | InnoDB e `utf8mb4` |
+| Tecnologia | Versão | Por que está aqui |
+| --- | --- | --- |
+| Caffeine | Gerenciada pelo Boot | Reutiliza respostas recentes da Google sem impedir um novo registro de busca. |
+| Bucket4j | 8.10.1 | Limita chamadas reais à Google Places; cache hit não consome permissão. |
+| Apache POI | 5.5.1 | Gera XLSX com células tipadas; CSV é produzido pelo próprio backend. |
 
-### Estrutura persistida
-
-- `busca`: parâmetros, totais e data de cada pesquisa.
-- `leads`: estabelecimento deduplicado, classificação, dados comerciais, geografia e CNPJ.
-- `busca_lead`: associação N:N com score, temperatura e instante daquela busca.
-- `pesquisa_informacoes_execucao`: execução da pesquisa inteligente, estado, datas, progresso, resumo e erro seguro; no máximo uma execução ativa por busca.
-- `nome_bloqueado`: termos da blacklist e sua forma normalizada única.
-- `cnpj_empresa`: CNPJ básico, razão social e competência da base.
-- `cnpj_estabelecimento`: unidade de 14 dígitos, endereço, município, situação cadastral e competência.
-
-Existem migrations versionadas de `V1` a `V6` e uma migration repetível para a carga CNPJ. A migration repetível versionada é apenas um placeholder seguro; a carga mensal volumosa real é gerada localmente e não deve ser commitada.
+Caffeine e Bucket4j mantêm estado apenas no processo. Uma reinicialização limpa o cache e reinicia o limite local; essa escolha acompanha a execução em uma instância, sem Redis ou mensageria.
 
 ## Frontend
 
-### Plataforma e bibliotecas
+As versões abaixo são as resolvidas em `frontend/package-lock.json`.
 
-As versões abaixo são as resolvidas atualmente pelo `package-lock.json`.
-
-| Tecnologia | Versão | Uso |
+| Tecnologia | Versão | Papel no projeto |
 | --- | --- | --- |
-| Angular | 22.1.4 | SPA e componentes standalone |
-| Angular CLI | 22.1.6 | Desenvolvimento e build |
-| Angular Build | 22.1.6 | Pipeline de compilação |
-| Angular CDK | 22.1.4 | Drag-and-drop do Kanban |
-| TypeScript | 6.0.3 | Código tipado em modo estrito |
-| RxJS | 7.8.2 | Fluxos assíncronos, HTTP e cancelamento |
-| Leaflet | 1.9.4 | Mapa, marcador, raio e camada municipal |
-| SCSS | Configurado pelo Angular | Estilos globais e por componente |
-| Angular Signals | Recurso do framework | Estado local e valores derivados |
-| Signal Forms | Recurso usado nas telas de formulário | Formulários tipados e reativos |
+| Angular e Angular CDK | 22.1.4 | SPA com componentes standalone; o CDK fornece drag-and-drop do Kanban. |
+| Angular CLI e Build | 22.1.6 | Servidor de desenvolvimento e build. |
+| TypeScript | 6.0.3 | Código e contratos HTTP tipados em modo estrito. |
+| Angular Signals e Signal Forms | Incluídos no Angular | Estado local, valores derivados e formulário da Busca. |
+| RxJS | 7.8.2 | Requisições HTTP, cancelamento e acompanhamento das ações assíncronas. |
+| Leaflet | 1.9.4 | Mapa, seleção de coordenadas e camada opcional de IDHM. |
+| SCSS | Suportado pelo Angular | Estilos globais, temas e estilos dos componentes. |
 
-O frontend é uma SPA sem SSR, sem biblioteca global de estado e sem framework visual externo. Usa componentes standalone, lazy loading por rota, `provideHttpClient`, `provideRouter`, templates estritos e TypeScript estrito.
+O frontend usa rotas carregadas sob demanda e serviços em `frontend/src/app/core/api/` para falar com o backend. O estado permanece próximo das telas; não há biblioteca global de estado. Os tiles básicos do mapa vêm do OpenStreetMap e dependem de rede durante o uso normal. A camada municipal/IDHM vem do backend, a partir de dados locais.
 
-### Telas e rotas
+## Integrações e dados
 
-| Rota | Conteúdo |
+| Tecnologia ou fonte | Uso e limite da escolha |
 | --- | --- |
-| `/busca` | Formulário, mapa Leaflet, raio, camada IDHM e resultados |
-| `/kanban` | Cinco etapas do funil, filtros, paginação, detalhe e exportação |
-| `/historico` | Lista das buscas realizadas |
-| `/historico/:id` | Detalhe e leads de uma busca anterior, inclusive reprocessamento de CNPJ |
-| `/bloqueios` | Cadastro, listagem e remoção de nomes bloqueados |
-| `**` | Página de rota não encontrada |
+| Google Places API (New) + Spring `RestClient` | Busca estabelecimentos pelo backend. A chave fica no ambiente do servidor; cache e rate limit reduzem chamadas repetidas. |
+| Brave Search API + `java.net.http.HttpClient` | Descobre candidatos a site próprio e perfil público do Instagram quando o usuário aciona **Buscar informações** e permite Brave. Não há integração com a API oficial do Instagram. |
+| `java.net.http.HttpClient` + jsoup 1.23.2 | Lê páginas públicas elegíveis com limites de host, tamanho, tempo e redirecionamento; extrai texto e links para confirmar identidade e, na ação própria, e-mail do site oficial. |
+| Dataset municipal/IDHM | Arquivo incluído no classpath; localiza município/IDHM e fornece GeoJSON sem download geográfico em runtime. |
+| Base pública de CNPJ | Recorte mensal gerado offline por scripts Python em `tools/cnpj/` e carregado no MySQL. A aplicação não consulta a Receita em runtime. |
+| OpenStreetMap | Fornece os tiles da camada base do mapa no navegador; não é a fonte do IDHM. |
 
-### Experiência e acessibilidade implementadas
+Playwright Java 1.62.0 continua no `pom.xml` para o código legado de scraping de buscadores, **desativado por padrão**. A pesquisa normal usa a API oficial do Brave e pode abrir apenas páginas candidatas permitidas. Os limites e verificações dessa leitura estão descritos em [fluxo.md](fluxo.md).
 
-- Layout responsivo para desktop e mobile.
-- Navegação lateral e áreas de trabalho independentes.
-- Temas `Sistema`, `Claro` e `Escuro`, com Signals, persistência em `localStorage`, acompanhamento de `prefers-color-scheme` e aplicação antecipada no bootstrap.
-- Paleta escura por tokens semânticos, incluindo tratamento tonal dos tiles, controles, popup, legenda, círculo e camada IDHM do Leaflet.
-- Kanban com rolagem horizontal localizada e rolagem vertical por coluna.
-- Drag-and-drop com atualização otimista, confirmação da API e rollback em erro.
-- Alternativa por teclado para mover cards entre etapas.
-- Drawer de detalhes com foco preso, fechamento por `Escape` e retorno do foco ao gatilho.
-- Mensagens distintas de carregamento, sucesso, vazio e erro.
-- Camada de IDHM opcional com legenda e popups acessíveis.
-- Download de blobs com nomes obtidos de forma segura dos headers HTTP.
-- WhatsApp aberto manualmente em nova aba somente quando a API fornece uma URL válida.
+## Testes e ferramentas de desenvolvimento
 
-## Integrações e dados externos
-
-### Google Places API (New)
-
-- Endpoint utilizado: Nearby Search `places:searchNearby`.
-- A chamada parte exclusivamente do backend.
-- Busca por popularidade e retorna no máximo 20 estabelecimentos por consulta externa.
-- Usa Field Mask para solicitar somente os campos necessários.
-- Traduz categorias internas para tipos aceitos pela Google.
-- Trata separadamente falta de configuração, autorização, cota, rate limit, consulta rejeitada, indisponibilidade e resposta inválida.
-- O cache evita chamadas repetidas para coordenadas, raio e categorias equivalentes.
-- O rate limiter protege somente as chamadas externas reais; cache hit não consome permissão.
-
-### Dados geográficos e IDHM
-
-- O runtime usa o arquivo offline `src/main/resources/geo/municipios-idhm.json`.
-- O dataset contém 5.570 municípios, limites geográficos e Polygon/MultiPolygon simplificados.
-- A carga valida tamanho, metadados e checksum antes de permanecer em memória.
-- A localização usa bounding boxes e point-in-polygon.
-- Não há download geográfico em runtime.
-- Os scripts reproduzíveis de geração ficam em `tools/idhm/` e usam Python.
-
-### Base de CNPJ
-
-- A correspondência acontece localmente; não existe consulta à Receita Federal em runtime.
-- Os scripts em `tools/cnpj/` processam os arquivos mensais oficiais em streaming.
-- O pipeline usa Python, manifesto de fontes, HTTPS, checksums SHA-256, filtros por UF/município e saída SQL determinística.
-- A aplicação rejeita correspondências ambíguas, de baixa confiança ou com candidatos demais.
-- Competência e confiança são persistidas para permitir revalidação futura.
-
-### OpenStreetMap
-
-O Leaflet usa tiles do OpenStreetMap no navegador, com atribuição. Portanto, embora o dataset municipal seja offline, a camada base do mapa depende de rede durante o uso normal, salvo se os tiles já estiverem em cache no navegador.
-
-## Cache, limites e desempenho
-
-- Cache Caffeine local, padrão de 30 minutos e no máximo 100 buscas.
-- Chave de cache por latitude/longitude arredondadas, raio e categorias normalizadas.
-- Bucket4j local, padrão de 10 requisições repostas ao longo de 60 segundos.
-- Resultados do cache não impedem a criação de um novo histórico de busca.
-- Endpoint geográfico limitado a 1.500 municípios por resposta.
-- Paginação do Kanban limitada a 25 leads por página.
-- Correspondência CNPJ limitada a 200 candidatos.
-- Cache e rate limiter ficam somente na memória do processo e são reiniciados com a aplicação.
-
-## Testes e qualidade
-
-### Backend
-
-| Ferramenta | Origem/versão | Uso |
-| --- | --- | --- |
-| Spring Boot Test | Gerenciada pelo Spring Boot 4.1.0 | Base dos testes e da integração com o contexto Spring |
-| JUnit Jupiter/JUnit 5 | Gerenciada pelo Spring Boot | Testes unitários, de integração e parametrizados |
-| Mockito | Gerenciada pelo Spring Boot | Mocks, capturas de argumentos e unidades isoladas |
-| MockMvc | Spring Test | Contratos HTTP de controllers e tratamento de erros |
-| MockRestServiceServer | Spring Test | Simulação das respostas HTTP da Google Places |
-| Spring/JPA/Flyway/MySQL | Integração local | Validação de repositories, migrations, transações e schema |
-| Apache POI | 5.5.1 | Leitura e validação das planilhas Excel produzidas |
-
-Foram encontrados 31 arquivos de classes de teste Java no inventário atual.
-
-### Frontend
-
-| Ferramenta | Versão resolvida | Uso |
-| --- | --- | --- |
-| Vitest | 4.1.11 | Testes unitários e de componentes |
-| jsdom | 28.1.0 | DOM simulado para testes |
-| Playwright | 1.62.1 | Smoke E2E em navegador |
-| axe-core para Playwright | 4.13.0 | Auditoria automatizada de acessibilidade |
-| Prettier | 3.9.6 | Formatação do código frontend |
-
-Foram encontrados 27 arquivos `*.spec.ts`, além do smoke E2E `frontend/scripts/mvp-flow-smoke.mjs` e de um script de inspeção visual.
-
-### Ferramentas de dados
-
-- Testes Python com `unittest` para os geradores de IDHM e CNPJ.
-- Validação de checksum, parsing, normalização, determinismo, limites e filtros.
-
-O estado persistido em `fluxo.md` registra 201 testes frontend aprovados na última validação do refinamento CNPJ-07. Na última execução completa documentada do backend, 161 testes foram executados: 155 passaram e seis terminaram com falha/erro por conflito entre fixtures antigas e a carga CNPJ real já presente no MySQL local. Os 41 testes diretamente ligados à última entrega passaram. Esses números são históricos documentados; as suítes não foram reexecutadas para produzir este inventário.
-
-## Infraestrutura e execução
-
-### Topologia atual
-
-```text
-Navegador
-   |
-   | http://localhost:4200
-   v
-Angular Development Server
-   |
-   | proxy /api -> http://localhost:8080
-   v
-Spring Boot / Tomcat
-   |
-   +--> MySQL local em localhost:3306
-   +--> Google Places API por HTTPS
-   +--> dataset IDHM e base CNPJ locais
-```
-
-### Ambiente local inspecionado
-
-| Componente | Versão/porta |
+| Ferramenta | Uso |
 | --- | --- |
-| Sistema | Linux amd64 |
-| Java | Amazon Corretto 25.0.4 LTS |
-| Maven | 3.9.16 pelo Maven Wrapper |
-| Node.js | 26.7.0 |
-| npm | 12.0.2 |
-| Backend | porta 8080 |
-| Frontend de desenvolvimento | porta 4200 |
-| MySQL | porta padrão 3306 |
+| JUnit, Mockito e Spring Test/MockMvc | Testes unitários, de serviços e dos contratos HTTP do backend. |
+| MySQL temporário, JPA e Flyway | Testes de integração com schema isolado da base da aplicação. |
+| Vitest 4.1.11 e jsdom 28.1.0 | Testes de componentes e lógica do Angular. |
+| Playwright 1.62.1 e `@axe-core/playwright` 4.13.0 | Smokes no navegador e auditorias automatizadas de acessibilidade. |
+| Python `unittest` | Testes dos scripts de preparação dos dados de CNPJ e IDHM. |
+| Spring Boot DevTools e Prettier | Apoio ao desenvolvimento local e formatação do frontend. |
 
-O `package.json` fixa o gerenciador em npm 12.0.2. As dependências Angular 22.1.x exigem uma versão compatível de Node; o Node 26.7.0 instalado atende ao intervalo declarado no lockfile.
-
-### Comandos disponíveis
-
-Backend:
-
-```bash
-./mvnw spring-boot:run
-./mvnw test
-./mvnw package
-```
-
-Frontend:
-
-```bash
-cd frontend
-npm install
-npm start
-npm test
-npm run build
-npm run e2e:smoke
-```
-
-### O que não existe na infraestrutura atual
-
-- Dockerfile.
-- Docker Compose.
-- Pipeline de CI/CD no repositório.
-- Deploy, VPS, Kubernetes ou configuração de nuvem.
-- Reverse proxy e HTTPS próprios do projeto.
-- Perfis separados de desenvolvimento, teste e produção.
-- Secret manager.
-- Redis.
-- RabbitMQ, Kafka ou outro message broker.
-- Observabilidade dedicada, métricas ou tracing.
-- Spring Boot Actuator; o health check é um controller próprio.
-- Automação de SAST, SCA, SBOM ou secret scanning.
-
-## Segurança e limites do escopo atual
-
-- A aplicação é local e single-user.
-- Não há autenticação, autorização, usuários, roles, JWT, sessão ou recuperação de senha.
-- Não há Spring Security no `pom.xml`.
-- Não há liberação CORS customizada; o desenvolvimento usa o proxy do Angular.
-- Entradas externas usam DTOs e Jakarta Validation.
-- A API não expõe entidades JPA diretamente.
-- O backend centraliza erros e não deve devolver stack trace, corpo bruto da Google ou credenciais.
-- A chave da Google deve permanecer somente no backend e deveria vir de `GOOGLE_PLACES_API_KEY`.
-- O WhatsApp é apenas link manual; não há disparo automático, em massa ou automação do WhatsApp Web.
-- Cache e rate limit atuais não são proteção contra DDoS e não funcionam de forma distribuída.
-
-### Atenção: configuração sensível no worktree
-
-O `application.yml` presente no worktree no momento deste levantamento contém uma credencial privilegiada do MySQL e uma chave da Google escritas diretamente no arquivo. Os valores não são reproduzidos aqui. Esse estado diverge das regras do projeto e da configuração versionada anterior, que usava variáveis de ambiente. Além do risco de commit acidental, o usuário administrativo do banco concede privilégios maiores que os necessários à aplicação.
-
-Para manter o modelo local com segurança, a configuração deve voltar a usar `DB_USERNAME`, `DB_PASSWORD` e `GOOGLE_PLACES_API_KEY`, com um usuário MySQL exclusivo e limitado ao schema da aplicação. Se a chave atual tiver sido compartilhada ou commitada em algum lugar, ela deve ser rotacionada e restringida no Google Cloud.
-
-## Funcionalidades propositalmente ausentes
-
-- Autenticação e multiusuário.
-- Deploy remoto ou uso em produção pública.
-- Scraping ou integração com Instagram.
-- Envio automático ou em massa de WhatsApp.
-- Filas e mensageria.
-- Cache distribuído.
-- Uso de IDHM ou CNPJ no cálculo do score.
-- Limpeza retroativa dos leads que já existiam antes de um nome entrar na blacklist.
-
-## Estado atual e pendências conhecidas
-
-- O MVP, o frontend FE-00 a FE-17, a melhoria FE-100, IDHM, blacklist e CNPJ-00 a CNPJ-07 estão documentados como concluídos em seus respectivos escopos.
-- O dark mode está concluído da DM-01.1 à DM-01.8, incluindo Leaflet, testes, smoke E2E e auditoria visual/acessível nos dois temas e viewports.
-- INFO-01.1 a INFO-01.6 estão concluídas com navegador headless, classificação conservadora, execução persistida (migration V6), endpoints REST e botão no Histórico. O worker usa uma thread e uma posição de espera, despacho após commit, limite padrão de 150 leads e progresso atômico com cada resultado. Reinício marca execuções ativas como interrompidas; o modelo pressupõe uma instância local. O frontend usa Signals por tela, polling cinco segundos após cada resposta, restauração por GET e links seguros nas observações. A INFO-01.7 adicionou fallback Google → DuckDuckGo → Brave em falha técnica, parsers isolados e dois E2Es com Angular/HTTP/worker/MySQL reais e HTML simulado, aprovados. O navegador mantém intervalo global de 15 segundos, pausa de uma hora por fonte bloqueada e cinco minutos após outra falha técnica, sem evasão. A suíte completa e o pacote passaram com 266 testes aprovados e três opt-in; o banco temporário por JVM resolveu a interferência da base CNPJ/blacklist e não entra no JAR de produção. Sem novas dependências. Em 13/09/2026, a API oficial do Brave Search passou a ser a fonte efetiva, consumida por `java.net.http.HttpClient` com `BRAVE_SEARCH_API_KEY`, timeout e leitura limitada. O scraping Bing → Google → DuckDuckGo → Brave foi testado e desativado por padrão: o Bing respondeu de forma genérica e ignorou a consulta em leads reais. Dois defeitos do navegador foram corrigidos (URI inválida de sub-recursos e leitura durante navegação). A suíte completa passou com 285 testes, zero falhas/erros e cinco opt-in não habilitados. A captura real ainda depende de configurar a chave do Brave.
-- A migration repetível de CNPJ no Git continua vazia por desenho; é preciso gerar e revisar uma carga mensal para uso com dados reais.
-- Atualização da pesquisa Brave em 14/09/2026: a chave está configurada e a API foi exercitada. O refinamento solicita trechos extras limitados da mesma URL e desativa correção ortográfica/operadores. A classificação exige identidade corroborada, rejeita conflitos locais/CNPJ/DDD e reutiliza os candidatos entre consultas. Além das duas consultas iniciais e da terceira condicional sem município, pode confirmar até dois perfis relacionados usando usuário e telefone, totalizando no máximo cinco consultas por lead, sem encadear descobertas. Nomes alternativos no Instagram exigem marca distintiva compartilhada e identificador externo exato. Referências públicas em sites exigem endereço com número, telefone e um único perfil explícito no mesmo trecho/bloco. Não há aumento de dependências nem acesso aos perfis/sites candidatos.
-- A primeira rodada de precisão, com 40 chamadas de diagnóstico sem escrita nos leads, identificou associações indevidas ou insuficientes e não confirmou URLs. Os refinamentos posteriores confirmaram o site da Petz Vila Velha e os perfis `centraldecomprasmichel` e `hortfrutcastelo`. No Hortifruti, a localização foi separada do nome comercial e a tolerância de username/endereço ficou condicionada a evidências conjuntas e limites pequenos. A validação real final consumiu duas chamadas e não aceitou site. O aceite amplo da INFO-01.7 permanece parcial até ampliar a amostra rotulada.
-- O isolamento do banco já está implementado com catálogo MySQL temporário. A suíte passou com 418 testes, 412 aprovados e seis opt-in ignorados, sem falhas/erros; o pacote foi gerado com `./mvnw -DskipTests package` após a suíte.
-- A configuração sensível local precisa voltar a variáveis de ambiente antes de qualquer commit ou compartilhamento.
-- Não existe infraestrutura de produção; o sistema deve ser tratado como ferramenta local e projeto de portfólio.
-
-## Fontes deste levantamento
-
-- `pom.xml` e dependências Maven.
-- `frontend/package.json`, `frontend/package-lock.json`, `angular.json` e `tsconfig.json`.
-- Código-fonte backend e frontend.
-- Migrations Flyway em `src/main/resources/db/migration/`.
-- `application.yml` e proxy de desenvolvimento Angular.
-- Scripts e documentação de `tools/idhm/` e `tools/cnpj/`.
-- `fluxo.md`, `API.md` e `SECURITY_REVIEW.md` confrontados com o código atual.
+As credenciais do MySQL e as chaves externas são lidas de variáveis de ambiente pelo `application.yml`. O `.env` local é ignorado pelo Git e precisa ser carregado antes de iniciar o backend; o [README.md](README.md) mostra os passos. Resultados e quantidade de testes não são fixados aqui, pois mudam conforme o código evolui.
